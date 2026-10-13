@@ -20,12 +20,15 @@ Rectangle {
 
         function onMatchFound(matchId, playerIndex, opponentName) {
             console.log("Match found:", matchId, playerIndex, opponentName);
-            deckManager.refreshValidDecks(authManager.username);
-            stack.push("./MatchScreen.qml");
+            stack.push("./MatchScreen.qml", {
+                localPlayerName: authManager.username,
+                opponentPlayerName: opponentName,
+                localPlayerColor: playerIndex
+            });
         }
 
         function onMatchmakingError(message) {
-            console.log("Matchmaking error:", message);
+            mainMenuRoot.deckError = message;
         }
     }
 
@@ -210,9 +213,8 @@ Rectangle {
                 if (matchmakingManager.searching) {
                     matchmakingManager.cancelMatchmaking();
                 } else {
-                    deckManager.refreshValidDecks(authManager.username);
                     mainMenuRoot.deckError = "";
-                    matchmakingManager.startMatchmaking("Game1", "");
+                    matchmakingManager.startMatchmaking("Go", "");
                 }
             }
         }

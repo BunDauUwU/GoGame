@@ -10,7 +10,20 @@ MatchmakingManager::MatchmakingManager(QObject* parent)
 
 void MatchmakingManager::setNetworkClient(NetworkClient* networkClient)
 {
+    if (m_networkClient) disconnect(m_networkClient, nullptr, this, nullptr);
     m_networkClient = networkClient;
+    if (networkClient) {
+        connect(networkClient, &NetworkClient::disconnected, this, [this] {
+            setSearching(false);
+            setStatusText(QStringLiteral("Disconnected from server"));
+        });
+        connect(networkClient, &NetworkClient::errorOccurred, this, [this](const QString &error) {
+            if (!m_searching) return;
+            setSearching(false);
+            setStatusText(error);
+            emit matchmakingError(error);
+        });
+    }
 }
 
 bool MatchmakingManager::isSearching() const
@@ -25,6 +38,7 @@ QString MatchmakingManager::statusText() const
 
 void MatchmakingManager::startMatchmaking(const QString& mode, const QString& deckId)
 {
+    if (m_searching) return;
     if (!m_networkClient) {
         emit matchmakingError(QStringLiteral("Network client is not ready"));
         return;
@@ -65,6 +79,8 @@ void MatchmakingManager::handleServerMessage(const QJsonObject& message)
     if (type == "MatchmakingStatus") {
         const QString status = payload.value("status").toString();
         setStatusText(status);
+        if (payload.value("searching").isBool())
+            setSearching(payload.value("searching").toBool());
         return;
     }
 
@@ -82,7 +98,11 @@ void MatchmakingManager::handleServerMessage(const QJsonObject& message)
 
     if (type == "Error") {
         const QString errorMessage = payload.value("message").toString();
-        emit matchmakingError(errorMessage);
+        if (m_searching) {
+            setSearching(false);
+            setStatusText(errorMessage);
+            emit matchmakingError(errorMessage);
+        }
     }
 }
 

@@ -315,7 +315,8 @@ void Server::authenticate(QWebSocket *socket, QJsonObject payload){
 }
 
 void Server::startMatchmaking(QWebSocket *socket, QJsonObject payload) {
-    const QJO client = m_clients[socket];
+    if (!m_clients.contains(socket)) return;
+    const QJO client = m_clients.value(socket);
     if (client["nickname"].toString().isEmpty()) {
         fail(socket, "NotAuthenticated", "Pls login");
         return ;
@@ -325,18 +326,21 @@ void Server::startMatchmaking(QWebSocket *socket, QJsonObject payload) {
         return ;
     }
 
-    removeFromQueues(socket);
     const QString mode = payload["mode"].toString().trimmed();
+    if (mode.isEmpty() || mode.size() > 64) {
+        fail(socket, "InvalidMode", "Mode must contain 1 to 64 characters"); return;
+    }
+    removeFromQueues(socket);
     QList<QWebSocket*>& queue = m_queues[mode];
     queue.append(socket);
     m_queues.insert(mode, queue);
-    send(socket, envelope("MatchmakingStatus", {{"status", "Finding opponent..."},{"mode", mode}}));
+    send(socket, envelope("MatchmakingStatus", {{"status", "Finding opponent..."},{"mode", mode},{"searching", true}}));
     tryCreateMatch(mode);
 }
 
 void Server::cancelMatchmaking(QWebSocket *socket, QJsonObject payload) {
     removeFromQueues(socket);
-    send(socket, envelope("MatchmakingStatus", {{"status", "Finding cancelled"}}));
+    send(socket, envelope("MatchmakingStatus", {{"status", "Matchmaking cancelled"},{"searching", false}}));
 }
 
 #include<QTimer>
@@ -344,6 +348,13 @@ void Server::cancelMatchmaking(QWebSocket *socket, QJsonObject payload) {
 void Server::tryCreateMatch(QString mode) {
     if (!m_queues.contains(mode)) return;
     auto &queue = m_queues[mode];
+    for (auto it = queue.begin(); it != queue.end();) {
+        auto socket = *it;
+        if (!m_clients.contains(socket) || socket->state() != QAbstractSocket::ConnectedState
+            || !m_clients.value(socket).value("matchId").toString().isEmpty())
+            it = queue.erase(it);
+        else ++it;
+    }
     while (queue.size() >= 2) {
         auto match = std::make_shared<Match>();
         match->id = QUuid::createUuid().toString(QUuid::WithoutBraces);

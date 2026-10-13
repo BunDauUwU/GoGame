@@ -64,6 +64,14 @@ int main(int argc, char **argv) {
     check(receive(a,"Error")["code"] == "NotAuthenticated", "Unauthenticated matchmaking allowed");
     send(a,"AuthRequest",{{"nickname","Black"}}); receive(a,"AuthResult");
     send(b,"AuthRequest",{{"nickname","White"}}); receive(b,"AuthResult");
+    send(a,"MatchmakingStart",{{"mode",""}});
+    check(receive(a,"Error")["code"] == "InvalidMode", "Empty mode accepted");
+    send(b,"MatchmakingStart",{{"mode","Go"}}); receive(b,"MatchmakingStatus");
+    send(b,"MatchmakingStart",{{"mode","Go"}}); receive(b,"MatchmakingStatus");
+    send(b,"MatchmakingCancel",{});
+    check(!receive(b,"MatchmakingStatus")["searching"].toBool(true), "Cancel did not clear searching");
+    for (const auto &message : messages[&b])
+        check(message["type"] != "MatchFound", "Duplicate queue entry created a self-match");
     send(a,"MatchmakingStart",{{"mode","Go"}}); receive(a,"MatchmakingStatus");
     send(b,"MatchmakingStart",{{"mode","Go"}}); receive(b,"MatchmakingStatus");
     const auto found = receive(a,"MatchFound"); receive(b,"MatchFound");

@@ -14,7 +14,14 @@
 AuthManager::AuthManager(QObject *parent) : QObject(parent) { initDatabase(); }
 
 void AuthManager::setNetworkClient(NetworkClient *client) {
+  if (m_networkClient) disconnect(m_networkClient, nullptr, this, nullptr);
   m_networkClient = client;
+  if (client) {
+    connect(client, &NetworkClient::connected, this, [this] {
+      if (m_isAuthenticated && !m_username.isEmpty())
+        m_networkClient->sendMessage(Protocol::makeAuthRequest(m_username));
+    });
+  }
 }
 
 void AuthManager::initDatabase() {
