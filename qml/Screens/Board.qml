@@ -98,11 +98,23 @@ Rectangle {
     implicitWidth: 1280
     implicitHeight: 720
 
-    // Row {
     Image {
+        id: background
+
         anchors.fill: parent
-        source: "qrc:/GoGame/assets/background/background1.png"
+        property int backgroundIndex: 1
+
+        source: AssetManager.url("Background" + backgroundIndex)
         fillMode: Image.PreserveAspectCrop
+
+        MouseArea {
+            anchors.fill: parent
+
+            onClicked: {
+                background.backgroundIndex =
+                    background.backgroundIndex % 3 + 1
+            }
+        }
     }
 
     ColumnLayout {
@@ -110,17 +122,21 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: 12
 
-        Text {
-            anchors.top: parent.top
-            anchors.topMargin: 12
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: gameManager.currentPlayer === 0 ? qsTr("Lượt quân đen") : qsTr("Lượt quân trắng")
-            font.pixelSize: 20
+        Row {
+            Button {
+                text: qsTr("Pass")
+                onClicked: gameManager.pass_turn()
+            }
+            Text {
+                text: gameManager.currentPlayer === 0
+                      ? qsTr("Black to play")
+                      : qsTr("White to play")
+                font.pixelSize: 20
+            }
         }
 
         Text {
             id: error
-            anchors.horizontalCenter: parent.horizontalCenter
             text: errorMessage
             color: "red"
         }
@@ -134,7 +150,7 @@ Rectangle {
         anchors.centerIn: parent
         width: Math.max(0, Math.min(608, parent.width - 32, parent.height - 80))
         height: width
-        color: "#80deb887"
+        color: '#deb887'
         property int boardSize: 19
         property real margin: 20
         property var boardState: gameManager.boardState
@@ -237,15 +253,15 @@ Rectangle {
                 running: previewStone.visible
                 loops: Animation.Infinite
                 NumberAnimation {
-                    from: 0.65
-                    to: 0.25
-                    duration: 450
+                    from: 0.8
+                    to: 0.3
+                    duration: 350
                     easing.type: Easing.InOutSine
                 }
                 NumberAnimation {
-                    from: 0.25
-                    to: 0.65
-                    duration: 450
+                    from: 0.3
+                    to: 0.8
+                    duration: 350
                     easing.type: Easing.InOutSine
                 }
             }
@@ -317,13 +333,5 @@ Rectangle {
         playerName: boardScreen.localPlayerName
         avatarSource: boardScreen.localAvatar
         avatarOnRight: true
-    }
-
-    Button {
-        anchors.right: parent.right
-        anchors.bottom: userInfo.top
-        anchors.margins: 20
-        text: qsTr("Pass")
-        onClicked: gameManager.pass_turn()
     }
 }

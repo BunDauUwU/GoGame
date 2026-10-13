@@ -29,28 +29,31 @@ set_source_files_properties(
         QT_QML_SINGLETON_TYPE TRUE
 )
 
+file(GLOB_RECURSE GAME_ASSETS
+    CONFIGURE_DEPENDS
+    LIST_DIRECTORIES false
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/*"
+)
+
+foreach(asset IN LISTS GAME_ASSETS)
+    file(RELATIVE_PATH asset_alias
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${asset}"
+    )
+
+    set_source_files_properties("${asset}" PROPERTIES
+        QT_RESOURCE_ALIAS "${asset_alias}"
+    )
+endforeach()
+
 qt_add_qml_module(appGoGame
     URI GoGame
     VERSION 1.0
 
     QML_FILES
-        qml/Components/battle/PlayerPanel.qml
-        qml/Components/battle/CountdownClock.qml
-        qml/Components/battle/ElementPointBar.qml
-        qml/Components/cards/Card.qml
-        qml/Components/cards/CharacterCard.qml
-        qml/Components/cards/SupportCard.qml
-        qml/Components/common/Loading.qml
-        qml/Components/common/Popup.qml
-        qml/Components/controls/GameButton.qml
-        qml/Components/controls/GameIcon.qml
-        qml/Components/controls/GameImage.qml
-        qml/Components/controls/GamePanel.qml
-        qml/Components/controls/GameText.qml
-        qml/Components/layout/GameBackground.qml
-        qml/Components/layout/GamePanel.qml
-        qml/Screens/SettingsScreen.qml
-        qml/Screens/Board.qml
+        main.qml
+
+        # Core
         qml/Core/Constants.qml
         qml/Core/Motion.qml
         qml/Core/Radius.qml
@@ -58,17 +61,73 @@ qt_add_qml_module(appGoGame
         qml/Core/Spacing.qml
         qml/Core/Theme.qml
         qml/Core/Typography.qml
+
+        # Components: Battle
+        qml/Components/battle/PlayerPanel.qml
+        qml/Components/battle/CountdownClock.qml
+        qml/Components/battle/ElementPointBar.qml
+
+        # Components: Cards
+        qml/Components/cards/Card.qml
+        qml/Components/cards/CharacterCard.qml
+        qml/Components/cards/SupportCard.qml
+
+        # Components: Common
+        qml/Components/common/Loading.qml
+        qml/Components/common/Popup.qml
+
+        # Components: Controls
+        qml/Components/controls/GameButton.qml
+        qml/Components/controls/GameIcon.qml
+        qml/Components/controls/GameImage.qml
+        qml/Components/controls/GamePanel.qml
+        qml/Components/controls/GameText.qml
+
+        # Components: Layout
+        qml/Components/layout/GameBackground.qml
+        qml/Components/layout/GamePanel.qml
+
+        # Screens
+        qml/Screens/SettingsScreen.qml
+        qml/Screens/Board.qml
         qml/Screens/LoginScreen.qml
         qml/Screens/MainMenu.qml
-        main.qml
-SOURCES src/Core/AI.cpp src/Core/AI.h src/Core/Game.cpp src/Core/Game.h src/Managers/AuthManager.cpp src/Managers/AuthManager.h src/Models/Board.cpp src/Models/Board.h src/Models/UI.cpp src/Models/UI.h src/Network/NetworkClient.cpp src/Network/NetworkClient.h src/Network/Protocol.cpp src/Network/Protocol.h main.cpp
-RESOURCES users.sqlite assets/background/background1.png
-SOURCES src/Core/Enums.h
-SOURCES src/Core/Enumutils.h src/Core/Enumutils.cpp
-SOURCES src/Managers/MatchmakingManager.h src/Managers/MatchmakingManager.cpp
-QML_FILES qml/Screens/SettingsScreen.qml
-QML_FILES qml/Screens/Board.qml
-RESOURCES assets/fonts/genshin.ttf assets/playerAvatar/ayame1.png assets/playerAvatar/ayame2.png assets/playerAvatar/ayame3.png assets/playerAvatar/ayame4.png assets/playerAvatar/ayame5.png assets/playerAvatar/ayame6.png assets/playerAvatar/ayame8.webp "assets/playerAvatar/eula (5).png" "assets/playerAvatar/hutao (1).jpeg" "assets/playerAvatar/hutao (1).png" "assets/playerAvatar/hutao (11).png" "assets/playerAvatar/hutao (12).png" "assets/playerAvatar/hutao (3).png" "assets/playerAvatar/kazuha (3).png" "assets/playerAvatar/kazuha (4).png" "assets/playerAvatar/kazuha (5).png" assets/playerAvatar/nahida.jpg "assets/playerAvatar/paimon (1).jpg" "assets/playerAvatar/yoimiya (1).png" "assets/playerAvatar/yoimiya (4).png" "assets/playerAvatar/yoimiya (8).png"
+
+    SOURCES
+        main.cpp
+
+        # Core
+        src/Core/AI.cpp
+        src/Core/AI.h
+        src/Core/Game.cpp
+        src/Core/Game.h
+        src/Core/Enums.h
+        src/Core/Enumutils.h
+        src/Core/Enumutils.cpp
+
+        # Managers
+        src/Managers/AssetManager.cpp
+        src/Managers/AssetManager.h
+        src/Managers/AuthManager.cpp
+        src/Managers/AuthManager.h
+        src/Managers/MatchmakingManager.h
+        src/Managers/MatchmakingManager.cpp
+
+        # Models
+        src/Models/Board.cpp
+        src/Models/Board.h
+        src/Models/UI.cpp
+        src/Models/UI.h
+
+        # Network
+        src/Network/NetworkClient.cpp
+        src/Network/NetworkClient.h
+        src/Network/Protocol.cpp
+        src/Network/Protocol.h
+
+    RESOURCES
+        users.sqlite
+        ${GAME_ASSETS}
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

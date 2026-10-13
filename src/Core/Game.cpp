@@ -41,7 +41,7 @@ bool Union(int u, int v) {
 }
 
 
-Game::Game(QObject* parent) : QObject(parent)
+GameManager::GameManager(QObject* parent) : QObject(parent)
 {
     m_board_state.resize(19, std::vector<int>(19, -1));
 
@@ -66,32 +66,32 @@ Game::Game(QObject* parent) : QObject(parent)
     }
 }
 
-void Game::setNetworkClient(NetworkClient* networkClient)
+void GameManager::setNetworkClient(NetworkClient* networkClient)
 {
     m_networkClient = networkClient;
 }
 
-QString Game::matchId() const
+QString GameManager::matchId() const
 {
     return m_matchId;
 }
 
-int Game::playerIndex() const
+int GameManager::playerIndex() const
 {
     return m_playerIndex;
 }
 
-QString Game::opponentName() const
+QString GameManager::opponentName() const
 {
     return m_opponentName;
 }
 
-std::vector<std::vector<int>> Game::board_state()
+std::vector<std::vector<int>> GameManager::board_state()
 {
     return m_board_state;
 }
 
-bool Game::is_valid_move(int x, int y)
+bool GameManager::is_valid_move(int x, int y)
 {
     if (x < 0 || x >= 19 || y < 0 || y >= 19) return false;
     if (m_board_state[x][y] != -1) return false;
@@ -139,7 +139,7 @@ bool Game::is_valid_move(int x, int y)
 }
 
 
-void Game::update_pieces(int x, int y)
+void GameManager::update_pieces(int x, int y)
 {
     if (!is_valid_move(x, y)) return;
 
@@ -258,7 +258,7 @@ void Game::update_pieces(int x, int y)
     emit pieces_updated();
 }
 
-void Game::pass_turn()
+void GameManager::pass_turn()
 {
     // A pass is a turn, so an immediate-ko restriction no longer applies.
     m_ko_square = -1;
@@ -267,7 +267,7 @@ void Game::pass_turn()
 }
 
 
-void Game::setMatchInfo(const QString& matchId, int playerIndex, const QString& opponentName) {
+void GameManager::setMatchInfo(const QString& matchId, int playerIndex, const QString& opponentName) {
     if (playerIndex != 0 && playerIndex != 1)
         return;
     if (m_matchId == matchId && m_playerIndex == playerIndex && m_opponentName == opponentName)
@@ -278,7 +278,7 @@ void Game::setMatchInfo(const QString& matchId, int playerIndex, const QString& 
     emit matchInfoChanged();
 }
 
-void Game::handleServerMessage(const QJsonObject& message) {
+void GameManager::handleServerMessage(const QJsonObject& message) {
     const QString type = Protocol::readMessageType(message);
     const QJsonObject payload = Protocol::readPayload(message);
 
@@ -335,7 +335,7 @@ void Game::handleServerMessage(const QJsonObject& message) {
 }
 
 
-void Game::setStage(GameStage stage) {
+void GameManager::setStage(GameStage stage) {
     if (m_stage == stage) {
         return;
     }
@@ -344,7 +344,7 @@ void Game::setStage(GameStage stage) {
     emit stageChanged();
 }
 
-void Game::sendCommand(const QJsonObject &command) {
+void GameManager::sendCommand(const QJsonObject &command) {
     if (!m_networkClient) {
         emit gameError(QStringLiteral("Network client is not ready"));
         return;
@@ -357,5 +357,3 @@ void Game::sendCommand(const QJsonObject &command) {
 
     m_networkClient->sendMessage(command);
 }
-
-

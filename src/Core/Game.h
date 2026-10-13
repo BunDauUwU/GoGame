@@ -10,16 +10,16 @@
 #include "../Core/Enums.h"
 #include "../Network/NetworkClient.h"
 
-class Game;
+class GameManager;
 
-class Game : public QObject {
+class GameManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList boardState READ boardState NOTIFY boardStateChanged)
     Q_PROPERTY(int currentPlayer READ currentPlayer NOTIFY currentPlayerChanged)
     Q_PROPERTY(int playerIndex READ playerIndex NOTIFY matchInfoChanged)
 
 public:
-    explicit Game(QObject* parent = nullptr);
+    explicit GameManager(QObject* parent = nullptr);
     void setNetworkClient(NetworkClient* networkClient);
     Q_INVOKABLE void setMatchInfo(
         const QString& matchId,
