@@ -6,6 +6,7 @@ Rectangle {
     property alias text: label.text
     property color backgroundColor: Theme.panelBackground
     property color accentColor: Theme.primary
+    readonly property bool hovered: mouse.containsMouse
     signal clicked
 
     implicitWidth: 160

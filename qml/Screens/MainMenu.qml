@@ -21,7 +21,7 @@ Rectangle {
         function onMatchFound(matchId, playerIndex, opponentName) {
             console.log("Match found:", matchId, playerIndex, opponentName);
             deckManager.refreshValidDecks(authManager.username);
-            stack.push("./Board.qml");
+            stack.push("./MatchScreen.qml");
         }
 
         function onMatchmakingError(message) {
@@ -113,11 +113,45 @@ Rectangle {
         anchors.margins: 20
         spacing: 8
 
-        Text {
-            text: networkClient.connected ? "● Server Connected" : "○ Offline Mode"
-            color: networkClient.connected ? "#4ADE80" : "#F87171"
-            font.pixelSize: 13
-            font.bold: true
+        Button {
+            id: connectionStatusButton
+
+            text: networkClient.connected ? "● Server Connected" : "○ Offline Mode (Click here to retry connection)"
+
+            enabled: !networkClient.connected
+            hoverEnabled: true
+
+            scale: pressed ? 0.94 : 1.0
+
+            Behavior on scale {
+                SpringAnimation {
+                    spring: 3
+                    damping: 0.2
+                    mass: 0.5
+                }
+            }
+
+            onClicked: {
+                networkClient.disconnectFromServer();
+                reconnectTimer.restart();
+            }
+
+            HoverHandler {
+                cursorShape: connectionStatusButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+
+            contentItem: Text {
+                text: connectionStatusButton.text
+                color: networkClient.connected ? "#4ADE80" : "#F87171"
+                font.pixelSize: 13
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                color: "transparent"
+            }
         }
 
         Text {
@@ -159,8 +193,18 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
-            text: matchmakingManager.searching ? "Cancel Match" : "Find Match"
+            width: 400
+            text: "Play against AI"
+            onClicked: {
+                console.log("Matchmaking action triggered");
+            }
+        }
+
+        GameButton {
+            height: 60
+            width: 400
+            enabled: networkClient.connected
+            text: !networkClient.connected ? "Multiplayer unavailable" : matchmakingManager.searching ? "Cancel Match" : "Find Match"
             onClicked: {
                 console.log("Matchmaking action triggered");
                 if (matchmakingManager.searching) {
@@ -175,17 +219,7 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
-            text: qsTr("Connect to server again")
-            onClicked: {
-                networkClient.disconnectFromServer();
-                reconnectTimer.restart();
-            }
-        }
-
-        GameButton {
-            height: 60
-            width: 200
+            width: 400
             text: qsTr("Settings")
             onClicked: {
                 stack.push("./SettingsScreen.qml");
@@ -194,11 +228,11 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
+            width: 400
             text: qsTr("Log Out")
             onClicked: {
                 authManager.logout();
-                stack.replace("./LoginScreen.qml");
+                stack.pop();
             }
         }
     }
