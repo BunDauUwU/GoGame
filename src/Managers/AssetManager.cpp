@@ -13,10 +13,15 @@ AssetManager::AssetManager(QObject *parent)
     : QObject(parent) {}
 
 const QHash<QString, QString> AssetManager::paths = {
-    {"GenshinFont", "qrc:/assets/fonts/genshin.ttf"},
-    // {"Background", "qrc:/assets/background"}
+    {"GenshinFont", "fonts/genshin.ttf"},
+    {"Background1", "background/background1.png"},
+    {"Background2", "background/background2.png"},
+    {"Background3", "background/background3.png"},
 };
 
 QUrl AssetManager::url(const QString &name) const {
-    return QUrl(paths.value(name));
+    if (!paths.contains(name))
+        return {};
+
+    return QUrl("qrc:/GoGame/assets/" + paths.value(name));
 }

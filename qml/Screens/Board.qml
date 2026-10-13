@@ -99,9 +99,22 @@ Rectangle {
     implicitHeight: 720
 
     Image {
+        id: background
+
         anchors.fill: parent
-        source: "qrc:/GoGame/assets/background/background1.png"
+        property int backgroundIndex: 1
+
+        source: AssetManager.url("Background" + backgroundIndex)
         fillMode: Image.PreserveAspectCrop
+
+        MouseArea {
+            anchors.fill: parent
+
+            onClicked: {
+                background.backgroundIndex =
+                    background.backgroundIndex % 3 + 1
+            }
+        }
     }
 
     ColumnLayout {
@@ -124,7 +137,6 @@ Rectangle {
 
         Text {
             id: error
-            anchors.horizontalCenter: parent.horizontalCenter
             text: errorMessage
             color: "red"
         }
@@ -138,7 +150,7 @@ Rectangle {
         anchors.centerIn: parent
         width: Math.max(0, Math.min(608, parent.width - 32, parent.height - 80))
         height: width
-        color: "#80deb887"
+        color: '#deb887'
         property int boardSize: 19
         property real margin: 20
         property var boardState: gameManager.boardState

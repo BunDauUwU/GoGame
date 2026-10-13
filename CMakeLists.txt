@@ -29,6 +29,23 @@ set_source_files_properties(
         QT_QML_SINGLETON_TYPE TRUE
 )
 
+file(GLOB_RECURSE GAME_ASSETS
+    CONFIGURE_DEPENDS
+    LIST_DIRECTORIES false
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/*"
+)
+
+foreach(asset IN LISTS GAME_ASSETS)
+    file(RELATIVE_PATH asset_alias
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${asset}"
+    )
+
+    set_source_files_properties("${asset}" PROPERTIES
+        QT_RESOURCE_ALIAS "${asset_alias}"
+    )
+endforeach()
+
 qt_add_qml_module(appGoGame
     URI GoGame
     VERSION 1.0
@@ -110,36 +127,7 @@ qt_add_qml_module(appGoGame
 
     RESOURCES
         users.sqlite
-        assets/background/background1.png
-
-        # Fonts
-        assets/fonts/genshin.ttf
-
-        # Player avatars
-        assets/playerAvatar/ayame1.png
-        assets/playerAvatar/ayame2.png
-        assets/playerAvatar/ayame3.png
-        assets/playerAvatar/ayame4.png
-        assets/playerAvatar/ayame5.png
-        assets/playerAvatar/ayame6.png
-        assets/playerAvatar/ayame8.webp
-
-        "assets/playerAvatar/eula (5).png"
-        "assets/playerAvatar/hutao (1).jpeg"
-        "assets/playerAvatar/hutao (1).png"
-        "assets/playerAvatar/hutao (11).png"
-        "assets/playerAvatar/hutao (12).png"
-        "assets/playerAvatar/hutao (3).png"
-        "assets/playerAvatar/kazuha (3).png"
-        "assets/playerAvatar/kazuha (4).png"
-        "assets/playerAvatar/kazuha (5).png"
-
-        assets/playerAvatar/nahida.jpg
-
-        "assets/playerAvatar/paimon (1).jpg"
-        "assets/playerAvatar/yoimiya (1).png"
-        "assets/playerAvatar/yoimiya (4).png"
-        "assets/playerAvatar/yoimiya (8).png"
+        ${GAME_ASSETS}
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

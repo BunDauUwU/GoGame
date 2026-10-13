@@ -4,6 +4,7 @@
 
 #include "src/Core/Game.h"
 #include "src/Network/NetworkClient.h"
+#include "src/Managers/AssetManager.h"
 #include "src/Managers/AuthManager.h"
 #include "src/Managers/MatchmakingManager.h"
 
@@ -22,20 +23,22 @@ int main(int argc, char *argv[])
 
     NetworkClient networkClient;
 
+    AssetManager assetManager;
+
     MatchmakingManager matchmakingManager;
     matchmakingManager.setNetworkClient(&networkClient);
 
     AuthManager authManager;
     authManager.setNetworkClient(&networkClient);
 
-    Game game;
-    game.setNetworkClient(&networkClient);
+    GameManager gameManager;
+    gameManager.setNetworkClient(&networkClient);
 
     QObject::connect(
         &networkClient,
         &NetworkClient::messageReceived,
-        &game,
-        &Game::handleServerMessage
+        &gameManager,
+        &GameManager::handleServerMessage
         );
 
     QObject::connect(
@@ -55,15 +58,15 @@ int main(int argc, char *argv[])
     QObject::connect(
         &matchmakingManager,
         &MatchmakingManager::matchFound,
-        &game,
-        &Game::setMatchInfo
+        &gameManager,
+        &GameManager::setMatchInfo
         );
 
     QQmlApplicationEngine engine;
     engine.addImportPath(QStringLiteral("qrc:/"));
     engine.rootContext()->setContextProperty("networkClient", &networkClient);
     engine.rootContext()->setContextProperty("matchmakingManager", &matchmakingManager);
-    engine.rootContext()->setContextProperty("gameManager", &game);
+    engine.rootContext()->setContextProperty("gameManager", &gameManager);
     engine.rootContext()->setContextProperty("authManager", &authManager);
 
     networkClient.connectToServer(networkClient.serverUrl());

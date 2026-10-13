@@ -2,6 +2,8 @@
 #pragma once
 
 #include <QObject>
+#include <QQmlEngine>
+#include <QJSEngine>
 #include <QHash>
 #include <QString>
 #include <QUrl>
@@ -10,6 +12,7 @@
 class AssetManager : public QObject {
     Q_OBJECT
     QML_ELEMENT
+    QML_SINGLETON
 
 public:
     explicit AssetManager(QObject *parent = nullptr);
