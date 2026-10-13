@@ -98,7 +98,6 @@ Rectangle {
     implicitWidth: 1280
     implicitHeight: 720
 
-    // Row {
     Image {
         anchors.fill: parent
         source: "qrc:/GoGame/assets/background/background1.png"
@@ -110,12 +109,17 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: 12
 
-        Text {
-            anchors.top: parent.top
-            anchors.topMargin: 12
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: gameManager.currentPlayer === 0 ? qsTr("Lượt quân đen") : qsTr("Lượt quân trắng")
-            font.pixelSize: 20
+        Row {
+            Button {
+                text: qsTr("Pass")
+                onClicked: gameManager.pass_turn()
+            }
+            Text {
+                text: gameManager.currentPlayer === 0
+                      ? qsTr("Black to play")
+                      : qsTr("White to play")
+                font.pixelSize: 20
+            }
         }
 
         Text {
@@ -317,13 +321,5 @@ Rectangle {
         playerName: boardScreen.localPlayerName
         avatarSource: boardScreen.localAvatar
         avatarOnRight: true
-    }
-
-    Button {
-        anchors.right: parent.right
-        anchors.bottom: userInfo.top
-        anchors.margins: 20
-        text: qsTr("Pass")
-        onClicked: gameManager.pass_turn()
     }
 }
