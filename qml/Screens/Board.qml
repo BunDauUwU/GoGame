@@ -241,15 +241,15 @@ Rectangle {
                 running: previewStone.visible
                 loops: Animation.Infinite
                 NumberAnimation {
-                    from: 0.65
-                    to: 0.25
-                    duration: 450
+                    from: 0.8
+                    to: 0.3
+                    duration: 350
                     easing.type: Easing.InOutSine
                 }
                 NumberAnimation {
-                    from: 0.25
-                    to: 0.65
-                    duration: 450
+                    from: 0.3
+                    to: 0.8
+                    duration: 350
                     easing.type: Easing.InOutSine
                 }
             }
