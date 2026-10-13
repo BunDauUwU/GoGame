@@ -93,7 +93,7 @@ qt_add_qml_module(appGoGame
 
         # Screens
         qml/Screens/SettingsScreen.qml
-        qml/Screens/Board.qml
+        qml/Screens/MatchScreen.qml
         qml/Screens/LoginScreen.qml
         qml/Screens/MainMenu.qml
 

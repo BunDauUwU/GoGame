@@ -120,7 +120,7 @@ Rectangle {
         text: qsTr("Back")
 
         onClicked: {
-            StackView.view.pop();
+            stack.pop();
         }
     }
 }

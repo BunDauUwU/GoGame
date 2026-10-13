@@ -21,7 +21,7 @@ Rectangle {
         function onMatchFound(matchId, playerIndex, opponentName) {
             console.log("Match found:", matchId, playerIndex, opponentName);
             deckManager.refreshValidDecks(authManager.username);
-            stack.push("./Board.qml");
+            stack.push("./MatchScreen.qml");
         }
 
         function onMatchmakingError(message) {
