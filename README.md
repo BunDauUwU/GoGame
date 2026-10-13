@@ -379,7 +379,6 @@ Kết quả: hợp nhất `origin/main` vào `main`, giữ lịch sử hai nhán
 Kiểm tra merge: build client `build/Desktop_Debug` và build server sạch `build/merge-check-server` thành công; CTest integration đạt 1/1. Build server trong thư mục cũ gặp cache AUTOMOC lỗi thời; build sạch xác nhận mã hợp nhất hoạt động.
 
 ### 12/10/2026 — Implement `gameManager.pass_turn`
-### 12/10/2026 — Cập nhật tiến độ đồng hồ, báo lỗi và layout bàn cờ
 
 Nội dung prompt của người dùng:
 
@@ -399,7 +398,7 @@ and append to the README.md, follow the AI guidelines
 
 Kết quả: bổ sung đầy đủ hai prompt của phiên làm việc này, ngày thực hiện và kết quả vào nhật ký AI trong README.md theo quy ước của dự án.
 
-### 12/10/2026 — Implement `AssetsManager.cpp`
+### 12/10/2026 — Cập nhật tiến độ đồng hồ, báo lỗi và layout bàn cờ
 
 Nội dung prompt của người dùng:
 Cập nhật README. Đồng thời note những thứ này để sau này tôi làm:

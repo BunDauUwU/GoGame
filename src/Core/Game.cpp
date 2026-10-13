@@ -358,4 +358,4 @@ void Game::sendCommand(const QJsonObject &command) {
     m_networkClient->sendMessage(command);
 }
 
-}
+
