@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import "../Components/battle"
 import "../Components/controls"
 import "../Core"
+import "../Singletons"
 import GoGame
 
 Rectangle {
@@ -84,16 +85,8 @@ Rectangle {
         anchors.fill: parent
         property int backgroundIndex: 1
 
-        source: AssetManager.url("Background" + backgroundIndex)
+        source: AssetManager.url("Background" + AppState.backgroundIndex)
         fillMode: Image.PreserveAspectCrop
-
-        MouseArea {
-            anchors.fill: parent
-
-            onClicked: {
-                background.backgroundIndex = background.backgroundIndex % 3 + 1;
-            }
-        }
     }
 
     ColumnLayout {
