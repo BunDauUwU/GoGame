@@ -36,7 +36,7 @@ QString MatchmakingManager::statusText() const
     return m_statusText;
 }
 
-void MatchmakingManager::startMatchmaking(const QString& mode, const QString& deckId)
+void MatchmakingManager::startMatchmaking(const QString& mode)
 {
     if (m_searching) return;
     if (!m_networkClient) {
@@ -53,7 +53,7 @@ void MatchmakingManager::startMatchmaking(const QString& mode, const QString& de
     setStatusText(QStringLiteral("Finding opponent..."));
 
     m_networkClient->sendMessage(
-        Protocol::makeStartMatchmaking(mode, deckId)
+        Protocol::makeStartMatchmaking(mode)
         );
 }
 

@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include "GoMatch.h"
+#include "ByoYomiClock.h"
 #include <QTimer>
 #include <array>
 #include <memory>
@@ -14,12 +15,11 @@ class QWebSocket;
 
 class Server : public QObject {
 public:
-    explicit Server(const QString &dataFile, QObject *parent = nullptr);
+    explicit Server(const QString &dataFile, QObject *parent = nullptr,
+                    ByoYomiClock timeControl = {});
     ~Server() override;
     bool start(quint16 port, QString &error);
-    bool stop(quint16 port, QString &error);
 
-    QJsonObject address() const;
 
     void onConnection(QWebSocket *socket);
     void onMessage(QWebSocket *socket, const QString &raw);
@@ -61,7 +61,7 @@ private:
         bool started = true;
         int winnerIndex = -1;
         QString endReason;
-        std::array<qint64, 2> remainingMs{600000, 600000};
+        std::array<ByoYomiClock, 2> clocks;
         qint64 turnStartedMs = 0;
         QTimer *timer = nullptr;
     };
@@ -72,6 +72,6 @@ private:
     bool consumeClock(Match &match, int playerIndex);
     void armActionTimer(Match &match);
     QMap<QString, std::shared_ptr<Match>> m_matches;
-    int m_selectionTimeoutMs = 0;
+    ByoYomiClock m_timeControl;
     int m_actionTimeoutMs = 30'000;
 };

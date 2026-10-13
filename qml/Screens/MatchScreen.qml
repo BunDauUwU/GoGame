@@ -3,7 +3,6 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../Components/battle"
 import "../Components/controls"
-import "../Components/layout"
 import "../Core"
 import GoGame
 
@@ -46,47 +45,28 @@ Rectangle {
     onPreviewEnabledChanged: clearPreview()
     onLocalPlayerColorChanged: clearPreview()
 
-    function formatTime(totalSeconds) {
-        const seconds = Math.max(0, totalSeconds);
-        const tail = seconds % 60;
-        return Math.floor(seconds / 60) + ":" + (tail < 10 ? "0" : "") + tail;
-    }
-
-    CountdownClock {
-        z: 4
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: 24
-        deadlineEpochMs: battleState.actionDeadlineEpochMs || 0
-        visible: !root.finished && battleState.currentPlayerIndex === root.me && (!(selfPlayer.endedRound || false) || root.choosingReplacement)
-    }
-    Rectangle {
-        z: 4
-        anchors.top: parent.top
-        anchors.right: parent.left
-        anchors.topMargin: 72
-        anchors.rightMargin: 24
-        width: 108
-        height: 32
-        radius: 16
-        color: "#b51d2838"
-        border.color: "#65768c"
-        Text {
-            anchors.centerIn: parent
-            text: "Game  " + root.formatTime(root.gameSecondsLeft)
-            color: "#dce7f5"
-            font.bold: true
-        }
-    }
+    property double snapshotReceivedAt: Date.now()
+    property double clockNow: Date.now()
     Timer {
-        interval: 1000
+        interval: 200
         repeat: true
-        running: !root.finished && battleState.currentPlayerIndex === root.me && (!selfPlayer.endedRound || root.choosingReplacement) && root.gameSecondsLeft > 0
-        onTriggered: root.gameSecondsLeft--
+        running: gameManager.online && !gameManager.finished
+        onTriggered: boardScreen.clockNow = Date.now()
     }
 
     Connections {
         target: gameManager
+        function onGameError(message) {
+            boardScreen.clearPreview();
+            boardScreen.errorMessage = message;
+        }
+        function onSnapshotChanged() {
+            boardScreen.snapshotReceivedAt = Date.now();
+            boardScreen.clockNow = Date.now();
+        }
+        function onInteractionChanged() {
+            boardScreen.clearPreview();
+        }
         function onCurrentPlayerChanged() {
             boardScreen.clearPreview();
         }
@@ -122,7 +102,7 @@ Rectangle {
         spacing: 12
 
         Text {
-            text: gameManager.currentPlayer === 0 ? qsTr("Black to play") : qsTr("White to play")
+            text: gameManager.finished ? qsTr("Game ended") : gameManager.pending ? qsTr("Waiting for opponent…") : gameManager.online ? (gameManager.canAct ? qsTr("Your turn") : qsTr("Opponent's turn")) : gameManager.currentPlayer === 0 ? qsTr("Black to play") : qsTr("White to play")
             font.pixelSize: 20
         }
 
@@ -208,7 +188,8 @@ Rectangle {
         MouseArea {
             id: mouseArea
             anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
+            enabled: gameManager.canAct
+            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: function (mouse) {
                 var usableWidth = width - (2 * board.margin);
                 var usableHeight = height - (2 * board.margin);
@@ -306,9 +287,62 @@ Rectangle {
     Button {
         anchors.right: parent.right
         anchors.bottom: userInfo.top
-        anchors.margins: 20
+        anchors.bottomMargin: 112
+        anchors.rightMargin: 20
         text: qsTr("Pass")
+        enabled: gameManager.canAct
         onClicked: gameManager.pass_turn()
+    }
+
+    Button {
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.margins: 20
+        text: qsTr("Concede")
+        visible: gameManager.online
+        enabled: !gameManager.finished && !gameManager.pending
+        onClicked: concedeDialog.open()
+    }
+    Dialog {
+        id: concedeDialog
+        anchors.centerIn: parent
+        title: qsTr("Concede this game?")
+        modal: true
+        standardButtons: Dialog.Yes | Dialog.No
+        onAccepted: gameManager.concede()
+    }
+    Rectangle {
+        anchors.centerIn: parent
+        width: 380
+        height: resultColumn.implicitHeight + 40
+        radius: 12
+        color: "#eef0ede7"
+        border.color: "#bda78c"
+        z: 10
+        visible: gameManager.online && gameManager.finished
+        Column {
+            id: resultColumn
+            anchors.centerIn: parent
+            width: parent.width - 40
+            spacing: 14
+            Text {
+                width: parent.width
+                text: boardScreen.battleState.winnerIndex === gameManager.playerIndex ? qsTr("You won") : boardScreen.battleState.winnerIndex >= 0 ? qsTr("You lost") : qsTr("Game ended")
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 24
+            }
+            Text {
+                width: parent.width
+                text: gameManager.resultMessage
+                wrapMode: Text.WordWrap
+                horizontalAlignment: Text.AlignHCenter
+            }
+            Button {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("Back to menu")
+                onClicked: stack.pop()
+            }
+        }
     }
 
     PlayerPanel {
@@ -332,5 +366,34 @@ Rectangle {
         playerName: boardScreen.localPlayerName
         avatarSource: boardScreen.localAvatar
         avatarOnRight: true
+    }
+    GameClock {
+        objectName: "opponentClock"
+        z: 5
+        anchors.left: opponentInfo.left
+        anchors.top: opponentInfo.bottom
+        anchors.topMargin: 12
+        width: opponentInfo.width
+        playerLabel: boardScreen.opponentPlayerName
+        property int colorIndex: 1 - boardScreen.localPlayerColor
+        clockState: (boardScreen.battleState.clocks || [])[colorIndex] || ({})
+        elapsedMs: boardScreen.clockNow - boardScreen.snapshotReceivedAt
+        active: boardScreen.battleState.currentPlayerIndex === colorIndex
+        finished: gameManager.finished
+        visible: gameManager.online
+    }
+    GameClock {
+        objectName: "localClock"
+        z: 5
+        anchors.right: userInfo.right
+        anchors.bottom: userInfo.top
+        anchors.bottomMargin: 12
+        width: userInfo.width
+        playerLabel: boardScreen.localPlayerName
+        clockState: (boardScreen.battleState.clocks || [])[boardScreen.localPlayerColor] || ({})
+        elapsedMs: boardScreen.clockNow - boardScreen.snapshotReceivedAt
+        active: boardScreen.battleState.currentPlayerIndex === boardScreen.localPlayerColor
+        finished: gameManager.finished
+        visible: gameManager.online
     }
 }

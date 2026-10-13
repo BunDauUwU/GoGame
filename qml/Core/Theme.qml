@@ -6,7 +6,6 @@ QtObject {
 
     // Window
 
-    readonly property color windowBackground: "#1E2126"
 
     // Panel
 
@@ -14,7 +13,6 @@ QtObject {
 
     // Card
 
-    readonly property color cardBackground: "#353A42"
 
     // Accent
 
@@ -26,17 +24,12 @@ QtObject {
     readonly property real primaryG: primary.g
     readonly property real primaryB: primary.b
 
-    readonly property real secondaryR: secondary.r
-    readonly property real secondaryG: secondary.g
-    readonly property real secondaryB: secondary.b
     // Text
 
     readonly property color text: "#FFFFFF"
 
-    readonly property color textGray: "#B8B8B8"
 
     readonly property color danger: "#FF4E4E"
 
-    readonly property color success: "#49C26B"
 
 }

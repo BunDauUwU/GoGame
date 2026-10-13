@@ -195,16 +195,8 @@ bool AuthManager::registerUser(const QString &username,
   insertQuery.bindValue(QStringLiteral(":time"),
                         QDateTime::currentDateTime().toString(Qt::ISODate));
 
-  QJsonObject blankDeckProfile;
-  QJsonObject deckObj;
-  deckObj["chars"] = QJsonArray();
-  deckObj["cards"] = QJsonArray();
-  blankDeckProfile["deck1"] = deckObj;
-  blankDeckProfile["deck2"] = deckObj;
-  blankDeckProfile["deck3"] = deckObj;
-  QJsonDocument doc(blankDeckProfile);
-  QString jsonString = doc.toJson(QJsonDocument::Compact);
-  insertQuery.bindValue(QStringLiteral(":decks"), jsonString);
+  // Legacy column remains required in existing databases; Go has no decks.
+  insertQuery.bindValue(QStringLiteral(":decks"), QStringLiteral("{}"));
 
   if (!insertQuery.exec()) {
     const QString err = QStringLiteral("Failed to create account: ") +

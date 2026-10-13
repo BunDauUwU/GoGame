@@ -4,17 +4,10 @@
 
 #include "src/Core/Game.h"
 #include "src/Network/NetworkClient.h"
-#include "src/Managers/AssetManager.h"
 #include "src/Managers/AuthManager.h"
 #include "src/Managers/MatchmakingManager.h"
 
 
-#ifdef QT_DEBUG
-#include <QDebug>
-#define Debug(x) do { qDebug() << (x); } while (0)
-#else
-#define Debug(x) do { } while (0)
-#endif
 
 
 int main(int argc, char *argv[])
@@ -22,8 +15,6 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     NetworkClient networkClient;
-
-    AssetManager assetManager;
 
     MatchmakingManager matchmakingManager;
     matchmakingManager.setNetworkClient(&networkClient);

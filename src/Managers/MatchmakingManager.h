@@ -21,7 +21,7 @@ public:
     bool isSearching() const;
     QString statusText() const;
 
-    Q_INVOKABLE void startMatchmaking(const QString& mode, const QString& deckId);
+    Q_INVOKABLE void startMatchmaking(const QString& mode);
     Q_INVOKABLE void cancelMatchmaking();
 
 signals:

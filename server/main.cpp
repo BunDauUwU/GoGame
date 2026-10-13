@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addOption({{"p", "port"}, "Listen port (localhost only).", "port", "14509"});
     parser.addOption({{"d", "data-file"}, "JSON storage file.", "path", "data/state.json"});
+    parser.addOption({"main-minutes", "Main time per player (10 or 15 minutes).", "minutes", "10"});
     parser.process(app);
 
     bool portOk = false;
@@ -21,7 +22,14 @@ int main(int argc, char *argv[])
         std::fprintf(stderr, "Port must be between 1 and 65535\n");
         return 1;
     }
-    Server server(parser.value("data-file"));
+    bool minutesOk = false;
+    const int minutes = parser.value("main-minutes").toInt(&minutesOk);
+    if (!minutesOk || (minutes != 10 && minutes != 15)) {
+        std::fprintf(stderr, "Main time must be 10 or 15 minutes\n"); return 1;
+    }
+    ByoYomiClock timeControl;
+    timeControl.mainRemainingMs = minutes * 60000;
+    Server server(parser.value("data-file"), nullptr, timeControl);
     QString error;
     if (!server.start(static_cast<quint16>(port), error)) {
         std::fprintf(stderr, "%s\n", qPrintable(error));

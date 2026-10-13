@@ -1,10 +1,10 @@
 # GoGame
 
-Game cờ vây C++/Qt 6: client Qt Quick/QML và server console WebSocket. Tài liệu được viết lại sau khi review ngày **13/10/2026**. Server đã xử lý ván cờ; client hiện vẫn chơi local, chưa hoàn tất luồng chơi online từ UI.
+Game cờ vây C++/Qt 6: client Qt Quick/QML và server console WebSocket. Tài liệu cập nhật ngày **13/10/2026** sau khi dọn các thành phần không dùng. Client đã gửi lệnh online và áp dụng snapshot của server; hai người có thể ghép trận trên cùng máy. Server quyết định luật, lượt và đồng hồ Byo-yomi.
 
 ## Chạy dự án
 
-Cần CMake ≥ 3.16, compiler C++17 cho server và Qt 6 với Core, Gui, Quick/QML, Network, WebSockets, Sql, Multimedia. CMake khai báo Qt ≥ 6.2; client dùng `QWebSocket::errorOccurred`, nên kit Qt phải cung cấp signal này (kit cũ có thể cần điều chỉnh code).
+Cần CMake ≥ 3.16, compiler C++17 cho server và Qt 6 với Core, Gui, Quick/QML, Network, WebSockets, Sql. CMake khai báo Qt ≥ 6.2; client dùng `QWebSocket::errorOccurred`, nên kit Qt phải cung cấp signal này (kit cũ có thể cần điều chỉnh code).
 
 Tại thư mục gốc, mở **terminal riêng cho server**:
 
@@ -24,7 +24,7 @@ cmake --build build/local --parallel 3
 GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/local/appGoGame
 ```
 
-Có thể mở `CMakeLists.txt` bằng Qt Creator. Root build cũng thêm target server bằng `add_subdirectory(server)`; không cần chạy thêm server nếu terminal server đã hoạt động. Client tự kết nối khi mở, nhưng `SceneManager.qml` đang mở trực tiếp Board local, bỏ qua màn hình đăng nhập/menu. Chạy hai cửa sổ client **chưa đủ để chơi online** cho tới khi hoàn thành các mục tích hợp bên dưới.
+Có thể mở `CMakeLists.txt` bằng Qt Creator. Root build cũng thêm target server bằng `add_subdirectory(server)`; không cần chạy thêm server nếu terminal server đã hoạt động. Client tự kết nối khi mở và bắt đầu ở LoginScreen. Mở hai instance client trong hai terminal, đăng ký/đăng nhập hai tài khoản local, chọn **Find Match** ở cả hai. Server ghép mode `Go`, client nhận màu và tên đối thủ rồi mở MatchScreen. Có thể đặt `--main-minutes 15` khi chạy server; mặc định là 10 phút. Settings hiện cho chọn background trong phiên.
 
 ## Kiến trúc và tương tác
 
@@ -46,7 +46,7 @@ flowchart LR
     Protocol -->|messageReceived| Queue
 ```
 
-Luồng dưới đây là giao thức server đã có và luồng UI cần hoàn thiện. Client đã có lớp transport/managers; thao tác đặt quân/pass từ Board vẫn chạy local.
+Luồng dưới đây đã được nối qua NetworkClient, GameManager và MatchScreen. Preview giữ ở client; chỉ lần xác nhận mới gửi Play. Khi chờ phản hồi, client khóa thao tác để tránh gửi nước trùng.
 
 ```mermaid
 sequenceDiagram
@@ -94,7 +94,7 @@ Mọi text message dùng envelope `{"type":"...","payload":{...}}`. Binary khôn
 | Client → server | Payload | Server → client |
 | --- | --- | --- |
 | `AuthRequest` | `nickname` (1–17 ký tự sau trim) | `AuthResult` với `success`, `playerId`, `nickname`; nickname sai hiện trả `Error`. |
-| `MatchmakingStart` | `mode`; `deckId` của template bị bỏ qua | `MatchmakingStatus`, sau đó `MatchFound` và snapshot khi đủ 2 người cùng mode. |
+| `MatchmakingStart` | `mode` (1–64 ký tự sau trim) | `MatchmakingStatus`, sau đó `MatchFound` và snapshot khi đủ 2 người cùng mode. |
 | `MatchmakingCancel` | `{}` | `MatchmakingStatus`. |
 | `GameCommand` | `matchId`, `commandType`, `command` | `GameEvent` + snapshot, hoặc `Error`. |
 | `ReadData` | `{}` | `Data` chứa `data`. |
@@ -116,31 +116,96 @@ Ví dụ đặt quân tại hàng 0, cột 0:
 | `boardSize`, `board` | 19 và mảng 361 ô theo `row * 19 + col`; `-1` trống, `0` đen, `1` trắng. |
 | `moveCount`, `consecutivePasses` | Số lượt đã qua (kể cả pass), số pass liên tiếp. |
 | `currentPlayerIndex`, `komi` | Người đến lượt; komi trắng 6,5. |
-| `remainingMs` | Mảng thời gian đen/trắng tại lúc snapshot, giữ tương thích payload cũ. |
+| `remainingMs` | Mảng thời gian đen/trắng tới ranh giới thời gian hiện tại (main hoặc một period Byo-yomi). |
+| `clocks` | Mỗi người có `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, `phase` (`Main`/`ByoYomi`). |
 | `players` | Mỗi người có `playerId`, `nickname`, `playerIndex`, `color`, `remainingTimeMs`. |
 | `self.playerIndex` | 0 hoặc 1; không có dữ liệu card/hand riêng. |
 | `serverTimeEpochMs` | Thời điểm server tạo snapshot để client ước lượng lệch đồng hồ. |
-| `actionDeadlineEpochMs` | Epoch khi **tổng thời gian còn lại của người đang đi** hết; bằng 0 khi trận kết thúc. |
+| `actionDeadlineEpochMs` | Epoch của ranh giới main/period hiện tại của người đang đi; bằng 0 khi trận kết thúc. |
 | `winnerIndex`, `endReason` | `-1`/chuỗi rỗng khi đang chơi; người thắng và lý do khi kết thúc. |
 
-Mỗi bên có 600000 ms (10 phút). Server dùng thời gian monotonic để trừ clock và QTimer kiểm tra tối đa mỗi 30 giây; **30 giây không phải giới hạn mỗi nước**. Epoch deadline chỉ phục vụ UI. Snapshot gửi khi ghép trận, sau nước hợp lệ/pass và lúc kết thúc; không phát mỗi giây. Client cần tự animate countdown từ snapshot và hiệu chỉnh khi có snapshot mới. Không có round/weather/replacement/characters/elementPoints/deck/hand vì mô hình hiện tại là cờ vây. Đồng hồ cuối được đóng băng trước khi gửi snapshot kết thúc.
+Mỗi bên có **10 hoặc 15 phút chính + 3 lần Byo-yomi × 20 giây**. Hết main time chuyển sang Byo-yomi; hết một period mất một lần. Nước đi/pass hợp lệ hồi period hiện tại về 20 giây, không hồi số lần đã mất; lệnh sai không hồi giờ. Hết lần cuối xử thua. Server dùng monotonic time và QTimer kiểm tra tại ranh giới hoặc tối đa mỗi 30 giây; 30 giây không phải giới hạn mỗi nước. Snapshot gửi khi ghép trận, sau nước hợp lệ, timer và lúc kết thúc. GameClock nội suy clock của mình và đối thủ giữa các snapshot. Trường stage vẫn là chuỗi trong payload; không cần enum stage/card-game ở client.
 
-## Kết quả review: đã có và còn thiếu
+## Trạng thái hiện tại và việc còn lại
 
-| Phần | Đã có | Còn thiếu / vấn đề |
+| Phần | Đã có | Còn thiếu |
 | --- | --- | --- |
-| Server | Kết nối, guest nickname, hàng chờ theo mode, nhiều match tách bàn cờ, kiểm tra thành viên và lượt. | Mode chưa validate danh sách cho phép; guest chưa xác thực tài khoản thật. |
-| Luật | Ăn quân, tự sát, simple ko, pass, đầu hàng, hai pass tính diện tích với komi 6,5. | Superko, thỏa thuận quân chết, kiểm thử sâu các tình huống tính điểm; chưa xem là luật Trung/Nhật hoàn chỉnh. |
-| Clock / snapshot | Thời gian server, hết giờ, snapshot từng người, deadline, kết quả cuối. | Bind và hiển thị đồng hồ của mình/đối thủ trong QML. |
-| GameManager | Bàn cờ local, preview validation, đặt quân, pass; nhận/store snapshot và phát signal. | `snapshot` chưa có Q_PROPERTY cho QML; snapshot chưa cập nhật `boardState`/`currentPlayer`; Board đặt quân/pass local thay vì gửi `GameCommand`. |
-| Board.qml | Grid 19×19, preview hai lần nhấn/nhấp nháy, báo lỗi, flip theo màu, avatar/name panel, background. | Clock còn tham chiếu `root.finished`, `root.me`, `selfPlayer`, `root.gameSecondsLeft` chưa khai báo ở Board; tên/avatar còn hardcode; chưa nối Error server vào thông báo UI. |
-| Auth | Client đăng ký/đăng nhập SQLite local, gửi nickname khi login lúc đang kết nối. | Server chỉ guest; reconnect không tự gửi lại AuthRequest. DB thực ở AppDataLocation, không phải file `users.sqlite` ở root. |
-| Menu / template | Manager matchmaking gửi/nhận JSON, MatchFound cập nhật match info. | MainMenu còn `deckManager` chưa được cung cấp; card components còn `assetsManager`; một số helper card/character ở Protocol.h chỉ khai báo. |
-| Settings / models / AI | Có file và khung tổ chức. | SettingsScreen còn rỗng; Board/UI models và AI còn file rỗng. Preview toggle mới là property, chưa có UI settings/lưu lựa chọn. |
-| Lưu dữ liệu | ReadData/WriteData bằng QSaveFile. | Match chỉ ở RAM; không replay, tự lưu match, phục hồi sau restart hay reconnect vào trận. Socket mất kết nối xử thua ngay. ReadData/WriteData hiện không phân quyền. |
-| Tài nguyên | Font, 3 background, avatar; AssetManager singleton cho background/font. | Thiếu nhạc, âm thanh đặt quân/báo lỗi; đường dẫn asset card template chưa được giải quyết. |
+| Server | Guest nickname, queue theo mode, nhiều trận riêng, luật cơ bản, xác nhận lượt/thành viên, timer và snapshot từng người. | Tài khoản server thật, TLS/phân quyền, khôi phục trận sau reconnect. |
+| Client online | MatchFound, gửi Play/EndRound/Concede, chỉ áp dụng bàn/lượt sau snapshot, pending lock, lỗi và kết quả trận. | Kiểm thử trực tiếp toàn bộ thao tác UI; hiện tên/avatar vẫn có giá trị mặc định khi chạy local. |
+| Luật | Ăn quân, tự sát, simple ko, hai pass tính diện tích với komi 6,5. | Superko, xử lý/thỏa thuận quân chết, hoàn thiện luật Trung rồi cân nhắc Nhật. |
+| Đồng hồ | Byo-yomi do server quản lý, hiển thị clock hai bên, timer gửi snapshot. | Tùy chọn time control trong UI; hiện 10/15 phút chọn qua CLI. |
+| Auth | SQLite local, gửi guest nickname khi login và kết nối lại. | Server chưa xác thực password/tài khoản local; logout local không hủy danh tính guest trên server. |
+| Settings | Chọn background qua AppState trong phiên. | Âm thanh, preview toggle có UI/lưu lựa chọn, avatar/frame/title/level/rank. Preview vẫn là property của MatchScreen. |
+| Dữ liệu | ReadData/WriteData nguyên tử bằng QSaveFile. | Match chỉ ở RAM; chưa tự lưu match, replay 5 ván hoặc phục hồi sau restart. API file vẫn chưa phân quyền. |
+| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font. | Chưa có implementation AI, nhạc/âm thanh đặt quân/báo lỗi. Các file rỗng đã bỏ; tạo lại khi triển khai thật. |
 
-Ưu tiên tích hợp: expose snapshot cho QML và áp dụng board/lượt → gửi Play/EndRound/Concede từ client online → sửa binding clock và tên người chơi → dọn menu/auth reconnect → lưu trận/replay. Giữ đường chơi local rõ ràng khi tích hợp để không dùng logic local quyết định kết quả online.
+## Những thay đổi trong lần dọn project này
+
+Đối chiếu với working tree ngay trước tác vụ, **xóa 22 file không được luồng hiện tại sử dụng**, tổng **403 dòng / 13.997 ký tự**. Các thay đổi online/Byo-yomi đã có trước tác vụ được giữ nguyên.
+
+- Bỏ Card, CharacterCard, SupportCard, ElementPointBar và CountdownClock cũ; giữ GameClock và PlayerPanel đang dùng.
+- Bỏ Loading/Popup, GameIcon/GameImage, GameBackground và GamePanel ở layout. Login dùng duy nhất GamePanel trong controls, loại bỏ trùng tên.
+- Bỏ Constants không có consumer, GamemodeScreen chưa nối vào navigation, các file AI/Board/UI/Enums.cpp rỗng hoặc chỉ chứa khung.
+- Bỏ `server/main.qml` và bản test cũ `server/test/Intergration.cpp`; giữ đủ bốn test thực trong `server/tests/`.
+- Gỡ file đã xóa khỏi CMake và import layout khỏi các màn hình; bỏ dependency Qt Multimedia vì không có code audio hiện tại, bỏ tìm Quick lặp và resource SQLite root không được đọc. Dữ liệu tài khoản ở AppDataLocation giữ nguyên.
+- Bỏ object AssetManager khởi tạo thừa ở main (QML singleton tự quản lý), macro Debug không dùng, include Multimedia thừa và mapping font không có consumer. Typography vẫn dùng font hiện có.
+- Bỏ SubmitDeck, GameEventType và GameStage của template; EnumUtils chỉ giữ hai chuyển enum → string đang dùng. Bỏ các parser enum/helper protocol không có consumer hoặc chỉ khai báo: ErrorPayload, SubmitDeck, ChooseActiveCharacter, SwitchCharacter, UseSkill, PlayCard, EndRound wrapper, hai helper JSON nội bộ.
+- Matchmaking chỉ nhận `mode`, không còn `deckId`. Play helper chỉ nhận `matchId`, `row`, `col`. Cập nhật mọi caller và test Players theo API này.
+- Bỏ GameManager `play()` không làm gì, `endRound()` wrapper không được gọi, getter board_state/opponentName và signal/stage state không có consumer. Giữ snapshot, interaction/board/turn notifications, pass_turn và submit đang dùng.
+- Bỏ Server `stop`/`address` không có caller và selection timeout của template; destructor vẫn dừng timer/socket. Không đổi protocol snapshot của server.
+- Dọn design token Motion/Radius/Spacing/Theme không được component hiện tại dùng; đổi chữ TCG ở menu thành GoGame và `deckError` thành `matchmakingError`. Bỏ nút AI chưa có hành động; kế hoạch AI vẫn giữ bên dưới.
+- Bỏ tạo ba deck JSON khi đăng ký; ghi `{}` vào cột SQLite `decks` cũ để tương thích database có sẵn. Không xóa dữ liệu hay migrate schema trong tác vụ này.
+- Thêm `scripts/server_stats.py` để tái đếm dòng/ký tự. Giữ ảnh/avatar/font hiện có làm tài nguyên dự án và kế hoạch customization.
+
+Các file đã xóa:
+
+- `qml/Components/cards/Card.qml`
+- `qml/Components/cards/CharacterCard.qml`
+- `qml/Components/cards/SupportCard.qml`
+- `qml/Components/battle/ElementPointBar.qml`
+- `qml/Components/battle/CountdownClock.qml`
+- `qml/Components/common/Loading.qml`
+- `qml/Components/common/Popup.qml`
+- `qml/Components/controls/GameIcon.qml`
+- `qml/Components/controls/GameImage.qml`
+- `qml/Components/layout/GameBackground.qml`
+- `qml/Components/layout/GamePanel.qml`
+- `qml/Core/Constants.qml`
+- `qml/Screens/GamemodeScreen.qml`
+- `src/Core/AI.cpp`
+- `src/Core/AI.h`
+- `src/Core/Enums.cpp`
+- `src/Models/Board.cpp`
+- `src/Models/Board.h`
+- `src/Models/UI.cpp`
+- `src/Models/UI.h`
+- `server/main.qml`
+- `server/test/Intergration.cpp`
+
+## Dòng và ký tự của server
+
+Đếm **mã server hiện tại**, không suy đoán số ký tự do riêng chủ dự án gõ: lịch sử có thay đổi của người và AI, Git author không chứng minh tác giả của từng ký tự. Mỗi dòng vật lý tính bằng `splitlines()` (kể cả dòng trống/comment); ký tự tính Unicode code points sau decode UTF-8, gồm khoảng trắng và xuống dòng, không phải byte. Không tính README, JSON dữ liệu, client code, file build hoặc script thống kê.
+
+| File / phạm vi | Dòng | Ký tự |
+| --- | ---: | ---: |
+| `server/main.cpp` | 42 | 1,665 |
+| `server/Server.h` | 77 | 2,777 |
+| `server/Server.cpp` | 580 | 18,973 |
+| `server/GoMatch.h` | 20 | 428 |
+| `server/GoMatch.cpp` | 84 | 2,905 |
+| `server/ByoYomiClock.h` | 38 | 1,378 |
+| **Runtime .cpp/.h** | **841** | **28,126** |
+| Tests (4 file .cpp) | 395 | 21,815 |
+| server/CMakeLists.txt | 41 | 1,983 |
+| **Runtime + tests + CMake** | **1,277** | **51,924** |
+
+Runtime trước dọn: 885 dòng / 29.272 ký tự; sau dọn giảm 44 dòng / 1.146 ký tự. Đây là chênh lệch đầu/cuối tác vụ, không so với HEAD (working tree đã có thay đổi trước đó).
+
+Chạy lại thống kê khi server thay đổi:
+
+```bash
+python3 scripts/server_stats.py
+```
 
 ## Cấu trúc file hiện tại
 
@@ -150,6 +215,33 @@ Toàn bộ file mã nguồn/tài nguyên và thư mục rỗng hiện có đư�
 GoGame/
 ├── .agents/
 ├── .aws/
+├── .cache/
+│   └── clangd/
+│       └── index/
+│           ├── .gitignore
+│           ├── AI.cpp.4E17C31F7974B5FF.idx
+│           ├── AssetManager.h.AD84910C2506BD0F.idx
+│           ├── AuthManager.cpp.4E081B7E22E49ED9.idx
+│           ├── AuthManager.h.355273112F6E7ADA.idx
+│           ├── Board.cpp.EE2C4218E85A5C17.idx
+│           ├── Enums.h.DA031E0D910F3FFB.idx
+│           ├── Enumutils.cpp.3B1DA0BA1C8CF8BD.idx
+│           ├── Enumutils.h.F79FE42F007ACA52.idx
+│           ├── Game.cpp.A55E6ED5908CF8C8.idx
+│           ├── Game.h.290119D6A4FD0010.idx
+│           ├── GoMatch.h.B601810E97098950.idx
+│           ├── Integration.cpp.500A2BFCCE88B845.idx
+│           ├── MatchmakingManager.cpp.FFB6A3A0C05AB22C.idx
+│           ├── MatchmakingManager.h.20A7300CFB34F87D.idx
+│           ├── NetworkClient.cpp.581BAFBC786E9B0E.idx
+│           ├── NetworkClient.h.9D3C13B4CBC6DD91.idx
+│           ├── Protocol.cpp.1408598CB1820C84.idx
+│           ├── Protocol.h.1FC09BF6E61449A2.idx
+│           ├── Server.cpp.DD6C1D482EAE20BF.idx
+│           ├── Server.h.DC4431FD042675DE.idx
+│           ├── UI.cpp.8D0D7D51C00009F2.idx
+│           ├── main.cpp.09E654D3744D22E9.idx
+│           └── main.cpp.65773C1C417C5788.idx
 ├── .codex/
 ├── .git/ [thu gọn: Git/IDE/file build]
 ├── .qtcreator/ [thu gọn: Git/IDE/file build]
@@ -188,27 +280,13 @@ GoGame/
 ├── qml/
 │   ├── Components/
 │   │   ├── battle/
-│   │   │   ├── CountdownClock.qml
-│   │   │   ├── ElementPointBar.qml
+│   │   │   ├── GameClock.qml
 │   │   │   └── PlayerPanel.qml
-│   │   ├── cards/
-│   │   │   ├── Card.qml
-│   │   │   ├── CharacterCard.qml
-│   │   │   └── SupportCard.qml
-│   │   ├── common/
-│   │   │   ├── Loading.qml
-│   │   │   └── Popup.qml
-│   │   ├── controls/
-│   │   │   ├── GameButton.qml
-│   │   │   ├── GameIcon.qml
-│   │   │   ├── GameImage.qml
-│   │   │   ├── GamePanel.qml
-│   │   │   └── GameText.qml
-│   │   └── layout/
-│   │       ├── GameBackground.qml
-│   │       └── GamePanel.qml
+│   │   └── controls/
+│   │       ├── GameButton.qml
+│   │       ├── GamePanel.qml
+│   │       └── GameText.qml
 │   ├── Core/
-│   │   ├── Constants.qml
 │   │   ├── Motion.qml
 │   │   ├── Radius.qml
 │   │   ├── SceneManager.qml
@@ -216,32 +294,33 @@ GoGame/
 │   │   ├── Theme.qml
 │   │   └── Typography.qml
 │   ├── Screens/
-│   │   ├── Board.qml
 │   │   ├── LoginScreen.qml
 │   │   ├── MainMenu.qml
+│   │   ├── MatchScreen.qml
 │   │   └── SettingsScreen.qml
+│   ├── Singletons/
+│   │   └── AppState.qml
 │   └── Themes/
+├── scripts/
+│   └── server_stats.py
 ├── server/
 │   ├── data/
 │   │   └── state.json
-│   ├── test/
-│   │   └── Intergration.cpp
 │   ├── tests/
+│   │   ├── Clock.cpp
 │   │   ├── GoCommands.cpp
-│   │   └── Integration.cpp
+│   │   ├── Integration.cpp
+│   │   └── Players.cpp
+│   ├── ByoYomiClock.h
 │   ├── CMakeLists.txt
 │   ├── GoMatch.cpp
 │   ├── GoMatch.h
 │   ├── README.md
 │   ├── Server.cpp
 │   ├── Server.h
-│   ├── main.cpp
-│   └── main.qml
+│   └── main.cpp
 ├── src/
 │   ├── Core/
-│   │   ├── AI.cpp
-│   │   ├── AI.h
-│   │   ├── Enums.cpp
 │   │   ├── Enums.h
 │   │   ├── Enumutils.cpp
 │   │   ├── Enumutils.h
@@ -255,11 +334,6 @@ GoGame/
 │   │   ├── AuthManager.h
 │   │   ├── MatchmakingManager.cpp
 │   │   └── MatchmakingManager.h
-│   ├── Models/
-│   │   ├── Board.cpp
-│   │   ├── Board.h
-│   │   ├── UI.cpp
-│   │   └── UI.h
 │   └── Network/
 │       ├── NetworkClient.cpp
 │       ├── NetworkClient.h
@@ -273,28 +347,28 @@ GoGame/
 └── users.sqlite
 ```
 
-`server/Server.*` quản lý transport, client, queue, match và clock; `server/GoMatch.*` quản lý luật/bàn cờ. `src/` là phía client. `qml/Core/` chứa scene/theme/token giao diện; `qml/Components/` chứa các component dùng lại. Hai `GamePanel.qml` ở controls và layout hiện cùng tồn tại. `server/test/Intergration.cpp` là bản cũ, không được CMake chạy; test hiện tại ở `server/tests/`. `server/main.qml` cũng là file khung không được server console nạp.
+`server/Server.*` quản lý kết nối/queue/match; `GoMatch.*` chứa luật; `ByoYomiClock.h` chứa time control. `src/` là client, `qml/` là UI; `scripts/` chứa script đo source. Các thư mục tài nguyên trống được giữ cho kế hoạch âm thanh/quân cờ.
 
 ## Kiểm tra
 
 ```bash
+ctest --test-dir build/local/server --output-on-failure
+# Nếu build riêng server:
 ctest --test-dir build/server --output-on-failure
 ```
 
-`goCommands` kiểm tra luật, auth/queue, thành viên, lượt, tọa độ, snapshot theo người nhận, clock/deadline, pass/kết quả và đầu hàng. `serverIntegration` kiểm tra file JSON, WebSocket, restart, message sai và reconnect. Các test dùng localhost cổng 24509/24510 và dữ liệu tạm; không dùng file dữ liệu thật. Có thể tắt test khi configure bằng `-DBUILD_TESTING=OFF`.
-
-Review ngày 13/10/2026: build server sạch ở `build/review-server` thành công, CTest đạt **2/2**. Kết quả build/chạy client sẽ ghi trong nhật ký bên dưới; build thành công không đồng nghĩa chơi online UI đã hoàn thiện.
+Sau cleanup ngày 13/10/2026, root build sạch `build/cleanup` thành công (client + server). **4/4 test đạt**: `byoYomiClock`, `players`, `goCommands`, `serverIntegration`. Test bao gồm ranh giới/hồi giờ Byo-yomi, đồng bộ hai GameManager, capture, pass, đầu hàng, rematch, disconnect, luật/giao thức và file JSON/restart. Test dùng dữ liệu tạm và localhost cổng 24509–24512. Không thêm test chỉ để kiểm tra file đã xóa.
 
 ## Kế hoạch phát triển
 
-### 1. Hoàn thiện Board.qml trước
+### 1. Hoàn thiện MatchScreen.qml trước
 
-- [ ] Ưu tiên `qml/Screens/Board.qml`.
+- [ ] Ưu tiên `qml/Screens/MatchScreen.qml`.
 - [x] Hoàn thiện UI bàn đấu: ô hiện tên người chơi và avatar.
 - [x] Hoàn thành logic đồng hồ đếm ngược phía client.
 - [x] Server quản lý thời gian mỗi người chơi và gửi deadline trong snapshot.
-- [ ] **Bước tiếp theo: nối snapshot và đồng hồ server vào UI client.**
-- [ ] Có thể bổ sung đồng hồ của đối thủ.
+- [x] Nối snapshot và đồng hồ server vào UI client bằng GameClock.
+- [x] Hiển thị đồng hồ của đối thủ.
 - [ ] Cân nhắc thu nhỏ layout bàn cờ để có thêm không gian cho chế độ chơi; đây là ý tưởng có thể làm sau.
 
 ### 2. Đặt quân bằng hai lần nhấn
@@ -338,7 +412,7 @@ Review ngày 13/10/2026: build server sạch ở `build/review-server` thành c�
 ### 9. Đấu với người qua JSON
 
 - [x] Server gửi JSON snapshot chứa bàn cờ, số nước, lượt và thời gian.
-- [ ] Client áp dụng snapshot và gửi lệnh thay cho thay đổi bàn cờ local.
+- [x] Client áp dụng snapshot và gửi lệnh thay cho thay đổi bàn cờ local.
 - [ ] Lưu trạng thái trận/replay riêng; hiện trận chỉ nằm trong bộ nhớ, file JSON chưa lưu trận tự động.
 
 ### 10. Xem lại ván đấu
@@ -583,3 +657,16 @@ Kết quả: review kiến trúc client/server, giao thức, luật, clock, auth
 Kiểm tra: build server sạch `build/review-server`, CTest đạt 2/2 (`goCommands`, `serverIntegration`); test snapshot mới xác nhận perspective, identities, board metadata, clock/deadline và trạng thái cuối. Build client sạch `build/review-client` thành công; còn cảnh báo Qt policy và file khung rỗng. Kiểm tra runtime offscreen được ghi bổ sung sau khi chạy; chưa kiểm tra thao tác online bằng UI.
 
 Runtime smoke: client offscreen chạy trong 3 giây và bị dừng bằng timeout (exit 124), không có output được ghi nhận; kiểm tra này chưa xác nhận các binding QML hoặc tương tác UI hoạt động. Các vấn đề UI nêu trên được xác định từ review mã nguồn.
+
+
+### 13/10/2026 — Dọn thành phần không dùng và thống kê server
+
+Nội dung prompt của người dùng:
+
+```text
+Remove unused element, component, function in the project. Rewrite README.md which contains all changes count how many character and lines I wrote for this server.
+```
+
+Kết quả: xóa 22 file không dùng; dọn API, enum, signal, helper, design token, import và cấu hình build; giữ online/Byo-yomi đang phát triển, tài nguyên và dữ liệu tài khoản. Viết lại trạng thái README, ghi đầy đủ nhóm thay đổi, cây file, kế hoạch còn lại và bảng đo server. Runtime hiện 841 dòng/28.126 ký tự; gồm tests và CMake là 1.277 dòng/51.924 ký tự. Không gán toàn bộ số liệu này cho riêng tác giả người dùng; thêm script tái đếm. Root build và bốn test đạt; kiểm tra build server riêng/runtime UI được ghi bổ sung sau khi hoàn tất.
+
+Kiểm tra bổ sung: build server riêng `build/cleanup-server` thành công. Client offscreen chạy 5 giây rồi được dừng bằng timeout (exit 124), không có output; đây chỉ là smoke attempt, chưa xác nhận thao tác/render UI. Không commit hoặc push trong tác vụ cleanup.

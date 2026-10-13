@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
 Item {
 
@@ -12,6 +11,5 @@ Item {
         anchors.fill: parent
 
         initialItem: "../Screens/LoginScreen.qml"
-        //initialItem: "../Screens/Board.qml"
     }
 }

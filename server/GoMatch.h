@@ -8,7 +8,7 @@ public:
     GoMatch();
     bool play(int row, int col, QString &error);
     void pass();
-    double score() const; // Black area - white area - 6.5 komi.
+    double score() const;
     QJsonArray state() const;
     int currentPlayer = 0;
     int moveCount = 0;

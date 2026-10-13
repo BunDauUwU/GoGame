@@ -6,12 +6,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.2 COMPONENTS Quick Sql REQUIRED)
-find_package(Qt6 6.2 COMPONENTS Quick REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS WebSockets)
 find_package(Qt6 REQUIRED COMPONENTS
     Core
     Gui
-    Multimedia
 )
 
 qt_add_executable(appGoGame
@@ -20,7 +18,6 @@ qt_add_executable(appGoGame
 
 set_source_files_properties(
     qml/Singletons/AppState.qml
-    qml/Core/Constants.qml
     qml/Core/Motion.qml
     qml/Core/Radius.qml
     qml/Core/Spacing.qml
@@ -58,7 +55,6 @@ qt_add_qml_module(appGoGame
         qml/Singletons/AppState.qml
 
         # Core
-        qml/Core/Constants.qml
         qml/Core/Motion.qml
         qml/Core/Radius.qml
         qml/Core/SceneManager.qml
@@ -67,29 +63,13 @@ qt_add_qml_module(appGoGame
         qml/Core/Typography.qml
 
         # Components: Battle
+        qml/Components/battle/GameClock.qml
         qml/Components/battle/PlayerPanel.qml
-        qml/Components/battle/CountdownClock.qml
-        qml/Components/battle/ElementPointBar.qml
-
-        # Components: Cards
-        qml/Components/cards/Card.qml
-        qml/Components/cards/CharacterCard.qml
-        qml/Components/cards/SupportCard.qml
-
-        # Components: Common
-        qml/Components/common/Loading.qml
-        qml/Components/common/Popup.qml
 
         # Components: Controls
         qml/Components/controls/GameButton.qml
-        qml/Components/controls/GameIcon.qml
-        qml/Components/controls/GameImage.qml
         qml/Components/controls/GamePanel.qml
         qml/Components/controls/GameText.qml
-
-        # Components: Layout
-        qml/Components/layout/GameBackground.qml
-        qml/Components/layout/GamePanel.qml
 
         # Screens
         qml/Screens/SettingsScreen.qml
@@ -101,8 +81,6 @@ qt_add_qml_module(appGoGame
         main.cpp
 
         # Core
-        src/Core/AI.cpp
-        src/Core/AI.h
         src/Core/Game.cpp
         src/Core/Game.h
         src/Core/Enums.h
@@ -117,12 +95,6 @@ qt_add_qml_module(appGoGame
         src/Managers/MatchmakingManager.h
         src/Managers/MatchmakingManager.cpp
 
-        # Models
-        src/Models/Board.cpp
-        src/Models/Board.h
-        src/Models/UI.cpp
-        src/Models/UI.h
-
         # Network
         src/Network/NetworkClient.cpp
         src/Network/NetworkClient.h
@@ -130,7 +102,6 @@ qt_add_qml_module(appGoGame
         src/Network/Protocol.h
 
     RESOURCES
-        users.sqlite
         ${GAME_ASSETS}
 )
 
@@ -153,7 +124,6 @@ target_link_libraries(appGoGame
     PRIVATE
         Qt6::Core
         Qt6::Gui
-        Qt6::Multimedia
         Qt6::Quick
         Qt6::Qml
         Qt6::Network

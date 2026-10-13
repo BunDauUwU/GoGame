@@ -1,35 +1,7 @@
 // src/Network/Protocol.cpp
 #include "Protocol.h"
 
-#include <QJsonDocument>
-
 #include "../Core/Enumutils.h"
-
-namespace {
-
-QJsonArray stringListToJsonArray(const QStringList& values)
-{
-    QJsonArray array;
-
-    for (const QString& value : values) {
-        array.append(value);
-    }
-
-    return array;
-}
-
-QJsonObject variantMapToJsonObject(const QVariantMap& values)
-{
-    QJsonObject object;
-
-    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-        object.insert(it.key(), QJsonValue::fromVariant(it.value()));
-    }
-
-    return object;
-}
-
-}
 
 namespace Protocol {
 
@@ -42,15 +14,6 @@ QJsonObject makeEnvelope(NetworkMessageType type, const QJsonObject& payload)
     return message;
 }
 
-QJsonObject makeErrorPayload(const QString& code, const QString& message)
-{
-    QJsonObject payload;
-    payload["code"] = code;
-    payload["message"] = message;
-
-    return payload;
-}
-
 QJsonObject makeAuthRequest(const QString& nickname)
 {
     QJsonObject payload;
@@ -60,11 +23,10 @@ QJsonObject makeAuthRequest(const QString& nickname)
     return makeEnvelope(NetworkMessageType::AuthRequest, payload);
 }
 
-QJsonObject makeStartMatchmaking(const QString& mode, const QString& deckId)
+QJsonObject makeStartMatchmaking(const QString& mode)
 {
     QJsonObject payload;
     payload["mode"] = mode;
-    payload["deckId"] = deckId;
 
     return makeEnvelope(NetworkMessageType::MatchmakingStart, payload);
 }
@@ -72,20 +34,6 @@ QJsonObject makeStartMatchmaking(const QString& mode, const QString& deckId)
 QJsonObject makeCancelMatchmaking()
 {
     return makeEnvelope(NetworkMessageType::MatchmakingCancel, QJsonObject{});
-}
-
-QJsonObject makeSubmitDeck(
-    const QString& deckId,
-    const QStringList& characterIds,
-    const QStringList& cardIds
-    )
-{
-    QJsonObject payload;
-    payload["deckId"] = deckId;
-    payload["characters"] = stringListToJsonArray(characterIds);
-    payload["cards"] = stringListToJsonArray(cardIds);
-
-    return makeEnvelope(NetworkMessageType::SubmitDeck, payload);
 }
 
 QJsonObject makeGameCommand(
@@ -102,14 +50,10 @@ QJsonObject makeGameCommand(
     return makeEnvelope(NetworkMessageType::GameCommand, payload);
 }
 
-QJsonObject makeEndRoundCommand(const QString& matchId)
-{
-    return makeGameCommand(
-        matchId,
-        GameCommandType::EndRound,
-        QJsonObject{}
-        );
+QJsonObject makePlayCommand(const QString &matchId, int row, int col) {
+    return makeGameCommand(matchId, GameCommandType::Play, {{"row", row}, {"col", col}});
 }
+
 
 QString readMessageType(const QJsonObject& message)
 {

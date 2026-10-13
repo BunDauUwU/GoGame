@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "../Components/controls"
-import "../Components/layout"
 import "../Core"
 import GoGame
 
@@ -10,7 +9,7 @@ Rectangle {
     id: mainMenuRoot
     implicitWidth: 1280
     implicitHeight: 720
-    property string deckError: ""
+    property string matchmakingError: ""
 
     // ==========================================
     // LOGIC & CONNECTIONS (Đặt ngoài hệ thống bố cục)
@@ -28,7 +27,7 @@ Rectangle {
         }
 
         function onMatchmakingError(message) {
-            mainMenuRoot.deckError = message;
+            mainMenuRoot.matchmakingError = message;
         }
     }
 
@@ -81,7 +80,7 @@ Rectangle {
         }
 
         Text {
-            text: "LUMIE TCG"
+            text: "GoGame"
             font.pixelSize: 64
             font.bold: true
             color: "white"
@@ -91,7 +90,7 @@ Rectangle {
         }
 
         Text {
-            text: "The Card Adventure"
+            text: "The Go Adventure"
             font.pixelSize: 22
             color: "#D8D8D8"
             font.italic: true
@@ -186,21 +185,12 @@ Rectangle {
         }
 
         Text {
-            text: mainMenuRoot.deckError
+            text: mainMenuRoot.matchmakingError
             color: "#F87171"
             font.pixelSize: 14
             wrapMode: Text.WordWrap
             width: 240
             visible: text.length > 0
-        }
-
-        GameButton {
-            height: 60
-            width: 400
-            text: "Play against AI"
-            onClicked: {
-                console.log("Matchmaking action triggered");
-            }
         }
 
         GameButton {
@@ -213,8 +203,8 @@ Rectangle {
                 if (matchmakingManager.searching) {
                     matchmakingManager.cancelMatchmaking();
                 } else {
-                    mainMenuRoot.deckError = "";
-                    matchmakingManager.startMatchmaking("Go", "");
+                    mainMenuRoot.matchmakingError = "";
+                    matchmakingManager.startMatchmaking("Go");
                 }
             }
         }
