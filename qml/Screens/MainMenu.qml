@@ -121,7 +121,6 @@ Rectangle {
             enabled: !networkClient.connected
             hoverEnabled: true
 
-            // Bounce when pressed and released
             scale: pressed ? 0.94 : 1.0
 
             Behavior on scale {
@@ -137,7 +136,6 @@ Rectangle {
                 reconnectTimer.restart();
             }
 
-            // Show a hand cursor when the button is clickable
             HoverHandler {
                 cursorShape: connectionStatusButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
             }
