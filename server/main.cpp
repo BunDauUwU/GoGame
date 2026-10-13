@@ -4,6 +4,10 @@
 #include <QCoreApplication>
 #include <cstdio>
 
+class LumieServer {
+
+};
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);

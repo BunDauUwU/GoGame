@@ -1,31 +1,196 @@
 # GoGame
 
-Dự án game cờ vây dùng C++ và Qt 6/QML. Giao diện nằm trong `qml/`, logic game và kết nối mạng nằm trong `src/`. Điểm khởi chạy là `main.cpp`, nạp giao diện `main.qml` và cung cấp các đối tượng game, xác thực, ghép trận, mạng cho QML.
+Game cờ vây C++/Qt 6: client Qt Quick/QML và server console WebSocket. Tài liệu được viết lại sau khi review ngày **13/10/2026**. Server đã xử lý ván cờ; client hiện vẫn chơi local, chưa hoàn tất luồng chơi online từ UI.
 
-README ghi lại cấu trúc hiện tại và kế hoạch phát triển; các mục dự định bên dưới chưa được xem là tính năng đã hoàn thiện. `src/Core/AI.h` và `AI.cpp` hiện mới là file khung.
+## Chạy dự án
 
-## 1. Cấu trúc file hiện tại
+Cần CMake ≥ 3.16, compiler C++17 cho server và Qt 6 với Core, Gui, Quick/QML, Network, WebSockets, Sql, Multimedia. CMake khai báo Qt ≥ 6.2; client dùng `QWebSocket::errorOccurred`, nên kit Qt phải cung cấp signal này (kit cũ có thể cần điều chỉnh code).
 
-Cập nhật ngày 12/10/2026. Liệt kê toàn bộ file mã nguồn, tài nguyên và thư mục rỗng hiện có. Nội dung `.git/`, `build/` và `.qtcreator/` được thu gọn vì là dữ liệu quản lý phiên bản, sản phẩm build và cấu hình IDE sinh tự động; các thư mục này vẫn được đánh dấu trong cây.
+Tại thư mục gốc, mở **terminal riêng cho server**:
+
+```bash
+cmake -S server -B build/server
+cmake --build build/server --parallel 3
+./build/server/appserver --data-file server/data/state.json
+```
+
+**Giữ terminal này chạy trong khi dùng client.** Server nghe `ws://127.0.0.1:14509`, dừng bằng `Ctrl+C`. Nếu CMake chưa tìm được Qt, thêm `-DCMAKE_PREFIX_PATH=/duong/dan/toi/Qt` khi configure. File chưa tồn tại được tạo bằng `{}`; file hỏng khiến server dừng và giữ nguyên dữ liệu.
+
+Mở terminal khác cho client:
+
+```bash
+cmake -S . -B build/local
+cmake --build build/local --parallel 3
+GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/local/appGoGame
+```
+
+Có thể mở `CMakeLists.txt` bằng Qt Creator. Root build cũng thêm target server bằng `add_subdirectory(server)`; không cần chạy thêm server nếu terminal server đã hoạt động. Client tự kết nối khi mở, nhưng `SceneManager.qml` đang mở trực tiếp Board local, bỏ qua màn hình đăng nhập/menu. Chạy hai cửa sổ client **chưa đủ để chơi online** cho tới khi hoàn thành các mục tích hợp bên dưới.
+
+## Kiến trúc và tương tác
+
+```mermaid
+flowchart LR
+    UI[QML Screens / Components] --> Game[GameManager]
+    UI --> Auth[AuthManager / SQLite local]
+    UI --> Queue[MatchmakingManager]
+    Game --> Protocol[Protocol / NetworkClient]
+    Auth --> Protocol
+    Queue --> Protocol
+    Protocol <-->|WebSocket JSON| Server[Server]
+    Server --> Rules[GoMatch: luật / bàn cờ]
+    Server --> Clock[QTimer / thời gian monotonic]
+    Server <-->|ReadData / WriteData| File[state.json]
+    Server -->|snapshot / event / error| Protocol
+    Protocol -->|messageReceived| Game
+    Protocol -->|messageReceived| Auth
+    Protocol -->|messageReceived| Queue
+```
+
+Luồng dưới đây là giao thức server đã có và luồng UI cần hoàn thiện. Client đã có lớp transport/managers; thao tác đặt quân/pass từ Board vẫn chạy local.
+
+```mermaid
+sequenceDiagram
+    participant A as Client A
+    participant S as Server
+    participant B as Client B
+    A->>S: WebSocket connect + AuthRequest(nickname)
+    S-->>A: AuthResult(playerId, nickname)
+    B->>S: WebSocket connect + AuthRequest(nickname)
+    S-->>B: AuthResult
+    A->>S: MatchmakingStart(mode)
+    S-->>A: MatchmakingStatus
+    B->>S: MatchmakingStart(same mode)
+    S-->>B: MatchmakingStatus
+    S-->>A: MatchFound(playerIndex=0, opponentName)
+    S-->>B: MatchFound(playerIndex=1, opponentName)
+    S-->>A: GameSnapshot(self.playerIndex=0)
+    S-->>B: GameSnapshot(self.playerIndex=1)
+    A->>A: Preview local, chưa gửi lệnh
+    A->>S: GameCommand(Play, row, col) khi xác nhận
+    S->>S: Kiểm tra thành viên, lượt, đồng hồ, luật
+    alt Nước hợp lệ
+        S-->>A: GameEvent(StonePlayed)
+        S-->>B: GameEvent(StonePlayed)
+        S-->>A: GameSnapshot mới
+        S-->>B: GameSnapshot mới
+    else Sai lượt / sai vị trí / sai luật
+        S-->>A: Error(code, message)
+    end
+    B->>S: GameCommand(EndRound / Concede)
+    Note over A,B: EndRound = pass trong cờ vây
+    S->>S: Hai pass / đầu hàng / hết giờ / ngắt kết nối
+    S-->>A: GameEvent(GameEnded)
+    S-->>B: GameEvent(GameEnded) nếu còn kết nối
+    S-->>A: GameSnapshot(stage=GameEnd, deadline=0)
+    S-->>B: GameSnapshot cuối nếu còn kết nối
+```
+
+Server là nguồn quyết định bàn cờ online, lượt và thời gian. Preview chỉ là UI; client cần chờ snapshot sau khi gửi lệnh xác nhận. Luồng `ReadData`/`WriteData` độc lập với trận đấu; hiện không dùng để đồng bộ hoặc tự lưu các match.
+
+## Giao thức JSON và sendSnapshot
+
+Mọi text message dùng envelope `{"type":"...","payload":{...}}`. Binary không được hỗ trợ; giới hạn message nhận 1 MiB.
+
+| Client → server | Payload | Server → client |
+| --- | --- | --- |
+| `AuthRequest` | `nickname` (1–17 ký tự sau trim) | `AuthResult` với `success`, `playerId`, `nickname`; nickname sai hiện trả `Error`. |
+| `MatchmakingStart` | `mode`; `deckId` của template bị bỏ qua | `MatchmakingStatus`, sau đó `MatchFound` và snapshot khi đủ 2 người cùng mode. |
+| `MatchmakingCancel` | `{}` | `MatchmakingStatus`. |
+| `GameCommand` | `matchId`, `commandType`, `command` | `GameEvent` + snapshot, hoặc `Error`. |
+| `ReadData` | `{}` | `Data` chứa `data`. |
+| `WriteData` | `data` là JSON object | `DataWritten` với `ok: true`, hoặc `Error`. Thay toàn bộ file. |
+
+Ví dụ đặt quân tại hàng 0, cột 0:
+
+```json
+{"type":"GameCommand","payload":{"matchId":"<id từ MatchFound>","commandType":"Play","command":{"row":0,"col":0}}}
+```
+
+`Play` yêu cầu tọa độ nguyên 0–18; `EndRound` là pass và `Concede` là đầu hàng, cả hai dùng `command: {}`. Đầu hàng được phép ngoài lượt; đặt quân/pass chỉ được thực hiện đúng lượt. Các lệnh nhân vật, card, skill trong template không được server Go hỗ trợ.
+
+`Server::sendSnapshot(socket, match)` tạo payload riêng cho mỗi người; overload `sendSnapshot(match)` gửi tới cả hai socket. Bàn cờ và thời gian công khai giống nhau, `self.playerIndex` theo người nhận.
+
+| Trường snapshot | Ý nghĩa |
+| --- | --- |
+| `matchId`, `stage`, `started` | ID trận, `Action` khi chơi hoặc `GameEnd` khi kết thúc. |
+| `boardSize`, `board` | 19 và mảng 361 ô theo `row * 19 + col`; `-1` trống, `0` đen, `1` trắng. |
+| `moveCount`, `consecutivePasses` | Số lượt đã qua (kể cả pass), số pass liên tiếp. |
+| `currentPlayerIndex`, `komi` | Người đến lượt; komi trắng 6,5. |
+| `remainingMs` | Mảng thời gian đen/trắng tại lúc snapshot, giữ tương thích payload cũ. |
+| `players` | Mỗi người có `playerId`, `nickname`, `playerIndex`, `color`, `remainingTimeMs`. |
+| `self.playerIndex` | 0 hoặc 1; không có dữ liệu card/hand riêng. |
+| `serverTimeEpochMs` | Thời điểm server tạo snapshot để client ước lượng lệch đồng hồ. |
+| `actionDeadlineEpochMs` | Epoch khi **tổng thời gian còn lại của người đang đi** hết; bằng 0 khi trận kết thúc. |
+| `winnerIndex`, `endReason` | `-1`/chuỗi rỗng khi đang chơi; người thắng và lý do khi kết thúc. |
+
+Mỗi bên có 600000 ms (10 phút). Server dùng thời gian monotonic để trừ clock và QTimer kiểm tra tối đa mỗi 30 giây; **30 giây không phải giới hạn mỗi nước**. Epoch deadline chỉ phục vụ UI. Snapshot gửi khi ghép trận, sau nước hợp lệ/pass và lúc kết thúc; không phát mỗi giây. Client cần tự animate countdown từ snapshot và hiệu chỉnh khi có snapshot mới. Không có round/weather/replacement/characters/elementPoints/deck/hand vì mô hình hiện tại là cờ vây. Đồng hồ cuối được đóng băng trước khi gửi snapshot kết thúc.
+
+## Kết quả review: đã có và còn thiếu
+
+| Phần | Đã có | Còn thiếu / vấn đề |
+| --- | --- | --- |
+| Server | Kết nối, guest nickname, hàng chờ theo mode, nhiều match tách bàn cờ, kiểm tra thành viên và lượt. | Mode chưa validate danh sách cho phép; guest chưa xác thực tài khoản thật. |
+| Luật | Ăn quân, tự sát, simple ko, pass, đầu hàng, hai pass tính diện tích với komi 6,5. | Superko, thỏa thuận quân chết, kiểm thử sâu các tình huống tính điểm; chưa xem là luật Trung/Nhật hoàn chỉnh. |
+| Clock / snapshot | Thời gian server, hết giờ, snapshot từng người, deadline, kết quả cuối. | Bind và hiển thị đồng hồ của mình/đối thủ trong QML. |
+| GameManager | Bàn cờ local, preview validation, đặt quân, pass; nhận/store snapshot và phát signal. | `snapshot` chưa có Q_PROPERTY cho QML; snapshot chưa cập nhật `boardState`/`currentPlayer`; Board đặt quân/pass local thay vì gửi `GameCommand`. |
+| Board.qml | Grid 19×19, preview hai lần nhấn/nhấp nháy, báo lỗi, flip theo màu, avatar/name panel, background. | Clock còn tham chiếu `root.finished`, `root.me`, `selfPlayer`, `root.gameSecondsLeft` chưa khai báo ở Board; tên/avatar còn hardcode; chưa nối Error server vào thông báo UI. |
+| Auth | Client đăng ký/đăng nhập SQLite local, gửi nickname khi login lúc đang kết nối. | Server chỉ guest; reconnect không tự gửi lại AuthRequest. DB thực ở AppDataLocation, không phải file `users.sqlite` ở root. |
+| Menu / template | Manager matchmaking gửi/nhận JSON, MatchFound cập nhật match info. | MainMenu còn `deckManager` chưa được cung cấp; card components còn `assetsManager`; một số helper card/character ở Protocol.h chỉ khai báo. |
+| Settings / models / AI | Có file và khung tổ chức. | SettingsScreen còn rỗng; Board/UI models và AI còn file rỗng. Preview toggle mới là property, chưa có UI settings/lưu lựa chọn. |
+| Lưu dữ liệu | ReadData/WriteData bằng QSaveFile. | Match chỉ ở RAM; không replay, tự lưu match, phục hồi sau restart hay reconnect vào trận. Socket mất kết nối xử thua ngay. ReadData/WriteData hiện không phân quyền. |
+| Tài nguyên | Font, 3 background, avatar; AssetManager singleton cho background/font. | Thiếu nhạc, âm thanh đặt quân/báo lỗi; đường dẫn asset card template chưa được giải quyết. |
+
+Ưu tiên tích hợp: expose snapshot cho QML và áp dụng board/lượt → gửi Play/EndRound/Concede từ client online → sửa binding clock và tên người chơi → dọn menu/auth reconnect → lưu trận/replay. Giữ đường chơi local rõ ràng khi tích hợp để không dùng logic local quyết định kết quả online.
+
+## Cấu trúc file hiện tại
+
+Toàn bộ file mã nguồn/tài nguyên và thư mục rỗng hiện có được liệt kê. `.git/`, `.qtcreator/`, `build/` thu gọn vì là dữ liệu Git/IDE hoặc file sinh khi build.
 
 ```text
 GoGame/
 ├── .agents/
 ├── .aws/
 ├── .codex/
-├── .git/  [nội dung Git / file sinh tự động, thu gọn]
-├── .qtcreator/  [nội dung Git / file sinh tự động, thu gọn]
+├── .git/ [thu gọn: Git/IDE/file build]
+├── .qtcreator/ [thu gọn: Git/IDE/file build]
 ├── assets/
+│   ├── background/
+│   │   ├── background1.png
+│   │   ├── background2.png
+│   │   └── background3.png
 │   ├── fonts/
 │   │   └── genshin.ttf
+│   ├── playerAvatar/
+│   │   ├── ayame1.png
+│   │   ├── ayame2.png
+│   │   ├── ayame3.png
+│   │   ├── ayame4.png
+│   │   ├── ayame5.png
+│   │   ├── ayame6.png
+│   │   ├── ayame8.webp
+│   │   ├── eula (5).png
+│   │   ├── hutao (1).jpeg
+│   │   ├── hutao (1).png
+│   │   ├── hutao (11).png
+│   │   ├── hutao (12).png
+│   │   ├── hutao (3).png
+│   │   ├── kazuha (3).png
+│   │   ├── kazuha (4).png
+│   │   ├── kazuha (5).png
+│   │   ├── nahida.jpg
+│   │   ├── paimon (1).jpg
+│   │   ├── yoimiya (1).png
+│   │   ├── yoimiya (4).png
+│   │   └── yoimiya (8).png
 │   ├── sounds/
 │   └── stones/
-├── build/  [nội dung Git / file sinh tự động, thu gọn]
+├── build/ [thu gọn: Git/IDE/file build]
 ├── qml/
 │   ├── Components/
 │   │   ├── battle/
 │   │   │   ├── CountdownClock.qml
-│   │   │   └── ElementPointBar.qml
+│   │   │   ├── ElementPointBar.qml
+│   │   │   └── PlayerPanel.qml
 │   │   ├── cards/
 │   │   │   ├── Card.qml
 │   │   │   ├── CharacterCard.qml
@@ -59,10 +224,17 @@ GoGame/
 ├── server/
 │   ├── data/
 │   │   └── state.json
+│   ├── test/
+│   │   └── Intergration.cpp
 │   ├── tests/
+│   │   ├── GoCommands.cpp
 │   │   └── Integration.cpp
 │   ├── CMakeLists.txt
+│   ├── GoMatch.cpp
+│   ├── GoMatch.h
 │   ├── README.md
+│   ├── Server.cpp
+│   ├── Server.h
 │   ├── main.cpp
 │   └── main.qml
 ├── src/
@@ -101,91 +273,27 @@ GoGame/
 └── users.sqlite
 ```
 
-| Đường dẫn                                                      | Vai trò                                                                                 |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `CMakeLists.txt`                                               | Cấu hình executable `appGoGame`, module QML `GoGame` và tài nguyên.                     |
-| `main.cpp`, `main.qml`                                         | Khởi tạo ứng dụng và giao diện gốc.                                                     |
-| `qml/Screens/`                                                 | Các màn hình đăng nhập, menu chính, cài đặt và bàn đấu.                                 |
-| `qml/Core/`                                                    | Quản lý màn hình, theme, font, khoảng cách, bo góc, chuyển động và hằng số.             |
-| `qml/Components/`                                              | Các thành phần giao diện dùng lại, chia theo battle, cards, common, controls, layout.   |
-| `src/Core/`                                                    | Logic game, enum, tiện ích enum và phần khung AI.                                       |
-| `src/Managers/`                                                | Quản lý xác thực và ghép trận.                                                          |
-| `src/Models/`                                                  | Các file mô hình Board và UI.                                                           |
-| `server/`                                                      | Server WebSocket C++ độc lập, tài liệu giao thức, dữ liệu JSON và kiểm thử integration. |
-| `src/Network/`                                                 | Client mạng và giao thức trao đổi.                                                      |
-| `assets/fonts/`                                                | Font `genshin.ttf`.                                                                     |
-| `assets/sounds/`, `assets/stones/`, `qml/Themes/`, `src/Data/` | Thư mục hiện còn trống.                                                                 |
-| `users.sqlite`                                                 | File SQLite hiện có, dung lượng 0 byte tại thời điểm kiểm tra.                          |
-| `.agents/`, `.aws/`, `.codex/`                                 | Thư mục môi trường hiện có, đang trống.                                                 |
-| `build/`, `.qtcreator/`, `.git/`                               | Dữ liệu build, IDE và Git; không phải mã nguồn tính năng.                               |
+`server/Server.*` quản lý transport, client, queue, match và clock; `server/GoMatch.*` quản lý luật/bàn cờ. `src/` là phía client. `qml/Core/` chứa scene/theme/token giao diện; `qml/Components/` chứa các component dùng lại. Hai `GamePanel.qml` ở controls và layout hiện cùng tồn tại. `server/test/Intergration.cpp` là bản cũ, không được CMake chạy; test hiện tại ở `server/tests/`. `server/main.qml` cũng là file khung không được server console nạp.
 
-Có hai file `GamePanel.qml` ở `controls/` và `layout/`; cây thư mục giữ nguyên cả hai.
-
-### Trạng thái hiện tại
-
-- Đã tạo server sơ khai bằng C++/Qt, chạy console độc lập với client, gửi/nhận JSON qua WebSocket và đọc/ghi file JSON.
-- Đã sửa một số lỗi component/màn hình do template: Board dùng `gameManager` và property bàn cờ cho QML; chuyển đích màn hình từ `DeckSelectScreen.qml` sang `Board.qml`; sửa URL reconnect và thêm nút kết nối lại trên màn hình đăng nhập.
-- Theo cập nhật của chủ dự án: logic đồng hồ đếm ngược đã xong; bước tiếp theo là xử lý và đồng bộ thời gian từ server, có thể bổ sung đồng hồ của đối thủ.
-- Phản hồi vị trí đặt sai đã hoàn thành, chỉ còn thiếu âm thanh báo lỗi.
-- Việc dọn template chưa hoàn tất: `MainMenu.qml` vẫn tham chiếu `deckManager`, đối tượng chưa được cung cấp từ `main.cpp`.
-
-### Server: đã có và còn thiếu
-
-| Hạng mục                | Trạng thái hiện tại                                                                                                                                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server độc lập          | Đã có target `appserver`, Qt Core/Network/WebSockets, nghe `ws://127.0.0.1:14509` mặc định.                                                                                                                                        |
-| Giao thức JSON          | Đã có text message `{type,payload}`: `ReadData` trả `Data`, `WriteData` trả `DataWritten`; lỗi trả `Error`.                                                                                                                        |
-| Lưu trữ                 | Đã đọc/ghi JSON object bằng `--data-file`, tạo `{}` khi chưa có file, ghi nguyên tử bằng `QSaveFile`. Mỗi lần ghi thay toàn bộ nội dung; các client dùng chung một file.                                                           |
-| Kiểm tra dữ liệu        | Đã từ chối JSON/payload sai, loại yêu cầu không hỗ trợ và binary message; giới hạn message 1 MiB. Chưa kiểm tra schema trạng thái trận hoặc luật cờ.                                                                               |
-| Kết nối client          | Đã tự kết nối khi khởi động, hỗ trợ `GOGAME_SERVER_URL` và reconnect. Kết nối thành công chưa có nghĩa là đăng nhập/ghép trận hoạt động.                                                                                           |
-| Kiểm thử                | Có `server/tests/Integration.cpp` và CTest kiểm tra đọc/ghi, nhiều client, restart, dữ liệu sai và reconnect. Kết quả chạy trước được ghi trong nhật ký; lần cập nhật README này không chạy lại test.                              |
-| Auth và matchmaking     | Chưa có xử lý đăng ký/đăng nhập, phiên người dùng, hàng chờ và ghép trận. Các yêu cầu tương ứng hiện chưa được server hỗ trợ.                                                                                                      |
-| Đồng bộ trận đấu        | Chưa tích hợp Board với `ReadData`/`WriteData`; chưa có phòng trận riêng, kiểm tra lượt/nước đi ở server hoặc cập nhật tự động tới đối thủ.                                                                                        |
-| Trạng thái và thời gian | Logic đồng hồ đếm ngược phía client đã xong; đã đến bước làm server xử lý và đồng bộ thời gian. Chưa có đồng hồ do server quản lý và khôi phục phiên trận; cần thống nhất schema trạng thái trận. Có thể thêm đồng hồ của đối thủ. |
-| Luật và kết thúc trận   | Chưa có kiểm tra luật Trung/Nhật ở server, tính điểm, bỏ lượt, đầu hàng và kết quả trận.                                                                                                                                           |
-| Replay                  | Chưa có lưu/xem lại tối đa 5 ván gần nhất.                                                                                                                                                                                         |
-| Triển khai ngoài local  | Hiện chỉ nghe localhost; chưa có TLS, xác thực hay phân quyền truy cập dữ liệu.                                                                                                                                                    |
-
-Chi tiết giao thức và kiểm thử: [server/README.md](server/README.md). `server/main.qml` là file khung; server console không nạp file này.
-
-### Chạy server trong terminal riêng
-
-Từ thư mục gốc `GoGame`, mở **một terminal riêng** và chạy lần lượt:
+## Kiểm tra
 
 ```bash
-cmake -S server -B build/server
-cmake --build build/server --parallel 3
-./build/server/appserver --data-file server/data/state.json
+ctest --test-dir build/server --output-on-failure
 ```
 
-**Để terminal này chạy nguyên đó trong lúc sử dụng client.** Server chạy ở foreground; nhấn `Ctrl+C` để dừng khi không còn sử dụng. Mọi thao tác chơi còn lại thực hiện trên client, mở bằng Qt Creator hoặc terminal khác theo hướng dẫn bên dưới. Cần Qt 6.2 trở lên với Core, Network và WebSockets để build server; nếu CMake chưa tìm được Qt, thêm `-DCMAKE_PREFIX_PATH=/duong/dan/toi/Qt` vào lệnh cấu hình.
+`goCommands` kiểm tra luật, auth/queue, thành viên, lượt, tọa độ, snapshot theo người nhận, clock/deadline, pass/kết quả và đầu hàng. `serverIntegration` kiểm tra file JSON, WebSocket, restart, message sai và reconnect. Các test dùng localhost cổng 24509/24510 và dữ liệu tạm; không dùng file dữ liệu thật. Có thể tắt test khi configure bằng `-DBUILD_TESTING=OFF`.
 
-Client mặc định kết nối `ws://127.0.0.1:14509`. Nếu client đã mở trước server, dùng nút **Kết nối lại server** trên màn hình đăng nhập. Có thể đặt URL khi mở client:
+Review ngày 13/10/2026: build server sạch ở `build/review-server` thành công, CTest đạt **2/2**. Kết quả build/chạy client sẽ ghi trong nhật ký bên dưới; build thành công không đồng nghĩa chơi online UI đã hoàn thiện.
 
-```bash
-GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/Desktop_Debug/appGoGame
-```
-
-### Build client
-
-Cần CMake từ 3.16, trình biên dịch C++ và Qt 6 có các module Quick/QML, Sql, Network, WebSockets. Cấu hình hiện tại yêu cầu Qt 6.2 trở lên cho Quick và Sql.
-
-```bash
-cmake -S . -B build/local -DCMAKE_PREFIX_PATH=/duong/dan/toi/Qt
-cmake --build build/local --parallel 3
-./build/local/appGoGame
-```
-
-Thay đường dẫn Qt theo máy; với bộ sinh đa cấu hình, đường dẫn executable tùy cấu hình build. Có thể mở `CMakeLists.txt` bằng Qt Creator và chọn kit Qt tương ứng. Đây là hướng dẫn từ cấu hình dự án, chưa xác nhận build trong lần cập nhật tài liệu này.
-
-## 2. Những dự định trong tương lai
+## Kế hoạch phát triển
 
 ### 1. Hoàn thiện Board.qml trước
 
 - [ ] Ưu tiên `qml/Screens/Board.qml`.
 - [x] Hoàn thiện UI bàn đấu: ô hiện tên người chơi và avatar.
 - [x] Hoàn thành logic đồng hồ đếm ngược phía client.
-- [ ] **Bước tiếp theo: làm server xử lý và đồng bộ thời gian đồng hồ.**
+- [x] Server quản lý thời gian mỗi người chơi và gửi deadline trong snapshot.
+- [ ] **Bước tiếp theo: nối snapshot và đồng hồ server vào UI client.**
 - [ ] Có thể bổ sung đồng hồ của đối thủ.
 - [ ] Cân nhắc thu nhỏ layout bàn cờ để có thêm không gian cho chế độ chơi; đây là ý tưởng có thể làm sau.
 
@@ -203,7 +311,8 @@ Thay đường dẫn Qt theo máy; với bộ sinh đa cấu hình, đường d�
 
 ### 4. Luật Trung / Nhật
 
-- [ ] Làm luật Trung trước.
+- [x] Server có luật cơ bản: ăn quân, tự sát, simple ko, hai lần pass và tính diện tích với komi 6,5.
+- [ ] Hoàn thiện luật Trung: superko, xử lý quân chết/thỏa thuận kết quả và kiểm thử tính điểm.
 - [ ] Cân nhắc luật Nhật sau vì triển khai phức tạp; chưa ưu tiên.
 
 ### 5. Animation khi ăn quân
@@ -228,8 +337,9 @@ Thay đường dẫn Qt theo máy; với bộ sinh đa cấu hình, đường d�
 
 ### 9. Đấu với người qua JSON
 
-- [ ] Trao đổi/lưu trạng thái trận bằng JSON gồm sân đấu hiện tại (trạng thái bàn cờ), số bước đã qua, người đang đến lượt và thời gian.
-- [ ] Thống nhất định dạng dữ liệu trước khi triển khai đồng bộ trận đấu.
+- [x] Server gửi JSON snapshot chứa bàn cờ, số nước, lượt và thời gian.
+- [ ] Client áp dụng snapshot và gửi lệnh thay cho thay đổi bàn cờ local.
+- [ ] Lưu trạng thái trận/replay riêng; hiện trận chỉ nằm trong bộ nhớ, file JSON chưa lưu trận tự động.
 
 ### 10. Xem lại ván đấu
 
@@ -287,7 +397,8 @@ Có nước nguy cấp          Thế trận hòa hoãn
 - [ ] Xuất mô hình `.onnx` để phục vụ policy/value trong AI.
 - [ ] Thử nghiệm tốc độ suy luận CPU cùng ngân sách thời gian của MCTS.
 
-## 3. Khai báo AI và nhật ký prompt
+
+## Khai báo AI và nhật ký prompt
 
 README này được soạn với sự hỗ trợ của AI (Codex) theo yêu cầu của chủ dự án. Lần cập nhật này chỉ tạo tài liệu, không triển khai các tính năng trong kế hoạch.
 
@@ -401,6 +512,8 @@ Kết quả: bổ sung đầy đủ hai prompt của phiên làm việc này, ng
 ### 12/10/2026 — Cập nhật tiến độ đồng hồ, báo lỗi và layout bàn cờ
 
 Nội dung prompt của người dùng:
+
+```text
 Cập nhật README. Đồng thời note những thứ này để sau này tôi làm:
 
 1. Phần đồng hồ đếm ngược đã xong logic nhưng cần handle từ server và có thể thêm đồng hồ của đối thủ -> đã đến bước làm server.
@@ -409,3 +522,64 @@ Cập nhật README. Đồng thời note những thứ này để sau này tôi 
 ```
 
 Kết quả: cập nhật tiến độ theo thông tin chủ dự án cung cấp. Đánh dấu logic đồng hồ client đã xong, ghi việc xử lý thời gian ở server là bước tiếp theo và khả năng thêm đồng hồ đối thủ. Đánh dấu phản hồi vị trí sai đã xong, bỏ yêu cầu khoanh đỏ khỏi kế hoạch hiện hành, chỉ giữ âm thanh báo lỗi là việc còn thiếu. Ghi ý tưởng thu nhỏ layout bàn cờ để thêm chế độ chơi. Giữ nguyên prompt lịch sử; chỉ sửa README, không thay đổi mã nguồn hoặc chạy build/test.
+
+### 13/10/2026 — Review toàn dự án, sơ đồ tương tác và sendSnapshot
+
+Nội dung prompt của người dùng (bỏ markup nhấn mạnh, chuẩn hóa khoảng trắng):
+
+```text
+Review all project, draw the interaction which will have between server and client. Rewrite readme.md. I sketch the sendSnapshot of server you should complete it: sendSnapshot(socket, match) {
+        const localIndex = match.sockets.indexOf(socket);
+        this.send(socket, "GameSnapshot", {
+            matchId: match.id,
+            stage: "Action",
+            round: match.round,
+            currentPlayerIndex: match.currentPlayerIndex,
+            pendingReplacement: match.pendingReplacement || null,
+            weather: {
+                sequence: match.weather.sequence,
+                activeWeather: {
+                    type: match.weather.rounds[match.round - 1] ?? "None",
+                    startedRound: match.round,
+                    remainingRounds: 1,
+                },
+                roundsPerWeather: 1,
+            },
+            players: match.players.map((state, index) => {
+                const player = this.clients.get(match.sockets[index]);
+                return {
+                    playerId: player.id,
+                    nickname: player.nickname,
+                    characters: state.characters.map((character, characterIndex) => ({
+                        ...character,
+                        element: character.applications[0] ?? "None",
+                        active: characterIndex === state.activeCharacterIndex,
+                        defeated: character.hp <= 0,
+                    })),
+                    elementPoints: { current: state.elementPoints, maximum: 10, permanentBonus: 0 },
+                    handCardCount: state.hand.length,
+                    deckCardCount: state.deck.length,
+                    activeCharacterIndex: state.activeCharacterIndex,
+                    summons: state.summons.map(publicEffect),
+                    states: state.states.filter(item => !item.passive).map(publicEffect),
+                    skillAvailability: availability(state, match),
+                    switchesUsed: state.switchesUsed || 0,
+                    switchesRemaining: Math.max(0, 1 - (state.switchesUsed || 0)),
+                    remainingTimeMs: state.remainingMs,
+                    endedRound: match.ended.has(index),
+                };
+            }),
+            self: {
+                handCardIds: localIndex >= 0 ? match.players[localIndex].hand : [],
+                handAvailability: localIndex >= 0 ? handAvailability(match.players[localIndex], match) : [],
+            },
+            actionDeadlineEpochMs: match.actionDeadlineEpochMs,
+        });
+    }
+```
+
+Kết quả: review kiến trúc client/server, giao thức, luật, clock, auth, matchmaking, QML, tài nguyên, cấu hình build và test; viết lại README với cây file hiện tại, Mermaid kiến trúc/sequence, schema snapshot và các vấn đề tích hợp. Giữ kế hoạch và prompt lịch sử. Hoàn thiện `sendSnapshot(socket, match)` bằng C++ theo mô hình Go hiện có: trạng thái bàn cờ, player identity/color/time, góc nhìn self, stage, thời điểm server/deadline, kết quả cuối; không tạo giả các trường weather/card/character chưa tồn tại. Đóng băng clock lúc kết thúc. Giữ các thay đổi server đang có trong working tree.
+
+Kiểm tra: build server sạch `build/review-server`, CTest đạt 2/2 (`goCommands`, `serverIntegration`); test snapshot mới xác nhận perspective, identities, board metadata, clock/deadline và trạng thái cuối. Build client sạch `build/review-client` thành công; còn cảnh báo Qt policy và file khung rỗng. Kiểm tra runtime offscreen được ghi bổ sung sau khi chạy; chưa kiểm tra thao tác online bằng UI.
+
+Runtime smoke: client offscreen chạy trong 3 giây và bị dừng bằng timeout (exit 124), không có output được ghi nhận; kiểm tra này chưa xác nhận các binding QML hoặc tương tác UI hoạt động. Các vấn đề UI nêu trên được xác định từ review mã nguồn.

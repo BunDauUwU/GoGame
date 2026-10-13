@@ -1,15 +1,35 @@
 #pragma once
 
 #include <QObject>
+#include "GoMatch.h"
+#include <QTimer>
+#include <array>
+#include <memory>
 #include <QJsonObject>
 #include <QWebSocketServer>
+#include <QMap>
+#include <QList>
 
 class QWebSocket;
 
 class Server : public QObject {
 public:
     explicit Server(const QString &dataFile, QObject *parent = nullptr);
+    ~Server() override;
     bool start(quint16 port, QString &error);
+    bool stop(quint16 port, QString &error);
+
+    QJsonObject address() const;
+
+    void onConnection(QWebSocket *socket);
+    void onMessage(QWebSocket *socket, const QString &raw);
+    void onClose(QWebSocket *socket);
+
+    void authenticate(QWebSocket *socket, QJsonObject payload);
+    void startMatchmaking(QWebSocket *socket, QJsonObject payload);
+    void cancelMatchmaking(QWebSocket *socket, QJsonObject payload);
+    void tryCreateMatch(QString mode);
+    void gameCommand(QWebSocket *socket, QJsonObject payload);
 
     void read(QWebSocket *client, const QString &text);
     void handler(QWebSocket *client, const QJsonObject &message);
@@ -23,10 +43,35 @@ public:
     bool writeData(const QJsonObject &data, QString &error) const;
     QString dataFile() const { return m_dataFile; }
 
+    void logServer(const QString &event, const QJsonObject &data);
+    void logClient(QWebSocket *socket, const QString &type, const QJsonObject &payload);
+    void removeFromQueues(QWebSocket *socket);
 private:
     void acceptConnection();
     void fail(QWebSocket *client, const QString &code, const QString &message);
 
     QString m_dataFile;
     QWebSocketServer m_server;
+    QMap<QWebSocket*, QJsonObject> m_clients;
+    QMap<QString, QList<QWebSocket*>> m_queues;
+    struct Match {
+        QString id;
+        QList<QWebSocket *> sockets;
+        GoMatch game;
+        bool started = true;
+        int winnerIndex = -1;
+        QString endReason;
+        std::array<qint64, 2> remainingMs{600000, 600000};
+        qint64 turnStartedMs = 0;
+        QTimer *timer = nullptr;
+    };
+    void broadcast(const Match &match, const QString &type, const QJsonObject &payload);
+    void sendSnapshot(const Match &match);
+    void sendSnapshot(QWebSocket *socket, const Match &match);
+    void endWithWinner(Match &match, int winner, const QString &reason);
+    bool consumeClock(Match &match, int playerIndex);
+    void armActionTimer(Match &match);
+    QMap<QString, std::shared_ptr<Match>> m_matches;
+    int m_selectionTimeoutMs = 0;
+    int m_actionTimeoutMs = 30'000;
 };
