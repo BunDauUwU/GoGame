@@ -11,7 +11,7 @@ Item {
 
         anchors.fill: parent
 
-        initialItem: "../Screens/MainMenu.qml"
+        initialItem: "../Screens/LoginScreen.qml"
         //initialItem: "../Screens/Board.qml"
     }
 }

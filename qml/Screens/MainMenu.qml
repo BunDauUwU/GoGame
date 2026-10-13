@@ -113,11 +113,47 @@ Rectangle {
         anchors.margins: 20
         spacing: 8
 
-        Text {
-            text: networkClient.connected ? "● Server Connected" : "○ Offline Mode"
-            color: networkClient.connected ? "#4ADE80" : "#F87171"
-            font.pixelSize: 13
-            font.bold: true
+        Button {
+            id: connectionStatusButton
+
+            text: networkClient.connected ? "● Server Connected" : "○ Offline Mode (Click here to retry connection)"
+
+            enabled: !networkClient.connected
+            hoverEnabled: true
+
+            // Bounce when pressed and released
+            scale: pressed ? 0.94 : 1.0
+
+            Behavior on scale {
+                SpringAnimation {
+                    spring: 3
+                    damping: 0.2
+                    mass: 0.5
+                }
+            }
+
+            onClicked: {
+                networkClient.disconnectFromServer();
+                reconnectTimer.restart();
+            }
+
+            // Show a hand cursor when the button is clickable
+            HoverHandler {
+                cursorShape: connectionStatusButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+
+            contentItem: Text {
+                text: connectionStatusButton.text
+                color: networkClient.connected ? "#4ADE80" : "#F87171"
+                font.pixelSize: 13
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                color: "transparent"
+            }
         }
 
         Text {
@@ -160,7 +196,17 @@ Rectangle {
         GameButton {
             height: 60
             width: 400
-            text: matchmakingManager.searching ? "Cancel Match" : "Find Match"
+            text: "Play against AI"
+            onClicked: {
+                console.log("Matchmaking action triggered");
+            }
+        }
+
+        GameButton {
+            height: 60
+            width: 400
+            enabled: networkClient.connected
+            text: !networkClient.connected ? "Multiplayer unavailable" : matchmakingManager.searching ? "Cancel Match" : "Find Match"
             onClicked: {
                 console.log("Matchmaking action triggered");
                 if (matchmakingManager.searching) {
@@ -170,16 +216,6 @@ Rectangle {
                     mainMenuRoot.deckError = "";
                     matchmakingManager.startMatchmaking("Game1", "");
                 }
-            }
-        }
-
-        GameButton {
-            height: 60
-            width: 400
-            text: qsTr("Connect to server again")
-            onClicked: {
-                networkClient.disconnectFromServer();
-                reconnectTimer.restart();
             }
         }
 
