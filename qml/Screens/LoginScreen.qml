@@ -64,7 +64,7 @@ Rectangle {
                 }
 
                 GameText {
-                    text: "Wanna be a Go master? You choose the wrong place"
+                    text: "Wanna be a Go master? You chose the wrong place."
                     type: GameText.Caption
                     color: "white"
                     font.italic: true
@@ -217,7 +217,7 @@ Rectangle {
                         GameText {
                             text: root.isRegisterMode ? "Log In" : "Sign Up"
                             type: GameText.Caption
-                            color: "white"
+                            color: "#ffeeaa"
                             font.bold: true
 
                             MouseArea {
@@ -238,7 +238,7 @@ Rectangle {
 
             function onLoginSuccess(username) {
                 console.log("Logged in successfully as:", username);
-                stack.replace("./MainMenu.qml");
+                stack.push("./MainMenu.qml");
             }
 
             function onRegisterSuccess(username) {

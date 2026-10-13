@@ -159,7 +159,7 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
+            width: 400
             text: matchmakingManager.searching ? "Cancel Match" : "Find Match"
             onClicked: {
                 console.log("Matchmaking action triggered");
@@ -175,7 +175,7 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
+            width: 400
             text: qsTr("Connect to server again")
             onClicked: {
                 networkClient.disconnectFromServer();
@@ -185,7 +185,7 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
+            width: 400
             text: qsTr("Settings")
             onClicked: {
                 stack.push("./SettingsScreen.qml");
@@ -194,11 +194,11 @@ Rectangle {
 
         GameButton {
             height: 60
-            width: 200
+            width: 400
             text: qsTr("Log Out")
             onClicked: {
                 authManager.logout();
-                stack.replace("./LoginScreen.qml");
+                stack.pop();
             }
         }
     }

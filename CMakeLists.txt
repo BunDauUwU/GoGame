@@ -19,6 +19,7 @@ qt_add_executable(appGoGame
 )
 
 set_source_files_properties(
+    qml/Singletons/AppState.qml
     qml/Core/Constants.qml
     qml/Core/Motion.qml
     qml/Core/Radius.qml
@@ -52,6 +53,9 @@ qt_add_qml_module(appGoGame
 
     QML_FILES
         main.qml
+
+        # Singletons
+        qml/Singletons/AppState.qml
 
         # Core
         qml/Core/Constants.qml
