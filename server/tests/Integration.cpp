@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include "Server.h"
 #include "../../src/Network/NetworkClient.h"
 #include <QEventLoop>
 #include <QFile>
@@ -40,9 +41,26 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     check(argc == 2, "Expected server executable path");
+    const auto emptyEnvelope = Server::envelope("ReadData");
+    check(emptyEnvelope["type"] == "ReadData" && emptyEnvelope["payload"].isObject()
+          && emptyEnvelope["payload"].toObject().isEmpty(), "Default envelope payload failed");
+    const auto message = Server::envelope("Example", {{"name", QString::fromUtf8("Cờ vây")}, {"turn", 1}});
+    QJsonObject parsed;
+    QString parseError;
+    check(Server::stringToJson(Server::jsonToString(message), parsed, parseError)
+          && parsed == message && parseError.isEmpty(), "JSON/string round trip failed");
+    check(!Server::stringToJson("invalid", parsed, parseError) && !parseError.isEmpty(),
+          "Malformed JSON conversion accepted");
+    check(!Server::stringToJson("[]", parsed, parseError), "Array conversion accepted");
+    check(Server::stringToJson("{}", parsed, parseError) && parsed.isEmpty() && parseError.isEmpty(),
+          "Valid empty object conversion failed");
     QTemporaryDir storage;
     check(storage.isValid(), "Temporary directory failed");
     const QString path = storage.filePath("state.json");
+    Server localServer(path);
+    check(localServer.send(nullptr, emptyEnvelope) == -1, "Null client send accepted");
+    QWebSocket disconnected;
+    check(localServer.send(&disconnected, emptyEnvelope) == -1, "Disconnected send accepted");
     QProcess server;
     auto start = [&] {
         server.start(QString::fromLocal8Bit(argv[1]), {"--port", "24509", "--data-file", path});

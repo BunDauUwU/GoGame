@@ -67,3 +67,25 @@ ctest --test-dir build/server --output-on-failure
 Bài kiểm tra dùng port localhost 24509 và thư mục dữ liệu tạm, kiểm tra đọc/ghi qua WebSocket, hai client, dữ liệu tồn tại sau restart, từ chối message sai và bảo toàn file JSON hỏng. Có thể tắt build bài kiểm tra bằng `-DBUILD_TESTING=OFF`.
 
 `main.qml` là file khung có sẵn; executable console không nạp file này.
+
+## Class Server
+
+`Server.h` khai báo API, `Server.cpp` triển khai; `main.cpp` đọc CLI và gọi `start`. Class nhận đường dẫn file khi khởi tạo, sở hữu WebSocket listener và các kết nối client.
+
+- `start(port, error)`: chuẩn bị file JSON, mở listener localhost.
+- `read(client, text)`: nhận text, parse JSON rồi gọi `handler`.
+- `handler(client, message)`: phân loại `type`, xử lý yêu cầu.
+- `send(client, message)`: gửi JSON object; trả số byte được chấp nhận gửi hoặc `-1` nếu client không kết nối.
+- `jsonToString(json)`: chuyển object thành JSON string compact.
+- `stringToJson(text, json, error)`: trả `true` khi text chứa JSON object hợp lệ; trả `false` và thông báo lỗi nếu không hợp lệ.
+- `envelope(type, payload = {})`: trả object `{type, payload}`, payload mặc định là object rỗng.
+- `readData(data, error)` / `writeData(data, error)`: đọc/ghi file JSON của server.
+
+Ví dụ phản hồi trong handler:
+
+```cpp
+send(client, envelope("Data", {{"data", data}}));
+send(client, envelope("Ready")); // {"type":"Ready","payload":{}}
+```
+
+Khi thêm loại message mới, bổ sung nhánh trong `Server::handler`. Auth và matchmaking vẫn chưa được triển khai.
