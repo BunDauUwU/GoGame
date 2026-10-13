@@ -111,8 +111,7 @@ Rectangle {
             anchors.fill: parent
 
             onClicked: {
-                background.backgroundIndex =
-                    background.backgroundIndex % 3 + 1
+                background.backgroundIndex = background.backgroundIndex % 3 + 1;
             }
         }
     }
@@ -122,17 +121,9 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: 12
 
-        Row {
-            Button {
-                text: qsTr("Pass")
-                onClicked: gameManager.pass_turn()
-            }
-            Text {
-                text: gameManager.currentPlayer === 0
-                      ? qsTr("Black to play")
-                      : qsTr("White to play")
-                font.pixelSize: 20
-            }
+        Text {
+            text: gameManager.currentPlayer === 0 ? qsTr("Black to play") : qsTr("White to play")
+            font.pixelSize: 20
         }
 
         Text {
@@ -150,7 +141,7 @@ Rectangle {
         anchors.centerIn: parent
         width: Math.max(0, Math.min(608, parent.width - 32, parent.height - 80))
         height: width
-        color: '#deb887'
+        color: "#80deb887"
         property int boardSize: 19
         property real margin: 20
         property var boardState: gameManager.boardState
@@ -310,6 +301,14 @@ Rectangle {
                 }
             }
         }
+    }
+
+    Button {
+        anchors.right: parent.right
+        anchors.bottom: userInfo.top
+        anchors.margins: 20
+        text: qsTr("Pass")
+        onClicked: gameManager.pass_turn()
     }
 
     PlayerPanel {
