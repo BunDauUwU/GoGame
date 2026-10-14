@@ -32,6 +32,13 @@ Rectangle {
     }
 
     Connections {
+        target: gameManager
+        function onGameError(message) {
+            mainMenuRoot.matchmakingError = message;
+        }
+    }
+
+    Connections {
         target: networkClient
 
         function onErrorOccurred(error) {
@@ -136,14 +143,24 @@ Rectangle {
 
                         text: modelData
                         Layout.fillWidth: true
+                        enabled: index === 1
 
                         onClicked: {
                             console.log("Selected:", modelData);
 
+                            if (gameManager.savedAISlots.length >= 20) {
+                                newAIDialog.open();
+                                selectionMenu.close();
+                                return;
+                            }
+                            if (!gameManager.startMediumGame(0))
+                                return;
                             AppState.difficultyLevel = index;
                             AppState.playingAgainstAI = true;
-
-                            stack.push("./MatchScreen.qml");
+                            stack.push("./MatchScreen.qml", {
+                                localPlayerName: authManager.username || "Player",
+                                opponentPlayerName: "Medium AI"
+                            });
 
                             selectionMenu.close();
                         }
@@ -295,6 +312,29 @@ Rectangle {
         }
 
         GameButton {
+            height: 48
+            width: 400
+            text: "Sandbox"
+            onClicked: {
+                if (gameManager.startSandbox())
+                    stack.push("./MatchScreen.qml", {
+                        localPlayerName: "Black",
+                        opponentPlayerName: "White",
+                        localPlayerColor: 0
+                    });
+            }
+        }
+        GameButton {
+            height: 48
+            width: 400
+            text: "Load game"
+            onClicked: {
+                gameManager.refreshSaves();
+                loadAIDialog.open();
+            }
+        }
+
+        GameButton {
             height: 60
             width: 400
             enabled: networkClient.connected
@@ -326,6 +366,48 @@ Rectangle {
             onClicked: {
                 authManager.logout();
                 stack.pop();
+            }
+        }
+    }
+
+    Dialog {
+        id: newAIDialog
+        anchors.centerIn: parent
+        modal: true
+        title: "Medium"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ComboBox {
+            id: newSlotSelector
+            model: 20
+            displayText: "Slot " + (currentIndex + 1)
+        }
+        onAccepted: {
+            if (gameManager.startMediumGame(0, newSlotSelector.currentIndex + 1)) {
+                stack.push("./MatchScreen.qml", {
+                    localPlayerName: authManager.username || "Player",
+                    opponentPlayerName: "Medium AI"
+                });
+            }
+        }
+    }
+
+    Dialog {
+        id: loadAIDialog
+        anchors.centerIn: parent
+        modal: true
+        title: "Load AI battle | 20 slots"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ComboBox {
+            id: loadAISelector
+            model: gameManager.savedAISlots
+            displayText: currentIndex >= 0 ? "Slot " + currentText : "No saved AI battles"
+        }
+        onAccepted: {
+            if (loadAISelector.currentIndex >= 0 && gameManager.loadAIGame(Number(loadAISelector.currentText))) {
+                stack.push("./MatchScreen.qml", {
+                    localPlayerName: authManager.username || "Player",
+                    opponentPlayerName: "Medium AI"
+                });
             }
         }
     }

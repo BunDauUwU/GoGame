@@ -33,6 +33,8 @@ flowchart LR
     UI[QML Screens / Components] --> Game[GameManager]
     UI --> Auth[AuthManager / SQLite local]
     UI --> Queue[MatchmakingManager]
+    Game --> AI[MediumAI: Minimax worker]
+    AI --> Rules
     Game --> Protocol[Protocol / NetworkClient]
     Auth --> Protocol
     Queue --> Protocol
@@ -140,7 +142,7 @@ Mỗi bên có **10 hoặc 15 phút chính + 3 lần Byo-yomi × 20 giây**. H�
 | Auth          | SQLite local, gửi guest nickname khi login và kết nối lại.                                                              | Server chưa xác thực password/tài khoản local; logout local không hủy danh tính guest trên server.                   |
 | Settings      | Chọn background qua AppState trong phiên.                                                                               | Âm thanh, preview toggle có UI/lưu lựa chọn, avatar/frame/title/level/rank. Preview vẫn là property của MatchScreen. |
 | Dữ liệu       | ReadData/WriteData nguyên tử bằng QSaveFile.                                                                            | Match chỉ ở RAM; chưa tự lưu match, replay 5 ván hoặc phục hồi sau restart. API file vẫn chưa phân quyền.            |
-| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font.                                                                           | Chưa có implementation AI, nhạc/âm thanh đặt quân/báo lỗi. Các file rỗng đã bỏ; tạo lại khi triển khai thật.         |
+| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font.                                                                           | Medium đã có trong `src/AI/`; Easy/Hard và nhạc/âm thanh đặt quân/báo lỗi chưa triển khai.         |
 
 ## Những thay đổi trong lần dọn project này
 
@@ -309,11 +311,6 @@ GoGame/
 ├── server/
 │   ├── data/
 │   │   └── state.json
-│   ├── tests/
-│   │   ├── Clock.cpp
-│   │   ├── GoCommands.cpp
-│   │   ├── Integration.cpp
-│   │   └── Players.cpp
 │   ├── ByoYomiClock.h
 │   ├── CMakeLists.txt
 │   ├── GoMatch.cpp
@@ -352,15 +349,7 @@ GoGame/
 
 `server/Server.*` quản lý kết nối/queue/match; `GoMatch.*` chứa luật; `ByoYomiClock.h` chứa time control. `src/` là client, `qml/` là UI; `scripts/` chứa script đo source. Các thư mục tài nguyên trống được giữ cho kế hoạch âm thanh/quân cờ.
 
-## Kiểm tra
-
-```bash
-ctest --test-dir build/local/server --output-on-failure
-# Nếu build riêng server:
-ctest --test-dir build/server --output-on-failure
-```
-
-Sau cleanup ngày 13/10/2026, root build sạch `build/cleanup` thành công (client + server). **4/4 test đạt**: `byoYomiClock`, `players`, `goCommands`, `serverIntegration`. Test bao gồm ranh giới/hồi giờ Byo-yomi, đồng bộ hai GameManager, capture, pass, đầu hàng, rematch, disconnect, luật/giao thức và file JSON/restart. Test dùng dữ liệu tạm và localhost cổng 24509–24512. Không thêm test chỉ để kiểm tra file đã xóa.
+Các file test, executable test và cấu hình CTest đã được xóa khỏi dự án. Build chỉ tạo client, server và các thư viện runtime.
 
 ## Kế hoạch phát triển
 
@@ -429,8 +418,10 @@ Sau cleanup ngày 13/10/2026, root build sạch `build/cleanup` thành công (cl
 | Độ khó     | Dự định                                                                               |
 | ---------- | ------------------------------------------------------------------------------------- |
 | Dễ         | Minimax suy nghĩ nông, tính trước 1–2 nước.                                           |
-| Trung bình | Minimax; độ sâu và ngân sách tính toán sẽ xác định khi thử nghiệm.                    |
+| Trung bình | Đã có Minimax trong `src/AI/`: depth tối đa 3, 10 ứng viên/nút, ngân sách 1 giây.                    |
 | Khó        | Alpha-Beta Pruning kết hợp MCTS để tối ưu; hướng tới dùng mạng 6-block ONNX trên CPU. |
+
+Medium được tách thành module riêng tại [src/AI/README.md](src/AI/README.md). Chọn **Play against AI → Medium** để chơi offline. Luồng: nước người chơi → luật GoMatch → worker Minimax → áp nước AI trên GUI. Dùng một worker, có hủy khi rời/reset ván và giữ chế độ preview/Fast mode. Sau tối ưu DSU/vùng ứng viên: bàn trống hoàn thành depth 3, 586 nodes, khoảng 61 ms; độ sâu và thời gian thực tế tùy vị trí. Easy/Hard chưa triển khai, đồng hồ Byo-yomi hiện chỉ có trong trận online.
 
 - [ ] Đo số phép tính và thời gian trên máy thực tế để mỗi nước AI không tốn quá 1–2 giây.
 - [ ] Giới hạn song song tối đa 3 luồng CPU. Ý tưởng ban đầu dùng `ParallelOptions { MaxDegreeOfParallelism = 3 }`; đây là cú pháp C#, khi triển khai trong dự án C++/Qt cần cơ chế tương đương.
@@ -473,6 +464,22 @@ Có nước nguy cấp          Thế trận hòa hoãn
 - [ ] Xây dựng và huấn luyện mạng neuron 6-block.
 - [ ] Xuất mô hình `.onnx` để phục vụ policy/value trong AI.
 - [ ] Thử nghiệm tốc độ suy luận CPU cùng ngân sách thời gian của MCTS.
+
+## Chế độ mô phỏng và lưu ván AI
+
+Chọn **Sandbox** trong menu để điều khiển cả đen và trắng theo lượt, không xoay bàn. Trong trận có Reset, Undo, Redo, Save, Load và Exit. Sandbox chỉ lưu một bản `sandbox.json`; Reset không xóa bản Save, Exit không tự ghi đè bản sandbox đã lưu.
+
+Trận Medium có **10 lần Undo và 10 lần Redo** (đổi `GameManager::AIHistoryLimit` trong `src/Core/Game.h`). Undo lùi cả cặp nước người chơi–AI; đi nhánh mới xóa Redo cũ. Có tối đa **20 slot JSON**. Slot đang chơi được auto-save sau mỗi nước và khi thoát; menu **Load AI battle** khôi phục đúng lượt, kể cả AI đang chờ đi. Khi đầy, chọn slot ghi đè để tạo ván mới.
+
+Engine GoMatch dùng DSU chung cho client, server, AI và tính vùng trống; AI đọc cache nhóm/khí, dùng Minimax có Alpha-Beta và vùng ứng viên cục bộ. Điều phối AI tách tại `src/AI/AIGame.cpp`. Phép đo bàn trống sau tối ưu: depth 3 / 586 nodes / khoảng 61 ms, trong khi phép đo trước hoàn thành depth 2 ở 1000 ms; vùng ứng viên nay được giới hạn nên không phải so sánh trên cùng cây tìm kiếm. Trần 1 giây vẫn giữ cho thế khó.
+
+Thông báo trong trận gồm ăn quân, ko/tái bắt bị cấm, phản ứng ko gây atari và điểm khi hai bên pass. JSON lưu lịch sử, cursor, bàn hiện tại/trước đó, ko, lượt, số nước, quota và kết quả. Load kiểm tra/replay dữ liệu trước khi thay trạng thái. Chi tiết vị trí file, cấu trúc và giới hạn luật: [src/AI/README.md](src/AI/README.md).
+
+## Tách client AI, DataManager và huấn luyện SGF
+
+AI nằm hoàn toàn trong `src/AI/`, chỉ được build ở client. Luật DSU chung chuyển sang `src/Rules/`; client và server cùng biên dịch source luật, server không build AI hoặc phụ thuộc Qt Concurrent. AI, DataManager và luật được khai báo trực tiếp trong CMake gốc của client; chỉ server có CMake riêng. Phần JSON save/load/slots/replay được tách khỏi GameManager sang `src/Managers/DataManager.h/.cpp`, giữ nguyên API nút lưu/tải.
+
+File `src/AI/trainAI.py` có inspect/prepare SGF, huấn luyện Transformer ~6 tỷ tham số (5.974.470.659; policy 362 + value), resume checkpoint và export ONNX external data. Cấu hình `resnet6` dùng để thử pipeline nhỏ. Chưa có trọng số 6B đã train vì chưa có corpus SGF thật. Pipeline train/resume/export đã được kiểm tra bằng model nhỏ trong venv tạm; cấu hình 6B được đếm tham số trên meta device. Hướng dẫn để tự triển khai Minimax, Alpha-Beta, MCTS và đọc neuron: [src/AI/IMPLEMENTATION_GUIDE.md](src/AI/IMPLEMENTATION_GUIDE.md).
 
 ## Khai báo AI và nhật ký prompt
 
@@ -702,3 +709,20 @@ Qua tài liệu tôi nhận thấy MCTS + RAVE là phương án tốt. So sánh 
 ```
 
 Kết quả: đối chiếu thiết kế Alpha-Beta nông + MCTS + mạng 6-block với hướng MCTS/RAVE; kiểm tra nghiên cứu MC-RAVE, neural MCTS và tài liệu ONNX Runtime về threading/quantization. Đề xuất thử baseline không mạng trước, tactical search cục bộ hỗ trợ xếp hạng, rồi đo phương án mạng nhỏ nếu cần; chưa chốt thay đổi roadmap hoặc triển khai AI. Chất lượng và tốc độ cần benchmark với cùng thời gian trên máy mục tiêu.
+
+
+### 14/10/2026 — Resolve merge conflict
+
+Nội dung prompt của người dùng:
+
+```text
+Read the git error and resolve the conflict
+```
+
+Kết quả: kiểm tra merge đang dở giữa main và origin/main. Ba file còn unmerged đã có nội dung giải quyết trong working tree: giữ Game.cpp theo logic local hiện có (khác local commit chỉ định dạng khoảng trắng), giữ AssetManager.cpp/.h với currentStoneSkin từ remote. Giữ assets/settings được merge tự động; dọn khoảng trắng cuối dòng trong SettingsScreen. Đánh dấu ba file resolved và hoàn tất merge bằng commit, không force-push.
+
+Kiểm tra: không còn conflict marker trong mã nguồn. Configure client bị chặn bởi src/AI/AIGame.cpp không tồn tại; MediumAI.cpp/.h và src/AI/README.md cũng được cấu hình nhưng chưa có trong working tree hoặc HEAD. Đây là vấn đề có sẵn, không khôi phục bằng cách thay logic AI mới bằng bản game cũ. Build server riêng được kiểm tra; kết quả ghi bên dưới.
+
+Kiểm tra bổ sung: phát hiện Server.h đang lấy GoMatch.h cũ ở server/ thay vì implementation chung mà CMake build ở src/Rules/. Sửa include thành ../src/Rules/GoMatch.h, giữ logic scoring/ko mới của server. Đây là sửa tương thích build cần thiết; client vẫn cần bổ sung các file AI bị thiếu có sẵn từ local HEAD.
+
+Kết quả build server riêng: thành công tại build/merge-server-20261014. Kiểm tra git diff --check đạt.

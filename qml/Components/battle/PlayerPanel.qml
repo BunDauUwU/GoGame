@@ -19,58 +19,61 @@ Item {
         onHeightChanged: requestPaint()
         Connections {
             target: root
-            function onAvatarOnRightChanged() { frame.requestPaint() }
-            function onFrameColorChanged() { frame.requestPaint() }
+            function onAvatarOnRightChanged() {
+                frame.requestPaint();
+            }
+            function onFrameColorChanged() {
+                frame.requestPaint();
+            }
         }
         onPaint: {
-            var ctx = getContext("2d")
-            ctx.reset()
-            var u = root.unit
-            ctx.scale(u, u)
-            var w = width / u
+            var ctx = getContext("2d");
+            ctx.reset();
+            var u = root.unit;
+            ctx.scale(u, u);
+            var w = width / u;
             if (root.avatarOnRight) {
-                ctx.translate(w, 0)
-                ctx.scale(-1, 1)
+                ctx.translate(w, 0);
+                ctx.scale(-1, 1);
             }
             // Scalloped end and inset gold outline match the reference nameplate.
             function outline(inset) {
-                ctx.beginPath()
-                ctx.moveTo(28, 3 + inset)
-                ctx.lineTo(w - 40, 3 + inset)
-                ctx.quadraticCurveTo(w - 20, 3 + inset, w - 16, 18)
-                ctx.bezierCurveTo(w - 5, 20, w - 6, 30, w - 3 - inset, 35)
-                ctx.quadraticCurveTo(w + 4 - inset, 44, w - 3 - inset, 53)
-                ctx.bezierCurveTo(w - 6, 60, w - 5, 70, w - 16, 72)
-                ctx.quadraticCurveTo(w - 20, 87 - inset, w - 40, 87 - inset)
-                ctx.lineTo(28, 87 - inset)
-                ctx.quadraticCurveTo(3 + inset, 87 - inset, 3 + inset, 64)
-                ctx.lineTo(3 + inset, 26)
-                ctx.quadraticCurveTo(3 + inset, 3 + inset, 28, 3 + inset)
-                ctx.closePath()
+                ctx.beginPath();
+                ctx.moveTo(28, 3 + inset);
+                ctx.lineTo(w - 40, 3 + inset);
+                ctx.quadraticCurveTo(w - 20, 3 + inset, w - 16, 18);
+                ctx.bezierCurveTo(w - 5, 20, w - 6, 30, w - 3 - inset, 35);
+                ctx.quadraticCurveTo(w + 4 - inset, 44, w - 3 - inset, 53);
+                ctx.bezierCurveTo(w - 6, 60, w - 5, 70, w - 16, 72);
+                ctx.quadraticCurveTo(w - 20, 87 - inset, w - 40, 87 - inset);
+                ctx.lineTo(28, 87 - inset);
+                ctx.quadraticCurveTo(3 + inset, 87 - inset, 3 + inset, 64);
+                ctx.lineTo(3 + inset, 26);
+                ctx.quadraticCurveTo(3 + inset, 3 + inset, 28, 3 + inset);
+                ctx.closePath();
             }
-            outline(0)
-            var gradient = ctx.createLinearGradient(0, 0, w, 90)
-            gradient.addColorStop(0, "#252c35")
-            gradient.addColorStop(0.6, "#343a43")
-            gradient.addColorStop(1, "#242b33")
-            ctx.fillStyle = gradient
-            ctx.shadowColor = "#35000000"
-            ctx.shadowBlur = 5
-            ctx.shadowOffsetY = 3
-            ctx.fill()
-            ctx.shadowBlur = 0
-            ctx.shadowOffsetY = 0
-            ctx.strokeStyle = root.frameColor
-            ctx.lineWidth = 2.5
-            ctx.stroke()
-            outline(4)
-            ctx.strokeStyle = "#716a60"
-            ctx.lineWidth = 1
-            ctx.stroke()
+            outline(0);
+            var gradient = ctx.createLinearGradient(0, 0, w, 90);
+            gradient.addColorStop(0, "#252c35");
+            gradient.addColorStop(0.6, "#343a43");
+            gradient.addColorStop(1, "#242b33");
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = "#35000000";
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetY = 3;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = root.frameColor;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            outline(4);
+            ctx.strokeStyle = "#716a60";
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
     }
 
-    // Diamond ornament is placed beyond the scalloped edge.
     Rectangle {
         x: root.avatarOnRight ? -7 * root.unit : parent.width - 8 * root.unit
         anchors.verticalCenter: parent.verticalCenter

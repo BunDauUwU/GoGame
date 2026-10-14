@@ -5,7 +5,7 @@
 
 namespace Protocol {
 
-QJsonObject makeEnvelope(NetworkMessageType type, const QJsonObject& payload)
+QJsonObject makeEnvelope(NetworkMessageType type, const QJsonObject &payload)
 {
     QJsonObject message;
     message["type"] = EnumUtils::toString(type);
@@ -14,7 +14,7 @@ QJsonObject makeEnvelope(NetworkMessageType type, const QJsonObject& payload)
     return message;
 }
 
-QJsonObject makeAuthRequest(const QString& nickname)
+QJsonObject makeAuthRequest(const QString &nickname)
 {
     QJsonObject payload;
     payload["mode"] = "guest";
@@ -23,7 +23,7 @@ QJsonObject makeAuthRequest(const QString& nickname)
     return makeEnvelope(NetworkMessageType::AuthRequest, payload);
 }
 
-QJsonObject makeStartMatchmaking(const QString& mode)
+QJsonObject makeStartMatchmaking(const QString &mode)
 {
     QJsonObject payload;
     payload["mode"] = mode;
@@ -36,11 +36,9 @@ QJsonObject makeCancelMatchmaking()
     return makeEnvelope(NetworkMessageType::MatchmakingCancel, QJsonObject{});
 }
 
-QJsonObject makeGameCommand(
-    const QString& matchId,
-    GameCommandType commandType,
-    const QJsonObject& commandPayload
-    )
+QJsonObject makeGameCommand(const QString &matchId,
+                            GameCommandType commandType,
+                            const QJsonObject &commandPayload)
 {
     QJsonObject payload;
     payload["matchId"] = matchId;
@@ -50,19 +48,19 @@ QJsonObject makeGameCommand(
     return makeEnvelope(NetworkMessageType::GameCommand, payload);
 }
 
-QJsonObject makePlayCommand(const QString &matchId, int row, int col) {
+QJsonObject makePlayCommand(const QString &matchId, int row, int col)
+{
     return makeGameCommand(matchId, GameCommandType::Play, {{"row", row}, {"col", col}});
 }
 
-
-QString readMessageType(const QJsonObject& message)
+QString readMessageType(const QJsonObject &message)
 {
     return message.value("type").toString("Unknown");
 }
 
-QJsonObject readPayload(const QJsonObject& message)
+QJsonObject readPayload(const QJsonObject &message)
 {
     return message.value("payload").toObject();
 }
 
-}
+} // namespace Protocol

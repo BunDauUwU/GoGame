@@ -57,10 +57,10 @@ Rectangle {
     }
 
     /*Rectangle {
-        anchors.fill: parent
-        color: "black"
-        opacity: background.visible ? 0.35 : 0
-    }*/
+            anchors.fill: parent
+            color: "black"
+            opacity: background.visible ? 0.35 : 0
+        }*/
 
     // MAIN SETTINGS
     ScrollView {

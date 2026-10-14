@@ -1,25 +1,26 @@
 #pragma once
 
+#include <QJsonObject>
+#include <QList>
+#include <QMap>
 #include <QObject>
-#include "GoMatch.h"
-#include "ByoYomiClock.h"
 #include <QTimer>
+#include <QWebSocketServer>
+#include "ByoYomiClock.h"
+#include "../src/Rules/GoMatch.h"
 #include <array>
 #include <memory>
-#include <QJsonObject>
-#include <QWebSocketServer>
-#include <QMap>
-#include <QList>
 
 class QWebSocket;
 
-class Server : public QObject {
+class Server : public QObject
+{
 public:
-    explicit Server(const QString &dataFile, QObject *parent = nullptr,
+    explicit Server(const QString &dataFile,
+                    QObject *parent = nullptr,
                     ByoYomiClock timeControl = {});
     ~Server() override;
     bool start(quint16 port, QString &error);
-
 
     void onConnection(QWebSocket *socket);
     void onMessage(QWebSocket *socket, const QString &raw);
@@ -46,15 +47,17 @@ public:
     void logServer(const QString &event, const QJsonObject &data);
     void logClient(QWebSocket *socket, const QString &type, const QJsonObject &payload);
     void removeFromQueues(QWebSocket *socket);
+
 private:
     void acceptConnection();
     void fail(QWebSocket *client, const QString &code, const QString &message);
 
     QString m_dataFile;
     QWebSocketServer m_server;
-    QMap<QWebSocket*, QJsonObject> m_clients;
-    QMap<QString, QList<QWebSocket*>> m_queues;
-    struct Match {
+    QMap<QWebSocket *, QJsonObject> m_clients;
+    QMap<QString, QList<QWebSocket *>> m_queues;
+    struct Match
+    {
         QString id;
         QList<QWebSocket *> sockets;
         GoMatch game;

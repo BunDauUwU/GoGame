@@ -16,10 +16,15 @@ Rectangle {
     layer.enabled: true
 
     Behavior on border.color {
-        ColorAnimation { duration: Motion.fast }
+        ColorAnimation {
+            duration: Motion.fast
+        }
     }
 
     Behavior on scale {
-        NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        NumberAnimation {
+            duration: Motion.fast
+            easing.type: Easing.OutCubic
+        }
     }
 }

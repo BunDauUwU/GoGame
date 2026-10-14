@@ -25,7 +25,11 @@ Rectangle {
             }
             period = count > 0 ? Math.max(0, period - elapsed) : 0;
         }
-        return { main: main, period: period, count: count };
+        return {
+            main: main,
+            period: period,
+            count: count
+        };
     }
     function formatTime(ms) {
         var seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -42,22 +46,14 @@ Rectangle {
         spacing: 3
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: root.playerLabel + (root.active && !root.finished ? qsTr(" · Đang đi") : "")
-            color: "#d7c7ad"
-            font.pixelSize: 13
-        }
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: root.display.main > 0 ? root.formatTime(root.display.main)
-                  : Math.ceil(root.display.period / 1000) + qsTr(" giây")
+            text: root.display.main > 0 ? root.formatTime(root.display.main) : Math.ceil(root.display.period / 1000)
             color: root.display.main <= 0 && root.display.period <= 5000 ? "#ff8877" : "#f3ede1"
             font.pixelSize: 26
             font.bold: true
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: root.display.main > 0 ? qsTr("Thời gian chính · Byo-yomi 3 × 20s")
-                  : qsTr("Byo-yomi · Còn ") + root.display.count + qsTr(" lần")
+            text: root.display.main > 0 ? qsTr("Byo-yomi 3 × 20s") : qsTr("Byo-yomi · ") + root.display.count + qsTr(" times remains")
             color: "#d7c7ad"
             font.pixelSize: 12
         }

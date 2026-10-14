@@ -1,7 +1,6 @@
 // src/Core/Enums.h
 #pragma once
 
-
 enum class NetworkMessageType {
     Unknown,
     AuthRequest,
@@ -16,9 +15,4 @@ enum class NetworkMessageType {
     Error
 };
 
-enum class GameCommandType {
-    Unknown,
-    Play,
-    EndRound,
-    Concede
-};
+enum class GameCommandType { Unknown, Play, EndRound, Concede };
