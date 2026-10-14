@@ -26,6 +26,20 @@ void AssetManager::setCurrentBackground(int index)
     emit currentBackgroundChanged();
 }
 
+int AssetManager::currentStoneSkin() const
+{
+    return m_currentStoneSkin;
+}
+
+void AssetManager::setCurrentStoneSkin(int index)
+{
+    if (m_currentStoneSkin == index)
+        return;
+
+    m_currentStoneSkin = index;
+    emit currentStoneSkinChanged();
+}
+
 QUrl AssetManager::url(const QString &name) const {
     if (!paths.contains(name))
         return {};
