@@ -3,7 +3,7 @@
 #include <QThreadPool>
 #include <QVariantList>
 #include <QVariantMap>
-#include "../AI/MediumAI.h"
+// #include "../AI/MediumAI.h"
 #include "../Managers/DataManager.h"
 #include "../Network/NetworkClient.h"
 #include "Enums.h"
@@ -15,6 +15,9 @@ class GameManager : public QObject
     Q_PROPERTY(int currentPlayer READ currentPlayer NOTIFY currentPlayerChanged)
     Q_PROPERTY(int playerIndex READ playerIndex NOTIFY matchInfoChanged)
     Q_PROPERTY(QVariantMap snapshot READ snapshot NOTIFY snapshotChanged)
+    Q_PROPERTY(QVariantMap scoring READ scoring NOTIFY scoringChanged)
+    Q_PROPERTY(QVariantMap serverScoring READ serverScoring NOTIFY scoringChanged)
+    Q_PROPERTY(QVariantMap scoringComparison READ scoringComparison NOTIFY scoringChanged)
     Q_PROPERTY(bool online READ online NOTIFY matchInfoChanged)
     Q_PROPERTY(bool aiEnabled READ aiEnabled NOTIFY aiStateChanged)
     Q_PROPERTY(bool sandbox READ sandbox NOTIFY aiStateChanged)
@@ -34,9 +37,9 @@ public:
     static constexpr int AISaveSlots = DataManager::AISaveSlots;
     explicit GameManager(QObject *parent = nullptr);
     ~GameManager() override;
-    Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
+    // Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
     Q_INVOKABLE bool startSandbox();
-    Q_INVOKABLE void stopAIGame();
+    // Q_INVOKABLE void stopAIGame();
     Q_INVOKABLE bool exitLocalGame();
     Q_INVOKABLE void resetGame();
     Q_INVOKABLE void undo();
@@ -57,6 +60,9 @@ public:
     void setNetworkClient(NetworkClient *client);
     Q_INVOKABLE void setMatchInfo(const QString &id, int player, const QString &opponent);
     QVariantMap snapshot() const { return m_snapshot; }
+    QVariantMap scoring() const { return m_scoring; }
+    QVariantMap serverScoring() const { return m_serverScoring; }
+    QVariantMap scoringComparison() const { return m_scoringComparison; }
     bool online() const { return !m_matchId.isEmpty(); }
     bool canAct() const;
     bool finished() const { return m_finished; }
@@ -79,6 +85,8 @@ signals:
     void currentPlayerChanged();
     void matchInfoChanged();
     void snapshotChanged();
+    void scoringChanged();
+    void scoringMismatchDetected(const QVariantMap &comparison);
     void interactionChanged();
     void aiStateChanged();
     void historyChanged();
@@ -94,8 +102,9 @@ private:
          m_sandbox = false;
     GoMatch m_position;
     QVariantMap m_snapshot;
+    QVariantMap m_scoring, m_serverScoring, m_scoringComparison;
     QThreadPool m_aiPool;
-    AI::MediumAI m_ai;
+    // AI::MediumAI m_ai;
     std::shared_ptr<std::atomic_bool> m_aiCancel;
     quint64 m_aiGeneration = 0;
     std::vector<GoMatch> m_history;
@@ -104,8 +113,10 @@ private:
         m_currentSlot = 0;
     void cancelSearch();
     void syncLocalPosition();
+    void updateScoring(const QVariantMap &serverScoring = {});
+    void notifyScore();
     void recordMove(const QJsonObject &move);
-    void requestAIMove();
+    // void requestAIMove();
     void finishLocalGame(int winner, const QString &reason);
     void submit(GameCommandType type, const QJsonObject &command = {});
     void notify(const QString &text);

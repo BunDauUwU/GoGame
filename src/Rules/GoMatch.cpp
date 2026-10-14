@@ -158,10 +158,9 @@ QJsonArray GoMatch::state() const
 }
 QJsonObject GoMatch::scoreDetails() const
 {
-    // Empty-region DSU is built only for scoring, not for each AI search node.
     std::array<int, Count> parent, size;
     std::array<unsigned char, Count> borders{};
-    std::array<int, 2> area{};
+    std::array<int, 2> territory{};
     for (int i = 0; i < Count; ++i) {
         parent[i] = i;
         size[i] = 1;
@@ -185,25 +184,76 @@ QJsonObject GoMatch::scoreDetails() const
                     parent[b] = a;
                     size[a] += size[b];
                 }
+    const auto &chains = groups();
+    std::array<std::bitset<Count>, Count> regionCells, boundaryChains, vitalChains;
+    std::bitset<Count> aliveChains, activeRegions;
     for (int pos = 0; pos < Count; ++pos) {
-        if (board[pos] >= 0)
-            ++area[board[pos]];
-        else
-            for (int next : neighbors()[pos])
-                if (next >= 0 && board[next] >= 0)
-                    borders[root(pos)] |= 1 << board[next];
-    }
-    for (int pos = 0; pos < Count; ++pos)
-        if (board[pos] == -1 && root(pos) == pos) {
-            if (borders[pos] == 1)
-                area[0] += size[pos];
-            else if (borders[pos] == 2)
-                area[1] += size[pos];
+        if (board[pos] >= 0) {
+            aliveChains.set(chains.root(pos));
+            continue;
         }
-    return {{"blackArea", area[0]},
-            {"whiteArea", area[1]},
+        const int region = root(pos);
+        regionCells[region].set(pos);
+        for (int next : neighbors()[pos])
+            if (next >= 0 && board[next] >= 0) {
+                borders[region] |= 1 << board[next];
+                boundaryChains[region].set(chains.root(next));
+            }
+    }
+    for (int region = 0; region < Count; ++region) {
+        if (regionCells[region].none() || (borders[region] != 1 && borders[region] != 2))
+            continue;
+        activeRegions.set(region);
+        for (int chain = 0; chain < Count; ++chain)
+            if (boundaryChains[region].test(chain)
+                && (regionCells[region] & ~chains.liberties[chain]).none())
+                vitalChains[region].set(chain);
+    }
+    bool changed;
+    do {
+        changed = false;
+        std::array<int, Count> eyes{};
+        for (int region = 0; region < Count; ++region) {
+            if (!activeRegions.test(region))
+                continue;
+            if ((boundaryChains[region] & ~aliveChains).any()) {
+                activeRegions.reset(region);
+                changed = true;
+                continue;
+            }
+            for (int chain = 0; chain < Count; ++chain)
+                if (vitalChains[region].test(chain))
+                    ++eyes[chain];
+        }
+        for (int chain = 0; chain < Count; ++chain)
+            if (aliveChains.test(chain) && eyes[chain] < 2) {
+                aliveChains.reset(chain);
+                changed = true;
+            }
+    } while (changed);
+    int unsettledPoints = 0;
+    for (int region = 0; region < Count; ++region) {
+        if (regionCells[region].none())
+            continue;
+        if (activeRegions.test(region) && (vitalChains[region] & aliveChains).any())
+            territory[borders[region] == 1 ? 0 : 1] += size[region];
+        else
+            unsettledPoints += size[region];
+    }
+    const double blackPoints = territory[0] + capturedStones[0];
+    const double whitePoints = territory[1] + capturedStones[1] + 6.5;
+    return {{"rules", "Japanese"},
+            {"scoreBasis", "SecuredTerritory"},
+            {"unsettledPoints", unsettledPoints},
+            {"blackTerritory", territory[0]},
+            {"whiteTerritory", territory[1]},
+            {"blackPrisoners", capturedStones[0]},
+            {"whitePrisoners", capturedStones[1]},
+            {"blackPoints", blackPoints},
+            {"whitePoints", whitePoints},
             {"komi", 6.5},
-            {"difference", area[0] - area[1] - 6.5}};
+            {"provisional", true},
+            {"difference", blackPoints - whitePoints}};
 }
 double GoMatch::score() const
 {

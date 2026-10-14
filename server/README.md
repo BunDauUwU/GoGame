@@ -104,7 +104,7 @@ Bỏ lượt (tên `EndRound` được giữ để tương thích enum hiện c�
 {"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"Concede","command":{}}}
 ```
 
-Server phát `GameEvent` với `StonePlayed`, `Passed` hoặc `GameEnded`, và `GameSnapshot` gồm `board` (361 ô, -1/0/1), `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, `komi`. Hai lần bỏ lượt liên tiếp kết thúc trận, tính diện tích quân sống trên bàn cộng vùng trống chỉ tiếp giáp một màu; trắng có komi 6.5. Bản này chưa có thỏa thuận loại quân chết trước tính điểm hoặc positional/situational superko. Ngắt kết nối trong trận tính là thua. Trận đang chạy chỉ lưu trong bộ nhớ; file JSON ReadData/WriteData vẫn độc lập.
+Server phát `GameEvent` với `StonePlayed`, `Passed` hoặc `GameEnded`, và `GameSnapshot` gồm `board` (361 ô, -1/0/1), `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, `komi`. Hai lần bỏ lượt liên tiếp kết thúc trận, tính đất trống chỉ tiếp giáp một màu + quân đã bắt; trắng cộng komi 6.5 theo công thức điểm Nhật. Quân còn trên bàn không cộng điểm. Điểm đang là tạm tính trên bàn hiện tại vì chưa xác nhận quân chết/seki. Bản này chưa có thỏa thuận loại quân chết trước tính điểm hoặc positional/situational superko. Ngắt kết nối trong trận tính là thua. Trận đang chạy chỉ lưu trong bộ nhớ; file JSON ReadData/WriteData vẫn độc lập.
 
 `GoMatch.h/.cpp` chứa luật, `Server::gameCommand` chứa kiểm tra/giao thức/đồng hồ. Các lệnh thẻ bài trong JS được thay bằng ba lệnh cờ vây trên. MatchScreen phía client gửi GameCommand trong trận online và cập nhật bàn/lượt từ GameSnapshot của server. Preview chỉ được chọn khi đến lượt; nhấn xác nhận gửi lệnh và khóa thao tác trong lúc chờ phản hồi.
 
@@ -163,10 +163,16 @@ Runtime server hiện **841 dòng / 28.126 ký tự**; gồm bốn test và CMak
 
 ## DSU và thông báo trận
 
-GoMatch sử dụng DSU nhóm quân, bitset khí, cache position bất biến và DSU vùng trống để tính diện tích. Snapshot thêm `position` (board, previousBoard, simple ko, captures, lượt/số nước) và `scoring` (blackArea, whiteArea, komi, difference). GameEvent StonePlayed bổ sung `captured`, `koPoint`, `koThreat`; GameEnded sau hai pass bổ sung `scoring`. Client hiển thị thông báo ăn quân, ko và kết quả diện tích. `koThreat` nhận diện phản ứng sau ko khiến một nhóm đối thủ vừa vào atari; chưa phải phân tích đầy đủ mọi đe dọa ko.
+GoMatch sử dụng DSU nhóm quân, bitset khí, cache position bất biến và DSU vùng trống để tính đất. Snapshot thêm `position` (board, previousBoard, simple ko, captures, lượt/số nước) và `scoring` (rules, blackTerritory, whiteTerritory, blackPrisoners, whitePrisoners, blackPoints, whitePoints, komi, provisional, difference). GameEvent StonePlayed bổ sung `captured`, `koPoint`, `koThreat`; GameEnded sau hai pass bổ sung `scoring`. Client hiển thị thông báo ăn quân, ko và kết quả điểm Nhật tạm tính. `koThreat` nhận diện phản ứng sau ko khiến một nhóm đối thủ vừa vào atari; chưa phải phân tích đầy đủ mọi đe dọa ko.
 
 Sandbox và lưu/undo/redo ván AI nằm ở client, không cho phép undo/redo trận online. Xem [tài liệu AI](../src/AI/README.md).
 
 ## Ranh giới build server/client
 
 Luật chung đặt tại `src/Rules/GoMatch.*`; server biên dịch source luật trực tiếp và chỉ link Qt Core/Network/WebSockets. Standalone server không build AI, DataManager hoặc Qt Concurrent. CMake gốc biên dịch AI, DataManager và luật trực tiếp vào client; chỉ server có CMake riêng. Các file test và cấu hình CTest đã được xóa. `DataManager` thuộc client và giữ Save/Load JSON; huấn luyện SGF và hướng dẫn thuật toán ở `src/AI/IMPLEMENTATION_GUIDE.md`.
+
+PlayerPanel hiển thị Current points từ scoring theo đúng màu của từng người. Công thức đất + quân bắt và komi dựa trên [quy tắc Nhật của Nihon Ki-in](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm). Điểm hiện tại tạm tính, chưa có bước hai bên xác nhận quân chết/seki.
+
+Điểm Current points chỉ cộng đất an toàn xác định bằng loại trừ Benson (chuỗi có hai vùng mắt vital) + quân đã bắt; trắng cộng komi. Vùng mở, vùng chưa chứng minh sống và mắt giả không cộng vào đất. scoreBasis là SecuredTerritory; unsettledPoints ghi số ô trống chưa được tính. Đây là ước lượng bảo thủ, không thay bước xác nhận quân chết/seki. Tham khảo [pass-alive territory trong KataGo](https://lightvector.github.io/KataGo/rules.html#additional-definitions).
+
+GameManager tính scoring độc lập từ m_position (bàn cờ + captures) bằng GoMatch::scoreDetails. QML dùng gameManager.scoring cho Current points; gameManager.serverScoring giữ nguyên scoring nhận từ GameSnapshot. gameManager.scoringComparison có status local/unavailable/matched/mismatch, moveCount, matches và differences theo từng trường (client/server/delta hoặc missing). Chỉ đối chiếu sau khi áp position của cùng snapshot; GameEvent kết thúc không được so với bàn của lượt cũ. scoringChanged cập nhật UI; scoringMismatchDetected phát khi có chênh lệch mới. Panel có dòng điểm Server để xem cùng điểm client. Đây là đối chiếu phép tính trên cùng trạng thái, không tự chứng minh trạng thái server đúng.

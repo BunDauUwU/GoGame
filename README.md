@@ -137,7 +137,7 @@ Mỗi bên có **10 hoặc 15 phút chính + 3 lần Byo-yomi × 20 giây**. H�
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Server        | Guest nickname, queue theo mode, nhiều trận riêng, luật cơ bản, xác nhận lượt/thành viên, timer và snapshot từng người. | Tài khoản server thật, TLS/phân quyền, khôi phục trận sau reconnect.                                                 |
 | Client online | MatchFound, gửi Play/EndRound/Concede, chỉ áp dụng bàn/lượt sau snapshot, pending lock, lỗi và kết quả trận.            | Kiểm thử trực tiếp toàn bộ thao tác UI; hiện tên/avatar vẫn có giá trị mặc định khi chạy local.                      |
-| Luật          | Ăn quân, tự sát, simple ko, hai pass tính diện tích với komi 6,5.                                                       | Superko, xử lý/thỏa thuận quân chết, hoàn thiện luật Trung rồi cân nhắc Nhật.                                        |
+| Luật          | Ăn quân, tự sát, simple ko, hai pass tính đất + quân bắt theo công thức Nhật với komi 6,5.                                                       | Superko, xử lý/thỏa thuận quân chết, xác nhận quân chết/seki để hoàn thiện tính điểm Nhật.                                        |
 | Đồng hồ       | Byo-yomi do server quản lý, hiển thị clock hai bên, timer gửi snapshot.                                                 | Tùy chọn time control trong UI; hiện 10/15 phút chọn qua CLI.                                                        |
 | Auth          | SQLite local, gửi guest nickname khi login và kết nối lại.                                                              | Server chưa xác thực password/tài khoản local; logout local không hủy danh tính guest trên server.                   |
 | Settings      | Chọn background qua AppState trong phiên.                                                                               | Âm thanh, preview toggle có UI/lưu lựa chọn, avatar/frame/title/level/rank. Preview vẫn là property của MatchScreen. |
@@ -377,7 +377,7 @@ Các file test, executable test và cấu hình CTest đã được xóa khỏi 
 
 ### 4. Luật Trung / Nhật
 
-- [x] Server có luật cơ bản: ăn quân, tự sát, simple ko, hai lần pass và tính diện tích với komi 6,5.
+- [x] Server có luật cơ bản: ăn quân, tự sát, simple ko, hai lần pass và tính đất + quân bắt với komi 6,5.
 - [ ] Hoàn thiện luật Trung: superko, xử lý quân chết/thỏa thuận kết quả và kiểm thử tính điểm.
 - [ ] Cân nhắc luật Nhật sau vì triển khai phức tạp; chưa ưu tiên.
 

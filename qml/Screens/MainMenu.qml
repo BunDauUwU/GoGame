@@ -143,9 +143,10 @@ Rectangle {
 
                         text: modelData
                         Layout.fillWidth: true
-                        enabled: index === 1
+                        enabled: false
 
                         onClicked: {
+                            /*
                             console.log("Selected:", modelData);
 
                             if (gameManager.savedAISlots.length >= 20) {
@@ -163,6 +164,7 @@ Rectangle {
                             });
 
                             selectionMenu.close();
+                            */
                         }
                     }
                 }
@@ -305,9 +307,10 @@ Rectangle {
             height: 60
             width: 400
             text: "Play against AI"
+            enabled: false
             onClicked: {
-                console.log("Matchmaking action triggered");
-                selectionMenu.open();
+                // console.log("Matchmaking action triggered");
+                // selectionMenu.open();
             }
         }
 
@@ -328,9 +331,10 @@ Rectangle {
             height: 48
             width: 400
             text: "Load game"
+            enabled: false
             onClicked: {
-                gameManager.refreshSaves();
-                loadAIDialog.open();
+                // gameManager.refreshSaves();
+                // loadAIDialog.open();
             }
         }
 
@@ -382,12 +386,14 @@ Rectangle {
             displayText: "Slot " + (currentIndex + 1)
         }
         onAccepted: {
+            /*
             if (gameManager.startMediumGame(0, newSlotSelector.currentIndex + 1)) {
                 stack.push("./MatchScreen.qml", {
                     localPlayerName: authManager.username || "Player",
                     opponentPlayerName: "Medium AI"
                 });
             }
+            */
         }
     }
 
@@ -403,12 +409,14 @@ Rectangle {
             displayText: currentIndex >= 0 ? "Slot " + currentText : "No saved AI battles"
         }
         onAccepted: {
+            /*
             if (loadAISelector.currentIndex >= 0 && gameManager.loadAIGame(Number(loadAISelector.currentText))) {
                 stack.push("./MatchScreen.qml", {
                     localPlayerName: authManager.username || "Player",
                     opponentPlayerName: "Medium AI"
                 });
             }
+            */
         }
     }
 

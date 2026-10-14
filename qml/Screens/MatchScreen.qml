@@ -11,6 +11,14 @@ Rectangle {
     id: boardScreen
     // 0 = black, 1 = white. Local play defaults to the black perspective.
     property var battleState: gameManager.snapshot || ({})
+    readonly property var scoring: gameManager.scoring
+    readonly property var serverScoring: gameManager.serverScoring
+    readonly property var scoringComparison: gameManager.scoringComparison
+
+    function pointsForColor(color) {
+        var points = color === 0 ? scoring.blackPoints : scoring.whitePoints;
+        return points === undefined ? (color === 0 ? 0 : 6.5) : points;
+    }
     property int localPlayerColor: gameManager.playerIndex === 1 ? 1 : 0
     readonly property bool boardFlipped: !gameManager.sandbox && localPlayerColor === 1
     property string localPlayerName: "Nguoi Dep Trai"
@@ -22,8 +30,8 @@ Rectangle {
     property bool previewEnabled: true
 
     Component.onDestruction: {
-        if (gameManager.aiEnabled)
-            gameManager.stopAIGame();
+        // if (gameManager.aiEnabled)
+        //     gameManager.stopAIGame();
         AppState.playingAgainstAI = false;
     }
 
@@ -98,6 +106,14 @@ Rectangle {
         Text {
             text: gameManager.finished ? qsTr("Game ended") : gameManager.pending ? (qsTr("Waiting for opponent…")) : gameManager.online ? (gameManager.canAct ? qsTr("Your turn") : qsTr("Opponent's turn")) : gameManager.currentPlayer === 0 ? qsTr("Black turn") : qsTr("White turn")
             font.pixelSize: 20
+        }
+        Text {
+            objectName: "scoringComparisonStatus"
+            visible: gameManager.online
+            text: boardScreen.scoringComparison.status === "matched" ? qsTr("Client/server scores match") : boardScreen.scoringComparison.status === "mismatch" ? qsTr("Client/server scores differ") : qsTr("Server score unavailable")
+            color: boardScreen.scoringComparison.status === "mismatch" ? "#b55f27" : "#394451"
+            font.pixelSize: 13
+            Layout.alignment: Qt.AlignHCenter
         }
     }
 
@@ -417,9 +433,9 @@ Rectangle {
         }
         onAccepted: {
             Saved;
-            if (loading)
-                gameManager.loadAIGame(slotSelector.currentIndex + 1);
-            else if (gameManager.saveGame(slotSelector.currentIndex + 1))
+            if (loading) {
+                // gameManager.loadAIGame(slotSelector.currentIndex + 1);
+            } else if (gameManager.saveGame(slotSelector.currentIndex + 1))
                 saveStatus.text = qsTr(" ~!");
         }
     }
@@ -495,8 +511,8 @@ Rectangle {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 text: {
-                    var score = boardScreen.battleState.scoring || ({});
-                    return score.blackArea === undefined ? "" : "Black: " + score.blackArea + "\nWhite: " + score.whiteArea + "\n" + score.komi + " komi";
+                    var score = boardScreen.scoring;
+                    return score.blackPoints === undefined ? "" : qsTr("Japanese score (provisional)") + "\n" + qsTr("Black: %1").arg(score.blackPoints) + "\n" + qsTr("White: %1").arg(score.whitePoints) + "\n" + qsTr("White includes %1 komi").arg(score.komi);
                 }
                 horizontalAlignment: Text.AlignHCenter
             }
@@ -519,6 +535,11 @@ Rectangle {
         width: Math.min(420, parent.width * 0.25)
         height: width * 90 / 420
         playerName: boardScreen.opponentPlayerName
+        currentPoints: boardScreen.pointsForColor(1 - boardScreen.localPlayerColor)
+        showServerPoints: gameManager.online && boardScreen.serverScoring.blackPoints !== undefined && boardScreen.serverScoring.whitePoints !== undefined
+        serverPoints: (boardScreen.localPlayerColor === 0 ? boardScreen.serverScoring.whitePoints : boardScreen.serverScoring.blackPoints) ?? 0
+        scoresMatch: boardScreen.scoringComparison.status === "matched"
+        // provisionalPoints: boardScreen.scoring.provisional !== false
         avatarSource: boardScreen.opponentAvatar
     }
 
@@ -530,6 +551,11 @@ Rectangle {
         width: Math.min(420, parent.width * 0.25)
         height: width * 90 / 420
         playerName: boardScreen.localPlayerName
+        currentPoints: boardScreen.pointsForColor(boardScreen.localPlayerColor)
+        showServerPoints: gameManager.online && boardScreen.serverScoring.blackPoints !== undefined && boardScreen.serverScoring.whitePoints !== undefined
+        serverPoints: (boardScreen.localPlayerColor === 0 ? boardScreen.serverScoring.blackPoints : boardScreen.serverScoring.whitePoints) ?? 0
+        scoresMatch: boardScreen.scoringComparison.status === "matched"
+        // provisionalPoints: boardScreen.scoring.provisional !== false
         avatarSource: boardScreen.localAvatar
         avatarOnRight: true
     }
