@@ -119,7 +119,7 @@ Rectangle {
 
         contentItem: GamePanel {
             Layout.fillWidth: true
-            implicitHeight: 480
+            implicitHeight: 240
             radius: Radius.xl
 
             ColumnLayout {
@@ -139,7 +139,7 @@ Rectangle {
 
                         onClicked: {
                             console.log("Selected:", modelData);
-                            
+
                             AppState.difficultyLevel = index;
                             AppState.playingAgainstAI = true;
 
