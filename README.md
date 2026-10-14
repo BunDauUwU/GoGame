@@ -709,3 +709,20 @@ Qua tài liệu tôi nhận thấy MCTS + RAVE là phương án tốt. So sánh 
 ```
 
 Kết quả: đối chiếu thiết kế Alpha-Beta nông + MCTS + mạng 6-block với hướng MCTS/RAVE; kiểm tra nghiên cứu MC-RAVE, neural MCTS và tài liệu ONNX Runtime về threading/quantization. Đề xuất thử baseline không mạng trước, tactical search cục bộ hỗ trợ xếp hạng, rồi đo phương án mạng nhỏ nếu cần; chưa chốt thay đổi roadmap hoặc triển khai AI. Chất lượng và tốc độ cần benchmark với cùng thời gian trên máy mục tiêu.
+
+
+### 14/10/2026 — Resolve merge conflict
+
+Nội dung prompt của người dùng:
+
+```text
+Read the git error and resolve the conflict
+```
+
+Kết quả: kiểm tra merge đang dở giữa main và origin/main. Ba file còn unmerged đã có nội dung giải quyết trong working tree: giữ Game.cpp theo logic local hiện có (khác local commit chỉ định dạng khoảng trắng), giữ AssetManager.cpp/.h với currentStoneSkin từ remote. Giữ assets/settings được merge tự động; dọn khoảng trắng cuối dòng trong SettingsScreen. Đánh dấu ba file resolved và hoàn tất merge bằng commit, không force-push.
+
+Kiểm tra: không còn conflict marker trong mã nguồn. Configure client bị chặn bởi src/AI/AIGame.cpp không tồn tại; MediumAI.cpp/.h và src/AI/README.md cũng được cấu hình nhưng chưa có trong working tree hoặc HEAD. Đây là vấn đề có sẵn, không khôi phục bằng cách thay logic AI mới bằng bản game cũ. Build server riêng được kiểm tra; kết quả ghi bên dưới.
+
+Kiểm tra bổ sung: phát hiện Server.h đang lấy GoMatch.h cũ ở server/ thay vì implementation chung mà CMake build ở src/Rules/. Sửa include thành ../src/Rules/GoMatch.h, giữ logic scoring/ko mới của server. Đây là sửa tương thích build cần thiết; client vẫn cần bổ sung các file AI bị thiếu có sẵn từ local HEAD.
+
+Kết quả build server riêng: thành công tại build/merge-server-20261014. Kiểm tra git diff --check đạt.

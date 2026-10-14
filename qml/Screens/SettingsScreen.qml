@@ -106,6 +106,37 @@ Rectangle {
                     }
                 }
             }
+
+            Item {
+                width: parent.width
+                height: stoneSkinhButtonsRow.implicitHeight
+
+                Row {
+                    id: stoneSkinhButtonsRow
+
+                    anchors.centerIn: parent
+                    spacing: 15
+
+                    Repeater {
+                        model: 3
+
+                        delegate: GameButton {
+                            required property int index
+
+                            opacity: AssetManager.currentBackground === index + 1 ? 1.0 : 0.6
+
+                            width: 200
+                            height: 60
+
+                            text: qsTr("Background %1").arg(index + 1)
+
+                            onClicked: {
+                                AssetManager.currentBackground = index + 1;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

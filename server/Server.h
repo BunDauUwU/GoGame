@@ -7,7 +7,7 @@
 #include <QTimer>
 #include <QWebSocketServer>
 #include "ByoYomiClock.h"
-#include "GoMatch.h"
+#include "../src/Rules/GoMatch.h"
 #include <array>
 #include <memory>
 
