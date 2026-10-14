@@ -91,53 +91,56 @@ Server là nguồn quyết định bàn cờ online, lượt và thời gian. Pr
 
 Mọi text message dùng envelope `{"type":"...","payload":{...}}`. Binary không được hỗ trợ; giới hạn message nhận 1 MiB.
 
-| Client → server | Payload | Server → client |
-| --- | --- | --- |
-| `AuthRequest` | `nickname` (1–17 ký tự sau trim) | `AuthResult` với `success`, `playerId`, `nickname`; nickname sai hiện trả `Error`. |
-| `MatchmakingStart` | `mode` (1–64 ký tự sau trim) | `MatchmakingStatus`, sau đó `MatchFound` và snapshot khi đủ 2 người cùng mode. |
-| `MatchmakingCancel` | `{}` | `MatchmakingStatus`. |
-| `GameCommand` | `matchId`, `commandType`, `command` | `GameEvent` + snapshot, hoặc `Error`. |
-| `ReadData` | `{}` | `Data` chứa `data`. |
-| `WriteData` | `data` là JSON object | `DataWritten` với `ok: true`, hoặc `Error`. Thay toàn bộ file. |
+| Client → server     | Payload                             | Server → client                                                                    |
+| ------------------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
+| `AuthRequest`       | `nickname` (1–17 ký tự sau trim)    | `AuthResult` với `success`, `playerId`, `nickname`; nickname sai hiện trả `Error`. |
+| `MatchmakingStart`  | `mode` (1–64 ký tự sau trim)        | `MatchmakingStatus`, sau đó `MatchFound` và snapshot khi đủ 2 người cùng mode.     |
+| `MatchmakingCancel` | `{}`                                | `MatchmakingStatus`.                                                               |
+| `GameCommand`       | `matchId`, `commandType`, `command` | `GameEvent` + snapshot, hoặc `Error`.                                              |
+| `ReadData`          | `{}`                                | `Data` chứa `data`.                                                                |
+| `WriteData`         | `data` là JSON object               | `DataWritten` với `ok: true`, hoặc `Error`. Thay toàn bộ file.                     |
 
 Ví dụ đặt quân tại hàng 0, cột 0:
 
 ```json
-{"type":"GameCommand","payload":{"matchId":"<id từ MatchFound>","commandType":"Play","command":{"row":0,"col":0}}}
+{
+    "type": "GameCommand",
+    "payload": { "matchId": "<id từ MatchFound>", "commandType": "Play", "command": { "row": 0, "col": 0 } }
+}
 ```
 
 `Play` yêu cầu tọa độ nguyên 0–18; `EndRound` là pass và `Concede` là đầu hàng, cả hai dùng `command: {}`. Đầu hàng được phép ngoài lượt; đặt quân/pass chỉ được thực hiện đúng lượt. Các lệnh nhân vật, card, skill trong template không được server Go hỗ trợ.
 
 `Server::sendSnapshot(socket, match)` tạo payload riêng cho mỗi người; overload `sendSnapshot(match)` gửi tới cả hai socket. Bàn cờ và thời gian công khai giống nhau, `self.playerIndex` theo người nhận.
 
-| Trường snapshot | Ý nghĩa |
-| --- | --- |
-| `matchId`, `stage`, `started` | ID trận, `Action` khi chơi hoặc `GameEnd` khi kết thúc. |
-| `boardSize`, `board` | 19 và mảng 361 ô theo `row * 19 + col`; `-1` trống, `0` đen, `1` trắng. |
-| `moveCount`, `consecutivePasses` | Số lượt đã qua (kể cả pass), số pass liên tiếp. |
-| `currentPlayerIndex`, `komi` | Người đến lượt; komi trắng 6,5. |
-| `remainingMs` | Mảng thời gian đen/trắng tới ranh giới thời gian hiện tại (main hoặc một period Byo-yomi). |
-| `clocks` | Mỗi người có `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, `phase` (`Main`/`ByoYomi`). |
-| `players` | Mỗi người có `playerId`, `nickname`, `playerIndex`, `color`, `remainingTimeMs`. |
-| `self.playerIndex` | 0 hoặc 1; không có dữ liệu card/hand riêng. |
-| `serverTimeEpochMs` | Thời điểm server tạo snapshot để client ước lượng lệch đồng hồ. |
-| `actionDeadlineEpochMs` | Epoch của ranh giới main/period hiện tại của người đang đi; bằng 0 khi trận kết thúc. |
-| `winnerIndex`, `endReason` | `-1`/chuỗi rỗng khi đang chơi; người thắng và lý do khi kết thúc. |
+| Trường snapshot                  | Ý nghĩa                                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `matchId`, `stage`, `started`    | ID trận, `Action` khi chơi hoặc `GameEnd` khi kết thúc.                                                                  |
+| `boardSize`, `board`             | 19 và mảng 361 ô theo `row * 19 + col`; `-1` trống, `0` đen, `1` trắng.                                                  |
+| `moveCount`, `consecutivePasses` | Số lượt đã qua (kể cả pass), số pass liên tiếp.                                                                          |
+| `currentPlayerIndex`, `komi`     | Người đến lượt; komi trắng 6,5.                                                                                          |
+| `remainingMs`                    | Mảng thời gian đen/trắng tới ranh giới thời gian hiện tại (main hoặc một period Byo-yomi).                               |
+| `clocks`                         | Mỗi người có `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, `phase` (`Main`/`ByoYomi`). |
+| `players`                        | Mỗi người có `playerId`, `nickname`, `playerIndex`, `color`, `remainingTimeMs`.                                          |
+| `self.playerIndex`               | 0 hoặc 1; không có dữ liệu card/hand riêng.                                                                              |
+| `serverTimeEpochMs`              | Thời điểm server tạo snapshot để client ước lượng lệch đồng hồ.                                                          |
+| `actionDeadlineEpochMs`          | Epoch của ranh giới main/period hiện tại của người đang đi; bằng 0 khi trận kết thúc.                                    |
+| `winnerIndex`, `endReason`       | `-1`/chuỗi rỗng khi đang chơi; người thắng và lý do khi kết thúc.                                                        |
 
 Mỗi bên có **10 hoặc 15 phút chính + 3 lần Byo-yomi × 20 giây**. Hết main time chuyển sang Byo-yomi; hết một period mất một lần. Nước đi/pass hợp lệ hồi period hiện tại về 20 giây, không hồi số lần đã mất; lệnh sai không hồi giờ. Hết lần cuối xử thua. Server dùng monotonic time và QTimer kiểm tra tại ranh giới hoặc tối đa mỗi 30 giây; 30 giây không phải giới hạn mỗi nước. Snapshot gửi khi ghép trận, sau nước hợp lệ, timer và lúc kết thúc. GameClock nội suy clock của mình và đối thủ giữa các snapshot. Trường stage vẫn là chuỗi trong payload; không cần enum stage/card-game ở client.
 
 ## Trạng thái hiện tại và việc còn lại
 
-| Phần | Đã có | Còn thiếu |
-| --- | --- | --- |
-| Server | Guest nickname, queue theo mode, nhiều trận riêng, luật cơ bản, xác nhận lượt/thành viên, timer và snapshot từng người. | Tài khoản server thật, TLS/phân quyền, khôi phục trận sau reconnect. |
-| Client online | MatchFound, gửi Play/EndRound/Concede, chỉ áp dụng bàn/lượt sau snapshot, pending lock, lỗi và kết quả trận. | Kiểm thử trực tiếp toàn bộ thao tác UI; hiện tên/avatar vẫn có giá trị mặc định khi chạy local. |
-| Luật | Ăn quân, tự sát, simple ko, hai pass tính diện tích với komi 6,5. | Superko, xử lý/thỏa thuận quân chết, hoàn thiện luật Trung rồi cân nhắc Nhật. |
-| Đồng hồ | Byo-yomi do server quản lý, hiển thị clock hai bên, timer gửi snapshot. | Tùy chọn time control trong UI; hiện 10/15 phút chọn qua CLI. |
-| Auth | SQLite local, gửi guest nickname khi login và kết nối lại. | Server chưa xác thực password/tài khoản local; logout local không hủy danh tính guest trên server. |
-| Settings | Chọn background qua AppState trong phiên. | Âm thanh, preview toggle có UI/lưu lựa chọn, avatar/frame/title/level/rank. Preview vẫn là property của MatchScreen. |
-| Dữ liệu | ReadData/WriteData nguyên tử bằng QSaveFile. | Match chỉ ở RAM; chưa tự lưu match, replay 5 ván hoặc phục hồi sau restart. API file vẫn chưa phân quyền. |
-| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font. | Chưa có implementation AI, nhạc/âm thanh đặt quân/báo lỗi. Các file rỗng đã bỏ; tạo lại khi triển khai thật. |
+| Phần          | Đã có                                                                                                                   | Còn thiếu                                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Server        | Guest nickname, queue theo mode, nhiều trận riêng, luật cơ bản, xác nhận lượt/thành viên, timer và snapshot từng người. | Tài khoản server thật, TLS/phân quyền, khôi phục trận sau reconnect.                                                 |
+| Client online | MatchFound, gửi Play/EndRound/Concede, chỉ áp dụng bàn/lượt sau snapshot, pending lock, lỗi và kết quả trận.            | Kiểm thử trực tiếp toàn bộ thao tác UI; hiện tên/avatar vẫn có giá trị mặc định khi chạy local.                      |
+| Luật          | Ăn quân, tự sát, simple ko, hai pass tính diện tích với komi 6,5.                                                       | Superko, xử lý/thỏa thuận quân chết, hoàn thiện luật Trung rồi cân nhắc Nhật.                                        |
+| Đồng hồ       | Byo-yomi do server quản lý, hiển thị clock hai bên, timer gửi snapshot.                                                 | Tùy chọn time control trong UI; hiện 10/15 phút chọn qua CLI.                                                        |
+| Auth          | SQLite local, gửi guest nickname khi login và kết nối lại.                                                              | Server chưa xác thực password/tài khoản local; logout local không hủy danh tính guest trên server.                   |
+| Settings      | Chọn background qua AppState trong phiên.                                                                               | Âm thanh, preview toggle có UI/lưu lựa chọn, avatar/frame/title/level/rank. Preview vẫn là property của MatchScreen. |
+| Dữ liệu       | ReadData/WriteData nguyên tử bằng QSaveFile.                                                                            | Match chỉ ở RAM; chưa tự lưu match, replay 5 ván hoặc phục hồi sau restart. API file vẫn chưa phân quyền.            |
+| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font.                                                                           | Chưa có implementation AI, nhạc/âm thanh đặt quân/báo lỗi. Các file rỗng đã bỏ; tạo lại khi triển khai thật.         |
 
 ## Những thay đổi trong lần dọn project này
 
@@ -186,17 +189,17 @@ Các file đã xóa:
 
 Đếm **mã server hiện tại**, không suy đoán số ký tự do riêng chủ dự án gõ: lịch sử có thay đổi của người và AI, Git author không chứng minh tác giả của từng ký tự. Mỗi dòng vật lý tính bằng `splitlines()` (kể cả dòng trống/comment); ký tự tính Unicode code points sau decode UTF-8, gồm khoảng trắng và xuống dòng, không phải byte. Không tính README, JSON dữ liệu, client code, file build hoặc script thống kê.
 
-| File / phạm vi | Dòng | Ký tự |
-| --- | ---: | ---: |
-| `server/main.cpp` | 42 | 1,665 |
-| `server/Server.h` | 77 | 2,777 |
-| `server/Server.cpp` | 580 | 18,973 |
-| `server/GoMatch.h` | 20 | 428 |
-| `server/GoMatch.cpp` | 84 | 2,905 |
-| `server/ByoYomiClock.h` | 38 | 1,378 |
-| **Runtime .cpp/.h** | **841** | **28,126** |
-| Tests (4 file .cpp) | 395 | 21,815 |
-| server/CMakeLists.txt | 41 | 1,983 |
+| File / phạm vi              |      Dòng |      Ký tự |
+| --------------------------- | --------: | ---------: |
+| `server/main.cpp`           |        42 |      1,665 |
+| `server/Server.h`           |        77 |      2,777 |
+| `server/Server.cpp`         |       580 |     18,973 |
+| `server/GoMatch.h`          |        20 |        428 |
+| `server/GoMatch.cpp`        |        84 |      2,905 |
+| `server/ByoYomiClock.h`     |        38 |      1,378 |
+| **Runtime .cpp/.h**         |   **841** | **28,126** |
+| Tests (4 file .cpp)         |       395 |     21,815 |
+| server/CMakeLists.txt       |        41 |      1,983 |
 | **Runtime + tests + CMake** | **1,277** | **51,924** |
 
 Runtime trước dọn: 885 dòng / 29.272 ký tự; sau dọn giảm 44 dòng / 1.146 ký tự. Đây là chênh lệch đầu/cuối tác vụ, không so với HEAD (working tree đã có thay đổi trước đó).
@@ -471,7 +474,6 @@ Có nước nguy cấp          Thế trận hòa hoãn
 - [ ] Xuất mô hình `.onnx` để phục vụ policy/value trong AI.
 - [ ] Thử nghiệm tốc độ suy luận CPU cùng ngân sách thời gian của MCTS.
 
-
 ## Khai báo AI và nhật ký prompt
 
 README này được soạn với sự hỗ trợ của AI (Codex) theo yêu cầu của chủ dự án. Lần cập nhật này chỉ tạo tài liệu, không triển khai các tính năng trong kế hoạch.
@@ -528,10 +530,19 @@ Viết README.md với những yêu cầu sau:
 
 12. Build cái mạng neuron 6b =)))
 
+Tài liệu tham khảo:
+1. https://www.studocu.vn/vn/document/dai-hoc-dien-luc/dien-luc-university/bao-cao-nhap-mon-tri-tue-nhan-tao/88382780?sid=a353be05-df77-4401-bae7-4597fba4fd601791775595
+2. https://www.scribd.com/document/434712509/BAO-CAO (Cờ Caro nhưng để tham khảo về phương trình khá tốt)
+3. https://www.moderndescartes.com/essays/implementing_go/ (Không phải cách xây dựng tối ưu nhưng ổn)
+4. https://www.codingame.com/ide/puzzle/atari-go (thử độ mạnh thuật toán
+)
+5. https://github.com/HosseinBakand/GO-Game-Min-Max-/tree/main/BaseGo/core (tham khảo minimax)
+6. https://github.com/GTnull/Go/blob/master/version_2.0/src/gogame/monteCarloMethod.java (như trên)
+7. https://github.com/27rg5/AI-bot-for-GO-game (Q-learning algorithm tham khảo trên bàn cờ 5x5)
+8. https://durhamgo.club/GoByGo.pdf (Tài liệu chính cần tham khảo)
 3) Khai báo AI: Hãy viết tất cả những gì tôi đã prompt cho bạn của dự án này kể cả hiện tại và sau này vô đây
 ```
 
-Tài liệu tham khảo: https://www.studocu.vn/vn/document/dai-hoc-dien-luc/dien-luc-university/bao-cao-nhap-mon-tri-tue-nhan-tao/88382780?sid=a353be05-df77-4401-bae7-4597fba4fd601791775595
 Kết quả: tạo README.md với cấu trúc hiện tại, đủ 12 mục kế hoạch và nhật ký prompt này. Đối chiếu cây mã nguồn/tài nguyên với hệ thống file; không chạy build hoặc test vì chỉ thay đổi tài liệu.
 
 ### 12/10/2026 — Cập nhật README về server và component template
@@ -657,7 +668,6 @@ Kết quả: review kiến trúc client/server, giao thức, luật, clock, auth
 Kiểm tra: build server sạch `build/review-server`, CTest đạt 2/2 (`goCommands`, `serverIntegration`); test snapshot mới xác nhận perspective, identities, board metadata, clock/deadline và trạng thái cuối. Build client sạch `build/review-client` thành công; còn cảnh báo Qt policy và file khung rỗng. Kiểm tra runtime offscreen được ghi bổ sung sau khi chạy; chưa kiểm tra thao tác online bằng UI.
 
 Runtime smoke: client offscreen chạy trong 3 giây và bị dừng bằng timeout (exit 124), không có output được ghi nhận; kiểm tra này chưa xác nhận các binding QML hoặc tương tác UI hoạt động. Các vấn đề UI nêu trên được xác định từ review mã nguồn.
-
 
 ### 13/10/2026 — Dọn thành phần không dùng và thống kê server
 
