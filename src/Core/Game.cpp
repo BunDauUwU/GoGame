@@ -65,6 +65,20 @@ GameManager::GameManager(QObject* parent) : QObject(parent)
     }
 }
 
+int GameManager::difficultyLevel() const
+{
+    return m_difficultyLevel;
+}
+
+void GameManager::setDifficultyLevel(int level)
+{
+    if (m_difficultyLevel == level)
+        return;
+
+    m_difficultyLevel = level;
+    emit difficultyLevelChanged();
+}
+
 void GameManager::setNetworkClient(NetworkClient* networkClient)
 {
     if (m_networkClient) disconnect(m_networkClient, nullptr, this, nullptr);
