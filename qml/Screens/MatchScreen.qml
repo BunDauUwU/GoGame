@@ -12,15 +12,20 @@ Rectangle {
     // 0 = black, 1 = white. Local play defaults to the black perspective.
     property var battleState: gameManager.snapshot || ({})
     property int localPlayerColor: gameManager.playerIndex === 1 ? 1 : 0
-    readonly property bool boardFlipped: localPlayerColor === 1
+    readonly property bool boardFlipped: !gameManager.sandbox && localPlayerColor === 1
     property string localPlayerName: "Nguoi Dep Trai"
     property string opponentPlayerName: "Nguoi Bi Gay Chim"
     property url localAvatar: "qrc:/GoGame/assets/playerAvatar/ayame2.png"
     property url opponentAvatar: "qrc:/GoGame/assets/playerAvatar/ayame1.png"
     property int cur_x: -1
     property int cur_y: -1
-    property string errorMessage: ""
     property bool previewEnabled: true
+
+    Component.onDestruction: {
+        if (gameManager.aiEnabled)
+            gameManager.stopAIGame();
+        AppState.playingAgainstAI = false;
+    }
 
     function clearPreview() {
         cur_x = -1;
@@ -30,10 +35,8 @@ Rectangle {
     function selectIntersection(row, col) {
         if (!gameManager.is_valid_move(row, col)) {
             clearPreview();
-            errorMessage = qsTr("Invalid move");
             return;
         }
-        errorMessage = "";
         if (!previewEnabled || (cur_x === row && cur_y === col)) {
             clearPreview();
             gameManager.update_pieces(row, col);
@@ -57,9 +60,8 @@ Rectangle {
 
     Connections {
         target: gameManager
-        function onGameError(message) {
+        function onGameError() {
             boardScreen.clearPreview();
-            boardScreen.errorMessage = message;
         }
         function onSnapshotChanged() {
             boardScreen.snapshotReceivedAt = Date.now();
@@ -94,14 +96,43 @@ Rectangle {
         spacing: 12
 
         Text {
-            text: gameManager.finished ? qsTr("Game ended") : gameManager.pending ? qsTr("Waiting for opponent…") : gameManager.online ? (gameManager.canAct ? qsTr("Your turn") : qsTr("Opponent's turn")) : gameManager.currentPlayer === 0 ? qsTr("Black to play") : qsTr("White to play")
+            text: gameManager.finished ? qsTr("Game ended") : gameManager.pending ? (qsTr("Waiting for opponent…")) : gameManager.online ? (gameManager.canAct ? qsTr("Your turn") : qsTr("Opponent's turn")) : gameManager.currentPlayer === 0 ? qsTr("Black turn") : qsTr("White turn")
             font.pixelSize: 20
         }
+    }
 
+    Rectangle {
+        z: 20
+        anchors.top: parent.top
+        anchors.topMargin: 20
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(parent.width - 40, 580)
+        height: noticeText.implicitHeight + 20
+        radius: 8
+        color: "#ed252c35"
+        border.color: "#bda78c"
+        visible: noticeTimer.running
         Text {
-            id: error
-            text: errorMessage
-            color: "red"
+            id: noticeText
+            anchors.centerIn: parent
+            width: parent.width - 24
+            text: gameManager.notification
+            wrapMode: Text.WordWrap
+            color: "#f3ede1"
+            horizontalAlignment: Text.AlignHCenter
+        }
+        Timer {
+            id: noticeTimer
+            interval: 1000
+        }
+        Connections {
+            target: gameManager
+            function onNotificationChanged() {
+                if (gameManager.notification.length > 0)
+                    noticeTimer.restart();
+                else
+                    noticeTimer.stop();
+            }
         }
     }
 
@@ -276,7 +307,125 @@ Rectangle {
         }
     }
 
+    Rectangle {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin: 20
+        width: Math.min(260, parent.width * 0.22)
+        height: localActions.implicitHeight + 24
+        radius: 12
+        color: "#ed252c35"
+        border.color: "#bda78c"
+        visible: gameManager.sandbox || gameManager.aiEnabled
+        z: 6
+        Column {
+            id: localActions
+            anchors.centerIn: parent
+            width: parent.width - 24
+            spacing: 8
+            Text {
+                text: gameManager.sandbox ? qsTr("Sandbox") : "AI · Slot " + gameManager.currentSaveSlot
+                color: "#f3ede1"
+                font.bold: true
+            }
+            Button {
+                width: localActions.width
+                text: gameManager.aiEnabled ? "Undo (" + gameManager.undoRemaining + ")" : "Undo"
+                enabled: gameManager.canUndo
+                onClicked: gameManager.undo()
+            }
+            Button {
+                width: localActions.width
+                text: "Redo"
+                enabled: gameManager.canRedo
+                onClicked: gameManager.redo()
+            }
+            Button {
+                width: localActions.width
+                text: qsTr("Reset")
+                visible: gameManager.sandbox
+                onClicked: resetDialog.open()
+            }
+            Button {
+                width: localActions.width
+                text: qsTr("Save")
+                onClicked: {
+                    if (gameManager.sandbox) {
+                        if (gameManager.saveGame())
+                            saveStatus.text = qsTr("Saved~!");
+                    } else {
+                        slotDialog.loading = false;
+                        slotSelector.currentIndex = Math.max(0, gameManager.currentSaveSlot - 1);
+                        slotDialog.open();
+                    }
+                }
+            }
+            Button {
+                width: localActions.width
+                text: qsTr("Load")
+                onClicked: {
+                    if (gameManager.sandbox)
+                        gameManager.loadSandbox();
+                    else {
+                        slotDialog.loading = true;
+                        slotDialog.open();
+                    }
+                }
+            }
+            Button {
+                width: localActions.width
+                text: qsTr("Exit")
+                onClicked: {
+                    if (gameManager.exitLocalGame())
+                        stack.pop();
+                }
+            }
+            Text {
+                id: saveStatus
+                text: ""
+                color: "#f3ede1"
+            }
+        }
+    }
+    Dialog {
+        id: resetDialog
+        anchors.centerIn: parent
+        modal: true
+        title: qsTr("Reset game?")
+        standardButtons: Dialog.Yes | Dialog.No
+        onAccepted: gameManager.resetGame()
+    }
+    Dialog {
+        id: slotDialog
+        objectName: "slotDialog"
+        property bool loading: false
+        anchors.centerIn: parent
+        modal: true
+        title: loading ? qsTr("Load game") : qsTr("Save game (overwrite selected game)")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ComboBox {
+            id: slotSelector
+            objectName: "slotSelector"
+            model: 20
+            textRole: ""
+            delegate: ItemDelegate {
+                required property int index
+                text: "Slot " + (index + 1) + (gameManager.savedAISlots.indexOf(index + 1) >= 0 ? " · saved" : " · empty")
+                width: slotSelector.width
+            }
+            displayText: "Slot " + (currentIndex + 1)
+        }
+        onAccepted: {
+            Saved;
+            if (loading)
+                gameManager.loadAIGame(slotSelector.currentIndex + 1);
+            else if (gameManager.saveGame(slotSelector.currentIndex + 1))
+                saveStatus.text = qsTr(" ~!");
+        }
+    }
+
     Button {
+        id: passButton
         anchors.right: parent.right
         anchors.bottom: userInfo.top
         anchors.bottomMargin: 112
@@ -287,18 +436,31 @@ Rectangle {
     }
 
     Button {
+        id: fastModeButton
+        objectName: "fastModeButton"
+        anchors.right: passButton.left
+        anchors.verticalCenter: passButton.verticalCenter
+        anchors.rightMargin: 12
+        text: boardScreen.previewEnabled ? qsTr("Fast mode: OFF") : qsTr("Fast mode: ON")
+        highlighted: !boardScreen.previewEnabled
+        onClicked: boardScreen.previewEnabled = !boardScreen.previewEnabled
+        ToolTip.visible: hovered
+        ToolTip.text: qsTr("Turn on/off preview mode")
+    }
+
+    Button {
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         anchors.margins: 20
-        text: qsTr("Concede")
-        visible: gameManager.online
+        text: qsTr("Surrender")
+        visible: gameManager.online || gameManager.aiEnabled
         enabled: !gameManager.finished && !gameManager.pending
         onClicked: concedeDialog.open()
     }
     Dialog {
         id: concedeDialog
         anchors.centerIn: parent
-        title: qsTr("Concede this game?")
+        title: qsTr("Are you gay?")
         modal: true
         standardButtons: Dialog.Yes | Dialog.No
         onAccepted: gameManager.concede()
@@ -311,7 +473,7 @@ Rectangle {
         color: "#eef0ede7"
         border.color: "#bda78c"
         z: 10
-        visible: gameManager.online && gameManager.finished
+        visible: (gameManager.online || gameManager.aiEnabled || gameManager.sandbox) && gameManager.finished
         Column {
             id: resultColumn
             anchors.centerIn: parent
@@ -319,7 +481,7 @@ Rectangle {
             spacing: 14
             Text {
                 width: parent.width
-                text: boardScreen.battleState.winnerIndex === gameManager.playerIndex ? qsTr("You won") : boardScreen.battleState.winnerIndex >= 0 ? qsTr("You lost") : qsTr("Game ended")
+                text: gameManager.sandbox ? (boardScreen.battleState.winnerIndex === 0 ? qsTr("Black wins") : qsTr("White wins")) : boardScreen.battleState.winnerIndex === gameManager.playerIndex ? qsTr("You won") : boardScreen.battleState.winnerIndex >= 0 ? qsTr("You lost") : qsTr("Game ended")
                 horizontalAlignment: Text.AlignHCenter
                 font.pixelSize: 24
             }
@@ -329,10 +491,22 @@ Rectangle {
                 wrapMode: Text.WordWrap
                 horizontalAlignment: Text.AlignHCenter
             }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: {
+                    var score = boardScreen.battleState.scoring || ({});
+                    return score.blackArea === undefined ? "" : "Black: " + score.blackArea + "\nWhite: " + score.whiteArea + "\n" + score.komi + " komi";
+                }
+                horizontalAlignment: Text.AlignHCenter
+            }
             Button {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: qsTr("Back to menu")
-                onClicked: stack.pop()
+                onClicked: {
+                    if (gameManager.online || gameManager.exitLocalGame())
+                        stack.pop();
+                }
             }
         }
     }

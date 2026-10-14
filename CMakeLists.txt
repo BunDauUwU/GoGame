@@ -3,12 +3,14 @@ cmake_minimum_required(VERSION 3.16)
 project(GoGame VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.2 COMPONENTS Quick Sql REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS WebSockets)
 find_package(Qt6 REQUIRED COMPONENTS
     Core
+    Concurrent
     Gui
 )
 
@@ -80,6 +82,15 @@ qt_add_qml_module(appGoGame
     SOURCES
         main.cpp
 
+        # Client AI
+        src/AI/AIGame.cpp
+        src/AI/MediumAI.cpp
+        src/AI/MediumAI.h
+
+        # Shared Go rules
+        src/Rules/GoMatch.cpp
+        src/Rules/GoMatch.h
+
         # Core
         src/Core/Game.cpp
         src/Core/Game.h
@@ -88,6 +99,8 @@ qt_add_qml_module(appGoGame
         src/Core/Enumutils.cpp
 
         # Managers
+        src/Managers/DataManager.cpp
+        src/Managers/DataManager.h
         src/Managers/AssetManager.cpp
         src/Managers/AssetManager.h
         src/Managers/AuthManager.cpp
@@ -103,6 +116,7 @@ qt_add_qml_module(appGoGame
 
     RESOURCES
         ${GAME_ASSETS}
+        src/AI/README.md
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -123,6 +137,7 @@ target_include_directories(appGoGame PRIVATE
 target_link_libraries(appGoGame
     PRIVATE
         Qt6::Core
+        Qt6::Concurrent
         Qt6::Gui
         Qt6::Quick
         Qt6::Qml

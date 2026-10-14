@@ -5,4 +5,4 @@
 namespace EnumUtils {
 QString toString(NetworkMessageType type);
 QString toString(GameCommandType type);
-}
+} // namespace EnumUtils

@@ -3,14 +3,14 @@
 
 #include "../Network/Protocol.h"
 
-MatchmakingManager::MatchmakingManager(QObject* parent)
+MatchmakingManager::MatchmakingManager(QObject *parent)
     : QObject(parent)
-{
-}
+{}
 
-void MatchmakingManager::setNetworkClient(NetworkClient* networkClient)
+void MatchmakingManager::setNetworkClient(NetworkClient *networkClient)
 {
-    if (m_networkClient) disconnect(m_networkClient, nullptr, this, nullptr);
+    if (m_networkClient)
+        disconnect(m_networkClient, nullptr, this, nullptr);
     m_networkClient = networkClient;
     if (networkClient) {
         connect(networkClient, &NetworkClient::disconnected, this, [this] {
@@ -18,7 +18,8 @@ void MatchmakingManager::setNetworkClient(NetworkClient* networkClient)
             setStatusText(QStringLiteral("Disconnected from server"));
         });
         connect(networkClient, &NetworkClient::errorOccurred, this, [this](const QString &error) {
-            if (!m_searching) return;
+            if (!m_searching)
+                return;
             setSearching(false);
             setStatusText(error);
             emit matchmakingError(error);
@@ -36,9 +37,10 @@ QString MatchmakingManager::statusText() const
     return m_statusText;
 }
 
-void MatchmakingManager::startMatchmaking(const QString& mode)
+void MatchmakingManager::startMatchmaking(const QString &mode)
 {
-    if (m_searching) return;
+    if (m_searching)
+        return;
     if (!m_networkClient) {
         emit matchmakingError(QStringLiteral("Network client is not ready"));
         return;
@@ -52,9 +54,7 @@ void MatchmakingManager::startMatchmaking(const QString& mode)
     setSearching(true);
     setStatusText(QStringLiteral("Finding opponent..."));
 
-    m_networkClient->sendMessage(
-        Protocol::makeStartMatchmaking(mode)
-        );
+    m_networkClient->sendMessage(Protocol::makeStartMatchmaking(mode));
 }
 
 void MatchmakingManager::cancelMatchmaking()
@@ -63,15 +63,13 @@ void MatchmakingManager::cancelMatchmaking()
         return;
     }
 
-    m_networkClient->sendMessage(
-        Protocol::makeCancelMatchmaking()
-        );
+    m_networkClient->sendMessage(Protocol::makeCancelMatchmaking());
 
     setSearching(false);
     setStatusText(QStringLiteral("Matchmaking cancelled"));
 }
 
-void MatchmakingManager::handleServerMessage(const QJsonObject& message)
+void MatchmakingManager::handleServerMessage(const QJsonObject &message)
 {
     const QString type = Protocol::readMessageType(message);
     const QJsonObject payload = Protocol::readPayload(message);
@@ -116,7 +114,7 @@ void MatchmakingManager::setSearching(bool searching)
     emit searchingChanged();
 }
 
-void MatchmakingManager::setStatusText(const QString& statusText)
+void MatchmakingManager::setStatusText(const QString &statusText)
 {
     if (m_statusText == statusText) {
         return;

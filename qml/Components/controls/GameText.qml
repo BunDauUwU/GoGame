@@ -20,21 +20,22 @@ Text {
     font.hintingPreference: Font.PreferFullHinting
 
     font.pixelSize: {
-        if (!Typography) return 16;
+        if (!Typography)
+            return 16;
 
-        switch(type) {
+        switch (type) {
         case GameText.Display:
-            return Typography.display
+            return Typography.display;
         case GameText.Title:
-            return Typography.title
+            return Typography.title;
         case GameText.Heading:
-            return Typography.heading
+            return Typography.heading;
         case GameText.Body:
-            return Typography.body
+            return Typography.body;
         case GameText.Caption:
-            return Typography.caption
+            return Typography.caption;
         default:
-            return Typography.body
+            return Typography.body;
         }
     }
 }

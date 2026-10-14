@@ -1,422 +1,510 @@
 #include "Game.h"
-
 #include "../Network/Protocol.h"
 
-#include <vector>
-#include <set>
-#include <QJsonArray>
-
-struct piece {
-    int par;
-    std::set<int> liberties;
-    std::vector<int> group;
-    int liberty() { return liberties.size(); }
-} pieces[19*19+1];
-
-int pos_to_int(int x, int y) {
-    return x * 19 + y;
-}
-
-std::pair<int,int> int_to_pos (int x) {
-    return std::make_pair(x / 19, x % 19);
-}
-
-int find_par(int x) {
-    return x == pieces[x].par ? x : pieces[x].par = find_par(pieces[x].par);
-}
-
-bool Union(int u, int v) {
-    int a = find_par(u);
-    int b = find_par(v);
-    if (a == b) return 0;
-
-    if (pieces[a].liberties.size() < pieces[b].liberties.size()) std::swap(a, b);
-    pieces[b].par = a;
-    pieces[a].liberties.insert(pieces[b].liberties.begin(), pieces[b].liberties.end());
-    pieces[b].liberties.clear();
-    pieces[a].group.insert(pieces[a].group.end(), pieces[b].group.begin(), pieces[b].group.end());
-    pieces[b].group.clear();
-    return 1;
-}
-
-
-GameManager::GameManager(QObject* parent) : QObject(parent)
+GameManager::GameManager(QObject *parent)
+    : QObject(parent)
 {
-    m_board_state.resize(19, std::vector<int>(19, -1));
-
-    int dx[] = {-1, 1, 0, 0};
-    int dy[] = {0, 0, -1, 1};
-
-    for (int i = 0; i < 19; i++) {
-        for (int j = 0; j < 19; j++) {
-            int current_idx = pos_to_int(i, j);
-            pieces[current_idx].par = current_idx;
-            pieces[current_idx].group = {current_idx};
-            pieces[current_idx].liberties.clear();
-
-            for (int d = 0; d < 4; d++) {
-                int ni = i + dx[d];
-                int nj = j + dy[d];
-                if (ni >= 0 && ni < 19 && nj >= 0 && nj < 19) {
-                    pieces[current_idx].liberties.insert(pos_to_int(ni, nj));
-                }
-            }
-        }
-    }
+    m_aiPool.setMaxThreadCount(1);
+    m_history.push_back(m_position);
+    connect(this, &GameManager::gameError, this, [this](const QString &message) {
+        if (message == "Occupied")
+            notify(tr("Invalid move: intersection is occupied"));
+        else if (message == "Suicide")
+            notify(tr("Invalid move: suicide is not allowed"));
+        else if (message == "OutsideBoard")
+            notify(tr("Invalid move: outside the board"));
+        else if (message == "Ko")
+            notify(tr("Ko: immediate recapture is forbidden; play elsewhere or pass"));
+        else
+            notify(message);
+    });
 }
 
-void GameManager::setNetworkClient(NetworkClient* networkClient)
+GameManager::~GameManager()
 {
-    if (m_networkClient) disconnect(m_networkClient, nullptr, this, nullptr);
-    m_networkClient = networkClient;
-    if (networkClient) {
-        connect(networkClient, &NetworkClient::disconnected, this, [this] {
-            if (!online() || m_finished) return;
+    if (m_aiEnabled)
+        saveGame();
+    cancelSearch();
+    m_aiPool.waitForDone();
+}
+void GameManager::cancelSearch()
+{
+    if (m_aiCancel)
+        m_aiCancel->store(true);
+    ++m_aiGeneration;
+    m_pending = false;
+}
+bool GameManager::canAct() const
+{
+    if (m_finished || m_pending)
+        return false;
+    if (online())
+        return m_ready && m_networkClient && m_networkClient->isConnected()
+               && currentPlayer() == m_playerIndex;
+    return !m_aiEnabled || currentPlayer() == m_playerIndex;
+}
+void GameManager::setNetworkClient(NetworkClient *client)
+{
+    if (m_networkClient)
+        disconnect(m_networkClient, nullptr, this, nullptr);
+    m_networkClient = client;
+    if (client)
+        connect(client, &NetworkClient::disconnected, this, [this] {
+            if (!online() || m_finished)
+                return;
             m_pending = false;
             m_finished = true;
             m_resultMessage = QStringLiteral("Disconnected from server; match cannot continue");
             emit interactionChanged();
             emit gameError(m_resultMessage);
         });
-    }
 }
-
-QString GameManager::matchId() const
+void GameManager::notify(const QString &text)
 {
-    return m_matchId;
+    m_notification = text;
+    emit notificationChanged();
 }
-
-int GameManager::playerIndex() const
+void GameManager::notifyMove()
 {
-    return m_playerIndex;
+    QStringList parts;
+    if (m_position.capturedLastMove > 0)
+        parts << QStringLiteral("Captured %1 stone(s)").arg(m_position.capturedLastMove);
+    if (m_position.koPoint >= 0)
+        parts << QStringLiteral("Ko at (%1, %2): immediate recapture is forbidden")
+                     .arg(m_position.koPoint / 19 + 1)
+                     .arg(m_position.koPoint % 19 + 1);
+    if (m_position.koThreatLastMove)
+        parts << "Ko threat: opposing group is in atari";
+    if (!parts.isEmpty())
+        notify(parts.join(" · "));
 }
-
-bool GameManager::is_valid_move(int x, int y)
+bool GameManager::is_valid_move(int row, int col)
 {
-    if (x < 0 || x >= 19 || y < 0 || y >= 19) return false;
-    if (m_board_state[x][y] != -1) return false;
-
-    if (online()) {
-        if (!canAct()) return false;
-        auto candidate = m_board_state;
-        candidate[x][y] = m_currentPlayer;
-        auto neighbors = [](int pos) {
-            std::vector<int> cells;
-            if (pos / 19 > 0) cells.push_back(pos - 19);
-            if (pos / 19 < 18) cells.push_back(pos + 19);
-            if (pos % 19 > 0) cells.push_back(pos - 1);
-            if (pos % 19 < 18) cells.push_back(pos + 1);
-            return cells;
-        };
-        auto group = [&](int pos, bool &liberty) {
-            std::vector<int> cells{pos}; std::set<int> visited{pos}; liberty = false;
-            const int color = candidate[pos / 19][pos % 19];
-            for (size_t i = 0; i < cells.size(); ++i) for (int next : neighbors(cells[i])) {
-                int state = candidate[next / 19][next % 19];
-                if (state == -1) liberty = true;
-                else if (state == color && visited.insert(next).second) cells.push_back(next);
-            }
-            return cells;
-        };
-        int pos = x * 19 + y;
-        for (int next : neighbors(pos)) if (candidate[next / 19][next % 19] == 1 - m_currentPlayer) {
-            bool liberty; auto cells = group(next, liberty);
-            if (!liberty) for (int cell : cells) candidate[cell / 19][cell % 19] = -1;
-        }
-        bool liberty; group(pos, liberty);
-        return liberty && candidate != m_previousOnlineBoard;
-    }
-
-    int current_idx = pos_to_int(x, y);
-    if (current_idx == m_ko_square) return false;
-
-    int dx[] = {-1, 1, 0, 0};
-    int dy[] = {0, 0, -1, 1};
-
-    bool empty_square = false;
-    bool can_connect = false;
-    int captured = 0;
-
-    for (int i = 0; i < 4; i++) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
-
-        if (nx >= 0 && nx < 19 && ny >= 0 && ny < 19) {
-            int neighbor_color = m_board_state[nx][ny];
-
-            if (neighbor_color == -1) {
-                empty_square = true;
-            }
-            else if (neighbor_color == m_currentPlayer) {
-                int p = find_par(pos_to_int(nx, ny));
-                if (pieces[p].liberties.size() > 1) {
-                    can_connect = true;
-                }
-            }
-            else {
-                int p = find_par(pos_to_int(nx, ny));
-                if (pieces[p].liberties.size() == 1 && pieces[p].liberties.count(current_idx)) {
-                    captured += pieces[p].group.size();
-                }
-            }
-        }
-    }
-
-    if (!empty_square && !can_connect && captured == 0) {
+    if (!canAct()) {
+        emit gameError(tr("Wait for your turn"));
         return false;
     }
-
-    return true;
+    auto candidate = m_position;
+    QString error;
+    bool valid = candidate.play(row, col, error);
+    if (!valid)
+        emit gameError(error);
+    return valid;
 }
-
-
-void GameManager::update_pieces(int x, int y)
+void GameManager::update_pieces(int row, int col)
 {
-    if (!is_valid_move(x, y)) { emit gameError(QStringLiteral("Invalid move or not your turn")); return; }
-    if (online()) { submit(GameCommandType::Play, {{"row", x}, {"col", y}}); return; }
-
-    int current_stone = pos_to_int(x, y);
-    m_board_state[x][y] = m_currentPlayer;
-
-    // reset
-    pieces[current_stone].par = current_stone;
-    pieces[current_stone].group = {current_stone};
-    pieces[current_stone].liberties.clear();
-
-    int dx[] = {-1, 1, 0, 0};
-    int dy[] = {0, 0, -1, 1};
-
-    for (int i = 0; i < 4; i++) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
-        if (nx >= 0 && nx < 19 && ny >= 0 && ny < 19) {
-            if (m_board_state[nx][ny] == -1) {
-                pieces[current_stone].liberties.insert(pos_to_int(nx, ny));
-            }
-        }
+    if (!canAct()) {
+        emit gameError(QStringLiteral("Wait for your turn"));
+        return;
     }
-
-    // Ko solution
-    // Chỉ cần lưu 1 ô vì theo lí thuyết không thể đặt ô kín khí lớn => chỉ còn luật Ko
-    int total_captured_stones = 0;
-    int last_captured_stone_idx = -1;
-    std::set<int> groups_to_capture;
-
-
-    for (int i = 0; i < 4; i++) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
-        if (nx >= 0 && nx < 19 && ny >= 0 && ny < 19) {
-            if (m_board_state[nx][ny] != -1) {
-                int neighbor_par = find_par(pos_to_int(nx, ny));
-                pieces[neighbor_par].liberties.erase(current_stone);
-
-                if (m_board_state[nx][ny] != m_currentPlayer && pieces[neighbor_par].liberty() == 0) {
-                    groups_to_capture.insert(neighbor_par);
-                }
-            }
-        }
+    auto candidate = m_position;
+    QString error;
+    if (!candidate.play(row, col, error)) {
+        emit gameError(error);
+        return;
     }
-
-    for (int target_par : groups_to_capture) {
-        total_captured_stones += pieces[target_par].group.size();
-
-        const auto captured_group = pieces[target_par].group;
-        for (int stone_idx : captured_group) {
-            last_captured_stone_idx = stone_idx;
-            std::pair<int, int> s_pos = int_to_pos(stone_idx);
-
-            m_board_state[s_pos.first][s_pos.second] = -1;
-
-            for (int d = 0; d < 4; d++) {
-                int nnx = s_pos.first + dx[d];
-                int nny = s_pos.second + dy[d];
-                if (nnx >= 0 && nnx < 19 && nny >= 0 && nny < 19) {
-                    if (m_board_state[nnx][nny] != -1) {
-                        int p_neighbor = find_par(pos_to_int(nnx, nny));
-                        pieces[p_neighbor].liberties.insert(stone_idx);
-                    }
-                }
-            }
-
-            pieces[stone_idx].par = stone_idx;
-            pieces[stone_idx].group = {stone_idx};
-            pieces[stone_idx].liberties.clear();
-            for (int d = 0; d < 4; d++) {
-                int nnx = s_pos.first + dx[d];
-                int nny = s_pos.second + dy[d];
-                if (nnx >= 0 && nnx < 19 && nny >= 0 && nny < 19) {
-                    if (m_board_state[nnx][nny] == -1) {
-                        pieces[stone_idx].liberties.insert(pos_to_int(nnx, nny));
-                    }
-                }
-            }
-        }
+    if (online()) {
+        submit(GameCommandType::Play, {{"row", row}, {"col", col}});
+        return;
     }
-
-    // Total Point
-    for (int i = 0; i < 4; i++) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
-        if (nx >= 0 && nx < 19 && ny >= 0 && ny < 19) {
-            if (m_board_state[nx][ny] == -1) {
-                pieces[current_stone].liberties.insert(pos_to_int(nx, ny));
-            }
-        }
-    }
-
-    // Union
-    for (int i = 0; i < 4; i++) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
-        if (nx >= 0 && nx < 19 && ny >= 0 && ny < 19) {
-            if (m_board_state[nx][ny] == m_currentPlayer) {
-                Union(current_stone, pos_to_int(nx, ny));
-            }
-        }
-    }
-
-    // Ko solve
-    int final_par = find_par(current_stone);
-    if (total_captured_stones == 1 && pieces[final_par].group.size() == 1 && pieces[final_par].liberty() == 1) {
-        m_ko_square = last_captured_stone_idx;
-    } else {
-        m_ko_square = -1;
-    }
-
-    m_currentPlayer = 1 - m_currentPlayer;
-    emit currentPlayerChanged();
-    emit boardStateChanged();
+    m_position = std::move(candidate);
+    recordMove({{"row", row}, {"col", col}});
+    notifyMove();
+    requestAIMove();
 }
-
 void GameManager::pass_turn()
 {
-    if (online()) { submit(GameCommandType::EndRound); return; }
-    // A pass is a turn, so an immediate-ko restriction no longer applies.
-    m_ko_square = -1;
-    m_currentPlayer = 1 - m_currentPlayer;
-    emit currentPlayerChanged();
+    if (!canAct())
+        return;
+    if (online()) {
+        submit(GameCommandType::EndRound);
+        return;
+    }
+    m_position.pass();
+    recordMove({{"pass", true}});
+    if (m_position.consecutivePasses >= 2)
+        finishLocalGame(m_position.score() > 0 ? 0 : 1, QStringLiteral("Two consecutive passes"));
+    else
+        requestAIMove();
 }
-
-
-void GameManager::setMatchInfo(const QString& matchId, int playerIndex, const QString& opponentName) {
-    if (playerIndex != 0 && playerIndex != 1)
+void GameManager::setMatchInfo(const QString &id, int player, const QString &opponent)
+{
+    if (id.isEmpty() || (player != 0 && player != 1))
         return;
-    if (m_matchId == matchId && m_playerIndex == playerIndex && m_opponentName == opponentName)
+    if (id == m_matchId && player == m_playerIndex && opponent == m_opponentName)
         return;
-    m_board_state.assign(19, std::vector<int>(19, -1));
-    m_previousOnlineBoard.clear();
+    stopAIGame();
+    m_sandbox = false;
+    m_position = GoMatch();
     m_snapshot.clear();
-    m_currentPlayer = 0;
-    m_ready = false; m_finished = false; m_pending = false;
+    m_matchId = id;
+    m_playerIndex = player;
+    m_opponentName = opponent;
+    m_ready = false;
+    m_finished = false;
+    m_pending = false;
     m_resultMessage.clear();
-    m_matchId = matchId;
-    m_playerIndex = playerIndex;
-    m_opponentName = opponentName;
+    notify("");
     emit matchInfoChanged();
-    emit boardStateChanged(); emit currentPlayerChanged(); emit snapshotChanged();
+    emit aiStateChanged();
+    emit boardStateChanged();
+    emit currentPlayerChanged();
+    emit snapshotChanged();
     emit interactionChanged();
+    emit historyChanged();
 }
-
-void GameManager::handleServerMessage(const QJsonObject& message) {
-    const QString type = Protocol::readMessageType(message);
-    const QJsonObject payload = Protocol::readPayload(message);
-
+void GameManager::handleServerMessage(const QJsonObject &message)
+{
+    const auto type = Protocol::readMessageType(message);
+    const auto payload = Protocol::readPayload(message);
     if (type == "MatchFound") {
-        setMatchInfo(payload.value("matchId").toString(), payload.value("playerIndex").toInt(-1), payload.value("opponentName").toString());
+        setMatchInfo(payload["matchId"].toString(),
+                     payload["playerIndex"].toInt(-1),
+                     payload["opponentName"].toString());
         return;
     }
-
+    if (type == "Error") {
+        if (online()) {
+            m_pending = false;
+            emit interactionChanged();
+            emit gameError(payload["message"].toString());
+        }
+        return;
+    }
+    if (!online() || payload["matchId"].toString() != m_matchId)
+        return;
     if (type == "GameSnapshot") {
-        const QString matchId = payload.value("matchId").toString();
-
-        if (matchId.isEmpty() || matchId != m_matchId) {
+        int newMoves = payload["moveCount"].toInt(-1),
+            oldMoves = m_snapshot.value("moveCount", -1).toInt();
+        if (newMoves < oldMoves)
+            return;
+        GoMatch position;
+        QString error;
+        auto json = payload["position"].toObject();
+        if (json.isEmpty()) {
+            json = m_position.toJson();
+            json["board"] = payload["board"];
+            json["previousBoard"] = m_position.state();
+            json["hasPrevious"] = m_ready && newMoves == oldMoves + 1;
+            json["currentPlayerIndex"] = payload["currentPlayerIndex"];
+            json["moveCount"] = newMoves;
+            json["consecutivePasses"] = payload["consecutivePasses"].toInt();
+        }
+        if (!GoMatch::fromJson(json, position, error)) {
+            emit gameError(error);
             return;
         }
-
-        const auto board = payload.value("board").toArray();
-        const int current = payload.value("currentPlayerIndex").toInt(-1);
-        if (board.size() != 361 || (current != 0 && current != 1)) return;
-        for (const auto &cell : board) {
-            if (!cell.isDouble() || (cell.toDouble() != -1 && cell.toDouble() != 0 && cell.toDouble() != 1)) return;
-        }
-        const int oldMoves = m_snapshot.value("moveCount", -1).toInt();
-        const int newMoves = payload.value("moveCount").toInt(-1);
-        if (oldMoves >= 0 && newMoves < oldMoves) return;
-        if (m_ready && newMoves == oldMoves + 1) m_previousOnlineBoard = m_board_state;
-        else if (newMoves != oldMoves) m_previousOnlineBoard.clear();
-        const auto oldBoard = m_board_state;
-        const int oldCurrent = m_currentPlayer;
-        const bool oldCanAct = canAct();
-        const bool oldFinished = m_finished;
-        for (int i = 0; i < 361; ++i) m_board_state[i / 19][i % 19] = board[i].toInt();
-        m_currentPlayer = current;
+        bool boardChanged = position.cells() != m_position.cells(),
+             turnChanged = position.currentPlayer != currentPlayer();
+        bool oldAct = canAct(), oldFinished = m_finished;
+        m_position = std::move(position);
         m_ready = true;
-        if (newMoves != oldMoves || !payload.value("started").toBool()) m_pending = false;
-        m_finished = !payload.value("started").toBool();
-        if (m_finished) m_resultMessage = payload.value("endReason").toString();
-        if (oldBoard != m_board_state) emit boardStateChanged();
-        if (oldCurrent != m_currentPlayer) emit currentPlayerChanged();
-        if (oldCanAct != canAct() || oldFinished != m_finished) emit interactionChanged();
+        m_finished = !payload["started"].toBool();
+        if (newMoves != oldMoves || m_finished)
+            m_pending = false;
+        if (m_finished)
+            m_resultMessage = payload["endReason"].toString();
         m_snapshot = payload.toVariantMap();
+        if (boardChanged)
+            emit boardStateChanged();
+        if (turnChanged)
+            emit currentPlayerChanged();
         emit snapshotChanged();
-
-        return;
-    }
-
-    if (type == "GameEvent") {
-        const QString matchId = payload.value("matchId").toString();
-
-        if (matchId.isEmpty() || matchId != m_matchId) {
-            return;
-        }
-
-        const QJsonArray events = payload.value("events").toArray();
-
-        for (const QJsonValue &value : events) {
-            const QJsonObject event = value.toObject();
-            const QString eventType = event.value("eventType").toString();
-
-            if (eventType == "GameEnded") {
-                m_finished = true; m_pending = false;
-                m_resultMessage = event.value("reason").toString();
+        if (oldAct != canAct() || oldFinished != m_finished)
+            emit interactionChanged();
+    } else if (type == "GameEvent") {
+        for (const auto &value : payload["events"].toArray()) {
+            const auto event = value.toObject();
+            auto kind = event["eventType"].toString();
+            if (kind == "StonePlayed") {
+                QStringList parts;
+                int captured = event["captured"].toInt();
+                int ko = event["koPoint"].toInt(-1);
+                if (captured > 0)
+                    parts << QString("Captured %1 stone(s)").arg(captured);
+                if (ko >= 0)
+                    parts << QString("Ko at (%1, %2)").arg(ko / 19 + 1).arg(ko % 19 + 1);
+                if (event["koThreat"].toBool())
+                    parts << "Ko threat: opposing group is in atari";
+                if (!parts.isEmpty())
+                    notify(parts.join(" · "));
+            } else if (kind == "GameEnded") {
+                m_finished = true;
+                m_pending = false;
+                m_resultMessage = event["reason"].toString();
+                auto scoring = event["scoring"].toObject();
+                if (!scoring.isEmpty())
+                    notify(QString("Final score: Black %1 \n White %2 + %3 komi")
+                               .arg(scoring["blackArea"].toInt())
+                               .arg(scoring["whiteArea"].toInt())
+                               .arg(scoring["komi"].toDouble()));
                 emit interactionChanged();
             }
         }
-
-        return;
     }
-
-    if (type == "Error" && online()) {
+}
+void GameManager::sendCommand(const QJsonObject &command)
+{
+    if (!m_networkClient || !m_networkClient->isConnected()) {
         m_pending = false;
         emit interactionChanged();
-        emit gameError(payload.value("message").toString());
-    }
-}
-
-
-void GameManager::sendCommand(const QJsonObject &command) {
-    if (!m_networkClient) {
-        emit gameError(QStringLiteral("Network client is not ready"));
+        emit gameError("Not connected to server");
         return;
     }
-
-    if (!m_networkClient->isConnected()) {
-        emit gameError(QStringLiteral("Not connected to server"));
-        return;
-    }
-
     m_networkClient->sendMessage(command);
 }
-
-void GameManager::submit(GameCommandType type, const QJsonObject &command) {
-    if (!online() || !m_ready || m_finished || m_pending || !m_networkClient || !m_networkClient->isConnected()
-        || (type != GameCommandType::Concede && !canAct())) {
-        emit gameError(QStringLiteral("Cannot send command: wait for your turn or server response"));
+void GameManager::submit(GameCommandType type, const QJsonObject &command)
+{
+    if (!online() || !m_ready || m_finished || m_pending || !m_networkClient
+        || !m_networkClient->isConnected() || (type != GameCommandType::Concede && !canAct())) {
+        emit gameError("Cannot send command now");
         return;
     }
     m_pending = true;
     emit interactionChanged();
     sendCommand(Protocol::makeGameCommand(m_matchId, type, command));
 }
-void GameManager::concede() { submit(GameCommandType::Concede); }
+void GameManager::concede()
+{
+    if (m_aiEnabled && !m_finished)
+        finishLocalGame(1 - m_playerIndex, "Conceded");
+    else
+        submit(GameCommandType::Concede);
+}
+
+bool GameManager::startSandbox()
+{
+    if (online() && !m_finished)
+        return false;
+    stopAIGame();
+    m_matchId.clear();
+    m_sandbox = true;
+    m_playerIndex = 0;
+    m_currentSlot = 0;
+    emit matchInfoChanged();
+    emit aiStateChanged();
+    resetGame();
+    return true;
+}
+
+bool GameManager::exitLocalGame()
+{
+    if (m_aiEnabled && !saveGame())
+        return false;
+    cancelSearch();
+    m_aiEnabled = false;
+    m_sandbox = false;
+    emit aiStateChanged();
+    emit interactionChanged();
+    return true;
+}
+void GameManager::resetGame()
+{
+    if (!m_sandbox)
+        return;
+    cancelSearch();
+    m_position = GoMatch();
+    m_history = {m_position};
+    m_moves.clear();
+    m_cursor = 0;
+    m_finished = false;
+    m_resultMessage.clear();
+    syncLocalPosition();
+    notify("Sandbox reset");
+}
+void GameManager::syncLocalPosition()
+{
+    m_snapshot = {{"mode", m_aiEnabled ? "Medium" : "Sandbox"},
+                  {"started", !m_finished},
+                  {"moveCount", m_position.moveCount},
+                  {"currentPlayerIndex", currentPlayer()},
+                  {"board", m_position.state().toVariantList()},
+                  {"komi", 6.5},
+                  {"consecutivePasses", m_position.consecutivePasses},
+                  {"scoring", m_position.scoreDetails().toVariantMap()}};
+    emit boardStateChanged();
+    emit currentPlayerChanged();
+    emit snapshotChanged();
+    emit interactionChanged();
+    emit historyChanged();
+}
+void GameManager::recordMove(const QJsonObject &move)
+{
+    m_history.resize(m_cursor + 1);
+    m_moves.resize(m_cursor);
+    m_moves.push_back(move);
+    m_history.push_back(m_position);
+    ++m_cursor;
+    syncLocalPosition();
+    if (m_aiEnabled && m_position.consecutivePasses < 2)
+        saveGame();
+}
+void GameManager::finishLocalGame(int winner, const QString &reason)
+{
+    cancelSearch();
+    m_finished = true;
+    m_resultMessage = reason;
+    m_snapshot["started"] = false;
+    m_snapshot["winnerIndex"] = winner;
+    m_snapshot["endReason"] = reason;
+    m_snapshot["scoring"] = m_position.scoreDetails().toVariantMap();
+    if (m_position.consecutivePasses >= 2) {
+        const auto score = m_position.scoreDetails();
+        notify(QString("Final score: Black %1 \n White %2 + 6.5 komi \n Difference %3")
+                   .arg(score["blackArea"].toInt())
+                   .arg(score["whiteArea"].toInt())
+                   .arg(score["difference"].toDouble()));
+    }
+    emit snapshotChanged();
+    emit interactionChanged();
+    emit historyChanged();
+    if (m_aiEnabled)
+        saveGame();
+}
+
+int GameManager::undoTarget() const
+{
+    if (m_cursor <= 0)
+        return -1;
+    if (!m_aiEnabled)
+        return m_cursor - 1;
+    for (int i = m_cursor - 1; i >= 0; --i)
+        if (m_history[i].currentPlayer == m_playerIndex)
+            return i;
+    return -1;
+}
+int GameManager::redoTarget() const
+{
+    if (m_cursor + 1 >= int(m_history.size()))
+        return -1;
+    if (!m_aiEnabled)
+        return m_cursor + 1;
+    for (int i = m_cursor + 1; i < int(m_history.size()); ++i)
+        if (m_history[i].currentPlayer == m_playerIndex || i == int(m_history.size()) - 1)
+            return i;
+    return -1;
+}
+bool GameManager::canUndo() const
+{
+    return !online() && (m_sandbox || m_aiEnabled) && undoTarget() >= 0
+           && (!m_aiEnabled || m_undoRemaining > 0);
+}
+bool GameManager::canRedo() const
+{
+    return !online() && (m_sandbox || m_aiEnabled) && redoTarget() >= 0
+           && (!m_aiEnabled || m_redoRemaining > 0);
+}
+void GameManager::undo()
+{
+    if (!canUndo())
+        return;
+    int target = undoTarget();
+    cancelSearch();
+    m_cursor = target;
+    m_position = m_history[target];
+    if (m_aiEnabled)
+        --m_undoRemaining;
+    m_finished = false;
+    m_resultMessage.clear();
+    syncLocalPosition();
+    notify("Undo");
+    if (m_aiEnabled)
+        saveGame();
+}
+void GameManager::redo()
+{
+    if (!canRedo())
+        return;
+    int target = redoTarget();
+    cancelSearch();
+    m_cursor = target;
+    m_position = m_history[target];
+    if (m_aiEnabled)
+        --m_redoRemaining;
+    m_finished = false;
+    m_resultMessage.clear();
+    syncLocalPosition();
+    notify("Redo");
+    if (m_position.consecutivePasses >= 2)
+        finishLocalGame(m_position.score() > 0 ? 0 : 1, "Two consecutive passes");
+    else {
+        if (m_aiEnabled)
+            saveGame();
+        requestAIMove();
+    }
+}
+QVariantList GameManager::savedAISlots() const
+{
+    return DataManager::savedAISlots();
+}
+bool GameManager::saveGame(int slot)
+{
+    if (online() || (!m_aiEnabled && !m_sandbox))
+        return false;
+    if (m_aiEnabled && slot == 0)
+        slot = m_currentSlot;
+    LocalGameData data;
+    data.ai = m_aiEnabled;
+    data.humanColor = m_playerIndex;
+    data.moves = m_moves;
+    data.cursor = m_cursor;
+    data.position = m_position;
+    data.undoRemaining = m_undoRemaining;
+    data.redoRemaining = m_redoRemaining;
+    data.finished = m_finished;
+    data.winnerIndex = m_snapshot.value("winnerIndex", -1).toInt();
+    data.endReason = m_resultMessage;
+    QString error;
+    if (!DataManager::save(data, slot, error)) {
+        emit gameError(error);
+        return false;
+    }
+    if (m_aiEnabled)
+        m_currentSlot = slot;
+    emit savesChanged();
+    return true;
+}
+bool GameManager::loadSandbox()
+{
+    return loadGame(false, 0);
+}
+bool GameManager::loadAIGame(int slot)
+{
+    return loadGame(true, slot);
+}
+bool GameManager::loadGame(bool ai, int slot)
+{
+    if (online() && !m_finished)
+        return false;
+    LocalGameData data;
+    QString error;
+    if (!DataManager::load(ai, slot, AIHistoryLimit, data, error)) {
+        emit gameError(error);
+        return false;
+    }
+    cancelSearch();
+    m_matchId.clear();
+    m_aiEnabled = ai;
+    m_sandbox = !ai;
+    m_playerIndex = data.humanColor;
+    m_currentSlot = ai ? slot : 0;
+    m_history = std::move(data.history);
+    m_moves = std::move(data.moves);
+    m_cursor = data.cursor;
+    m_position = std::move(data.position);
+    m_undoRemaining = data.undoRemaining;
+    m_redoRemaining = data.redoRemaining;
+    m_finished = data.finished;
+    m_ready = true;
+    m_resultMessage = data.endReason;
+    emit matchInfoChanged();
+    emit aiStateChanged();
+    syncLocalPosition();
+    m_snapshot["winnerIndex"] = data.winnerIndex;
+    m_snapshot["endReason"] = m_resultMessage;
+    emit snapshotChanged();
+    emit savesChanged();
+    notify("Saved game loaded");
+    requestAIMove();
+    return true;
+}

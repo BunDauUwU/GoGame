@@ -25,7 +25,8 @@ int main(int argc, char *argv[])
     bool minutesOk = false;
     const int minutes = parser.value("main-minutes").toInt(&minutesOk);
     if (!minutesOk || (minutes != 10 && minutes != 15)) {
-        std::fprintf(stderr, "Main time must be 10 or 15 minutes\n"); return 1;
+        std::fprintf(stderr, "Main time must be 10 or 15 minutes\n");
+        return 1;
     }
     ByoYomiClock timeControl;
     timeControl.mainRemainingMs = minutes * 60000;
@@ -35,8 +36,10 @@ int main(int argc, char *argv[])
         std::fprintf(stderr, "%s\n", qPrintable(error));
         return 1;
     }
-    std::fprintf(stdout, "Listening on ws://127.0.0.1:%u\nJSON storage: %s\n",
-                 port, qPrintable(server.dataFile()));
+    std::fprintf(stdout,
+                 "Listening on ws://127.0.0.1:%u\nJSON storage: %s\n",
+                 port,
+                 qPrintable(server.dataFile()));
     std::fflush(stdout);
     return app.exec();
 }

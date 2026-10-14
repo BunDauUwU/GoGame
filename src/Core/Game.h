@@ -1,84 +1,116 @@
-// src/Core/Game.h
 #pragma once
-
 #include <QObject>
-#include <QString>
-#include <QJsonObject>
+#include <QThreadPool>
 #include <QVariantList>
-#include <vector>
-
-#include "../Core/Enums.h"
+#include <QVariantMap>
+#include "../AI/MediumAI.h"
+#include "../Managers/DataManager.h"
 #include "../Network/NetworkClient.h"
+#include "Enums.h"
 
-
-class GameManager : public QObject {
+class GameManager : public QObject
+{
     Q_OBJECT
     Q_PROPERTY(QVariantList boardState READ boardState NOTIFY boardStateChanged)
     Q_PROPERTY(int currentPlayer READ currentPlayer NOTIFY currentPlayerChanged)
     Q_PROPERTY(int playerIndex READ playerIndex NOTIFY matchInfoChanged)
     Q_PROPERTY(QVariantMap snapshot READ snapshot NOTIFY snapshotChanged)
     Q_PROPERTY(bool online READ online NOTIFY matchInfoChanged)
+    Q_PROPERTY(bool aiEnabled READ aiEnabled NOTIFY aiStateChanged)
+    Q_PROPERTY(bool sandbox READ sandbox NOTIFY aiStateChanged)
     Q_PROPERTY(bool canAct READ canAct NOTIFY interactionChanged)
     Q_PROPERTY(bool finished READ finished NOTIFY interactionChanged)
     Q_PROPERTY(bool pending READ pending NOTIFY interactionChanged)
     Q_PROPERTY(QString resultMessage READ resultMessage NOTIFY interactionChanged)
-
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
+    Q_PROPERTY(int undoRemaining READ undoRemaining NOTIFY historyChanged)
+    Q_PROPERTY(int redoRemaining READ redoRemaining NOTIFY historyChanged)
+    Q_PROPERTY(QVariantList savedAISlots READ savedAISlots NOTIFY savesChanged)
+    Q_PROPERTY(int currentSaveSlot READ currentSaveSlot NOTIFY savesChanged)
+    Q_PROPERTY(QString notification READ notification NOTIFY notificationChanged)
 public:
-    explicit GameManager(QObject* parent = nullptr);
-    void setNetworkClient(NetworkClient* networkClient);
-    Q_INVOKABLE void setMatchInfo(
-        const QString& matchId,
-        int playerIndex,
-        const QString& opponentName
-        );
-
+    static constexpr int AIHistoryLimit = 1000; // Undo Redo Limit
+    static constexpr int AISaveSlots = DataManager::AISaveSlots;
+    explicit GameManager(QObject *parent = nullptr);
+    ~GameManager() override;
+    Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
+    Q_INVOKABLE bool startSandbox();
+    Q_INVOKABLE void stopAIGame();
+    Q_INVOKABLE bool exitLocalGame();
+    Q_INVOKABLE void resetGame();
+    Q_INVOKABLE void undo();
+    Q_INVOKABLE void redo();
+    Q_INVOKABLE bool saveGame(int slot = 0);
+    Q_INVOKABLE bool loadSandbox();
+    Q_INVOKABLE bool loadAIGame(int slot);
+    Q_INVOKABLE void refreshSaves() { emit savesChanged(); }
+    bool aiEnabled() const { return m_aiEnabled; }
+    bool sandbox() const { return m_sandbox; }
+    bool canUndo() const;
+    bool canRedo() const;
+    int undoRemaining() const { return m_undoRemaining; }
+    int redoRemaining() const { return m_redoRemaining; }
+    QVariantList savedAISlots() const;
+    int currentSaveSlot() const { return m_currentSlot; }
+    QString notification() const { return m_notification; }
+    void setNetworkClient(NetworkClient *client);
+    Q_INVOKABLE void setMatchInfo(const QString &id, int player, const QString &opponent);
     QVariantMap snapshot() const { return m_snapshot; }
     bool online() const { return !m_matchId.isEmpty(); }
-    bool canAct() const { return !online() || (m_ready && !m_finished && !m_pending && m_networkClient && m_networkClient->isConnected() && m_currentPlayer == m_playerIndex); }
+    bool canAct() const;
     bool finished() const { return m_finished; }
     bool pending() const { return m_pending; }
     QString resultMessage() const { return m_resultMessage; }
     Q_INVOKABLE void concede();
-    QString matchId() const;
-    int playerIndex() const;
-    int currentPlayer() const { return m_currentPlayer; }
-    QVariantList boardState() const {
-        QVariantList list;
-        for (int i = 0; i < 19; ++i) {
-            for (int j = 0; j < 19; ++j) {
-                list.append(m_board_state[i][j]);
-            }
-        }
-        return list;
-    }
-    Q_INVOKABLE bool is_valid_move(int x, int y);
-    Q_INVOKABLE void update_pieces(int x, int y);
+    QString matchId() const { return m_matchId; }
+    int playerIndex() const { return m_playerIndex; }
+    int currentPlayer() const { return m_position.currentPlayer; }
+    QString opponentName() const { return m_opponentName; }
+    QVariantList boardState() const { return m_position.state().toVariantList(); }
+    Q_INVOKABLE bool is_valid_move(int row, int col);
+    Q_INVOKABLE void update_pieces(int row, int col);
     Q_INVOKABLE void pass_turn();
-
     void sendCommand(const QJsonObject &command);
+public slots:
+    void handleServerMessage(const QJsonObject &message);
 signals:
     void boardStateChanged();
     void currentPlayerChanged();
     void matchInfoChanged();
     void snapshotChanged();
     void interactionChanged();
+    void aiStateChanged();
+    void historyChanged();
+    void savesChanged();
+    void notificationChanged();
+    void gameError(const QString &message);
 
-    void gameError(const QString& message);
-public slots:
-    void handleServerMessage(const QJsonObject& message);
 private:
-    NetworkClient* m_networkClient = nullptr;
-    QString m_matchId;
+    NetworkClient *m_networkClient = nullptr;
+    QString m_matchId, m_opponentName, m_resultMessage, m_notification;
     int m_playerIndex = -1;
-    int m_currentPlayer = 0;
-    QString m_opponentName;
-    int m_ko_square = -1;
-    std::vector<std::vector<int>> m_board_state;
+    bool m_ready = false, m_finished = false, m_pending = false, m_aiEnabled = false,
+         m_sandbox = false;
+    GoMatch m_position;
     QVariantMap m_snapshot;
-    bool m_ready = false;
-    bool m_finished = false;
-    bool m_pending = false;
-    QString m_resultMessage;
-    std::vector<std::vector<int>> m_previousOnlineBoard;
+    QThreadPool m_aiPool;
+    AI::MediumAI m_ai;
+    std::shared_ptr<std::atomic_bool> m_aiCancel;
+    quint64 m_aiGeneration = 0;
+    std::vector<GoMatch> m_history;
+    std::vector<QJsonObject> m_moves;
+    int m_cursor = 0, m_undoRemaining = AIHistoryLimit, m_redoRemaining = AIHistoryLimit,
+        m_currentSlot = 0;
+    void cancelSearch();
+    void syncLocalPosition();
+    void recordMove(const QJsonObject &move);
+    void requestAIMove();
+    void finishLocalGame(int winner, const QString &reason);
     void submit(GameCommandType type, const QJsonObject &command = {});
+    void notify(const QString &text);
+    void notifyMove();
+    int undoTarget() const;
+    int redoTarget() const;
+    bool loadGame(bool ai, int slot);
 };

@@ -57,10 +57,10 @@ Rectangle {
     }
 
     /*Rectangle {
-        anchors.fill: parent
-        color: "black"
-        opacity: background.visible ? 0.35 : 0
-    }*/
+            anchors.fill: parent
+            color: "black"
+            opacity: background.visible ? 0.35 : 0
+        }*/
 
     // MAIN SETTINGS
     ScrollView {
@@ -100,7 +100,7 @@ Rectangle {
                             text: qsTr("Background %1").arg(index + 1)
 
                             onClicked: {
-                                AssetManager.currentBackground = index + 1; 
+                                AssetManager.currentBackground = index + 1;
                             }
                         }
                     }

@@ -1,10 +1,9 @@
 // src/Managers/AssetManager.cpp
 #include "AssetManager.h"
 
-
-
 AssetManager::AssetManager(QObject *parent)
-    : QObject(parent) {}
+    : QObject(parent)
+{}
 
 const QHash<QString, QString> AssetManager::paths = {
     {"Background1", "background/background1.png"},
@@ -26,7 +25,8 @@ void AssetManager::setCurrentBackground(int index)
     emit currentBackgroundChanged();
 }
 
-QUrl AssetManager::url(const QString &name) const {
+QUrl AssetManager::url(const QString &name) const
+{
     if (!paths.contains(name))
         return {};
 

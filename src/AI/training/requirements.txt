@@ -1,0 +1,5 @@
+# SGF preparation/inspection needs only Python standard library.
+# Training and ONNX export:
+torch>=2.6,<3
+onnx>=1.16
+onnxscript>=0.3

@@ -3,12 +3,9 @@
 #include <QQmlContext>
 
 #include "src/Core/Game.h"
-#include "src/Network/NetworkClient.h"
 #include "src/Managers/AuthManager.h"
 #include "src/Managers/MatchmakingManager.h"
-
-
-
+#include "src/Network/NetworkClient.h"
 
 int main(int argc, char *argv[])
 {
@@ -25,33 +22,25 @@ int main(int argc, char *argv[])
     GameManager gameManager;
     gameManager.setNetworkClient(&networkClient);
 
-    QObject::connect(
-        &networkClient,
-        &NetworkClient::messageReceived,
-        &gameManager,
-        &GameManager::handleServerMessage
-        );
+    QObject::connect(&networkClient,
+                     &NetworkClient::messageReceived,
+                     &gameManager,
+                     &GameManager::handleServerMessage);
 
-    QObject::connect(
-        &networkClient,
-        &NetworkClient::messageReceived,
-        &matchmakingManager,
-        &MatchmakingManager::handleServerMessage
-        );
+    QObject::connect(&networkClient,
+                     &NetworkClient::messageReceived,
+                     &matchmakingManager,
+                     &MatchmakingManager::handleServerMessage);
 
-    QObject::connect(
-        &networkClient,
-        &NetworkClient::messageReceived,
-        &authManager,
-        &AuthManager::handleServerMessage
-        );
+    QObject::connect(&networkClient,
+                     &NetworkClient::messageReceived,
+                     &authManager,
+                     &AuthManager::handleServerMessage);
 
-    QObject::connect(
-        &matchmakingManager,
-        &MatchmakingManager::matchFound,
-        &gameManager,
-        &GameManager::setMatchInfo
-        );
+    QObject::connect(&matchmakingManager,
+                     &MatchmakingManager::matchFound,
+                     &gameManager,
+                     &GameManager::setMatchInfo);
 
     QQmlApplicationEngine engine;
     engine.addImportPath(QStringLiteral("qrc:/"));
@@ -63,7 +52,6 @@ int main(int argc, char *argv[])
     networkClient.connectToServer(networkClient.serverUrl());
 
     engine.load(QUrl(QStringLiteral("qrc:/GoGame/main.qml")));
-
 
     if (engine.rootObjects().isEmpty()) {
         return -1;
