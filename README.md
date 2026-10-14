@@ -539,7 +539,8 @@ Tài liệu tham khảo:
 5. https://github.com/HosseinBakand/GO-Game-Min-Max-/tree/main/BaseGo/core (tham khảo minimax)
 6. https://github.com/GTnull/Go/blob/master/version_2.0/src/gogame/monteCarloMethod.java (như trên)
 7. https://github.com/27rg5/AI-bot-for-GO-game (Q-learning algorithm tham khảo trên bàn cờ 5x5)
-8. https://durhamgo.club/GoByGo.pdf (Tài liệu chính cần tham khảo)
+8. https://durhamgo.club/GoByGo.pdf (Tài liệu tham khảo)
+9. https://deepmind-media.storage.googleapis.com/alphago/AlphaGoNaturePaper.pdf (Tài liệu tham khảo)
 3) Khai báo AI: Hãy viết tất cả những gì tôi đã prompt cho bạn của dự án này kể cả hiện tại và sau này vô đây
 ```
 
@@ -680,3 +681,24 @@ Remove unused element, component, function in the project. Rewrite README.md whi
 Kết quả: xóa 22 file không dùng; dọn API, enum, signal, helper, design token, import và cấu hình build; giữ online/Byo-yomi đang phát triển, tài nguyên và dữ liệu tài khoản. Viết lại trạng thái README, ghi đầy đủ nhóm thay đổi, cây file, kế hoạch còn lại và bảng đo server. Runtime hiện 841 dòng/28.126 ký tự; gồm tests và CMake là 1.277 dòng/51.924 ký tự. Không gán toàn bộ số liệu này cho riêng tác giả người dùng; thêm script tái đếm. Root build và bốn test đạt; kiểm tra build server riêng/runtime UI được ghi bổ sung sau khi hoàn tất.
 
 Kiểm tra bổ sung: build server riêng `build/cleanup-server` thành công. Client offscreen chạy 5 giây rồi được dừng bằng timeout (exit 124), không có output; đây chỉ là smoke attempt, chưa xác nhận thao tác/render UI. Không commit hoặc push trong tác vụ cleanup.
+
+### 14/10/2026 — Phân tích tài liệu GoByGo và đặt câu hỏi
+
+Nội dung prompt của người dùng:
+
+```text
+https://durhamgo.club/GoByGo.pdf
+phân tích bài viết sau, chỉ ra các ý chính. Sau đó đưa ra 10-20 câu hỏi bạn không hiểu để tôi trả lời.
+```
+
+Kết quả: đọc tài liệu, phân tích các ý chính và chuẩn bị 15 câu hỏi về các điểm phương pháp chưa rõ cùng các lựa chọn áp dụng cho AI GoGame. Chờ chủ dự án trả lời; chưa triển khai AI hoặc thay đổi mã nguồn.
+
+### 14/10/2026 — So sánh MCTS + RAVE với thiết kế AI hiện tại
+
+Nội dung prompt của người dùng:
+
+```text
+Qua tài liệu tôi nhận thấy MCTS + RAVE là phương án tốt. So sánh nó với phương án hiện tại của tôi. Nếu có thể kết hợp cả 2 thì kết quả có tốt hơn không liệu mạng neuron có cần cần thiết hay có thể thu nhỏ không. Liệu có thể tối ưu hiệu năng trên cả máy tính cấu hình thấp?
+```
+
+Kết quả: đối chiếu thiết kế Alpha-Beta nông + MCTS + mạng 6-block với hướng MCTS/RAVE; kiểm tra nghiên cứu MC-RAVE, neural MCTS và tài liệu ONNX Runtime về threading/quantization. Đề xuất thử baseline không mạng trước, tactical search cục bộ hỗ trợ xếp hạng, rồi đo phương án mạng nhỏ nếu cần; chưa chốt thay đổi roadmap hoặc triển khai AI. Chất lượng và tốc độ cần benchmark với cùng thời gian trên máy mục tiêu.
