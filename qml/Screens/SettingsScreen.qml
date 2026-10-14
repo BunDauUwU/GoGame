@@ -14,7 +14,7 @@ Rectangle {
         id: background
         anchors.fill: parent
 
-        property url currentSource: AssetManager.url("Background" + AppState.backgroundIndex)
+        property url currentSource: AssetManager.url("Background" + AssetManager.currentBackground)
         property bool showA: true
 
         onCurrentSourceChanged: {
@@ -92,7 +92,7 @@ Rectangle {
                         delegate: GameButton {
                             required property int index
 
-                            opacity: AppState.backgroundIndex === index + 1 ? 1.0 : 0.6
+                            opacity: AssetManager.currentBackground === index + 1 ? 1.0 : 0.6
 
                             width: 200
                             height: 60
@@ -100,7 +100,7 @@ Rectangle {
                             text: qsTr("Background %1").arg(index + 1)
 
                             onClicked: {
-                                AppState.backgroundIndex = index + 1;
+                                AssetManager.currentBackground = index + 1; 
                             }
                         }
                     }

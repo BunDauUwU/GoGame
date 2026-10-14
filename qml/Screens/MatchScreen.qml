@@ -83,9 +83,8 @@ Rectangle {
         id: background
 
         anchors.fill: parent
-        property int backgroundIndex: 1
 
-        source: AssetManager.url("Background" + AppState.backgroundIndex)
+        source: AssetManager.url("Background" + AssetManager.currentBackground)
         fillMode: Image.PreserveAspectCrop
     }
 

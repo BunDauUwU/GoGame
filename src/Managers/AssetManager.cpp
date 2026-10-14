@@ -12,6 +12,20 @@ const QHash<QString, QString> AssetManager::paths = {
     {"Background3", "background/background3.png"},
 };
 
+int AssetManager::currentBackground() const
+{
+    return m_currentBackground;
+}
+
+void AssetManager::setCurrentBackground(int index)
+{
+    if (m_currentBackground == index)
+        return;
+
+    m_currentBackground = index;
+    emit currentBackgroundChanged();
+}
+
 QUrl AssetManager::url(const QString &name) const {
     if (!paths.contains(name))
         return {};
