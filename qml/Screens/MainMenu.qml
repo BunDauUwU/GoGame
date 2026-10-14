@@ -62,6 +62,97 @@ Rectangle {
         opacity: 0.35
     }
 
+    Popup {
+        id: selectionMenu
+
+        parent: Overlay.overlay
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+
+        modal: true
+        focus: true
+        width: 280
+        padding: 12
+        background: Rectangle {
+            color: "transparent"
+        }
+
+        enter: Transition {
+            ParallelAnimation {
+                NumberAnimation {
+                    property: "opacity"
+                    from: 0.0
+                    to: 1.0
+                    duration: 180
+                    easing.type: Easing.OutCubic
+                }
+
+                NumberAnimation {
+                    property: "scale"
+                    from: 0.85
+                    to: 1.0
+                    duration: 220
+                    easing.type: Easing.OutBack
+                }
+            }
+        }
+
+        exit: Transition {
+            ParallelAnimation {
+                NumberAnimation {
+                    property: "opacity"
+                    from: 1.0
+                    to: 0.0
+                    duration: 130
+                    easing.type: Easing.InCubic
+                }
+
+                NumberAnimation {
+                    property: "scale"
+                    from: 1.0
+                    to: 0.9
+                    duration: 130
+                    easing.type: Easing.InCubic
+                }
+            }
+        }
+
+        contentItem: GamePanel {
+            Layout.fillWidth: true
+            implicitHeight: 480
+            radius: Radius.xl
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Spacing.xl
+                spacing: Spacing.md
+
+                Repeater {
+                    model: ["Easy", "Medium", "Hard"]
+
+                    delegate: GameButton {
+                        required property string modelData
+                        required property int index
+
+                        text: modelData
+                        Layout.fillWidth: true
+
+                        onClicked: {
+                            console.log("Selected:", modelData);
+                            
+                            AppState.difficultyLevel = index;
+                            AppState.playingAgainstAI = true;
+
+                            stack.push("./MatchScreen.qml");
+
+                            selectionMenu.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ==========================================
     // TITLE CONTAINER
     // ==========================================
@@ -191,6 +282,16 @@ Rectangle {
             wrapMode: Text.WordWrap
             width: 240
             visible: text.length > 0
+        }
+
+        GameButton {
+            height: 60
+            width: 400
+            text: "Play against AI"
+            onClicked: {
+                console.log("Matchmaking action triggered");
+                selectionMenu.open();
+            }
         }
 
         GameButton {
