@@ -109,66 +109,29 @@ Rectangle {
 
             Item {
                 width: parent.width
-                height: stoneSkinsButtonsRow.implicitHeight
+                height: stoneSkinhButtonsRow.implicitHeight
 
                 Row {
-                    id: stoneSkinsButtonsRow
+                    id: stoneSkinhButtonsRow
+
                     anchors.centerIn: parent
                     spacing: 15
 
                     Repeater {
-                        model: 2
+                        model: 3
 
                         delegate: GameButton {
-                            id: stoneSkinButton
-
                             required property int index
+
+                            opacity: AssetManager.currentBackground === index + 1 ? 1.0 : 0.6
 
                             width: 200
                             height: 60
 
-                            opacity: AssetManager.currentStoneSkin === index + 1 ? 1.0 : 0.65
+                            text: qsTr("Background %1").arg(index + 1)
 
                             onClicked: {
-                                AssetManager.currentStoneSkin = index + 1;
-                            }
-
-                            Item {
-                                Row {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 8
-                                    height: 64
-
-                                    Image {
-                                        width: 128
-                                        height: 128
-                                        source: AssetManager.url("StoneSkin" + (stoneSkinButton.index + 1) + "Black")
-                                        sourceSize: Qt.size(512, 512)
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                        cache: true
-                                    }
-
-                                    Image {
-                                        width: 128
-                                        height: 128
-                                        source: AssetManager.url("StoneSkin" + (stoneSkinButton.index + 1) + "White")
-                                        sourceSize: Qt.size(512, 512)
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                        cache: true
-                                    }
-
-                                    Text {
-                                        width: 96
-                                        height: 30
-                                        text: qsTr("Skin %1").arg(stoneSkinButton.index + 1)
-                                        color: stoneSkinButton.palette.buttonText
-                                        font: stoneSkinButton.font
-                                        verticalAlignment: Text.AlignVCenter
-                                        elide: Text.ElideRight
-                                    }
-                                }
+                                AssetManager.currentBackground = index + 1;
                             }
                         }
                     }

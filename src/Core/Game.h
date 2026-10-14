@@ -1,8 +1,5 @@
 #pragma once
-
-#include <QJsonObject>
 #include <QObject>
-#include <QString>
 #include <QThreadPool>
 #include <QVariantList>
 #include <QVariantMap>
@@ -11,7 +8,8 @@
 #include "../Network/NetworkClient.h"
 #include "Enums.h"
 
-class GameManager : public QObject {
+class GameManager : public QObject
+{
     Q_OBJECT
     Q_PROPERTY(QVariantList boardState READ boardState NOTIFY boardStateChanged)
     Q_PROPERTY(int currentPlayer READ currentPlayer NOTIFY currentPlayerChanged)
