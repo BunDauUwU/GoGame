@@ -512,7 +512,7 @@ Rectangle {
                 wrapMode: Text.WordWrap
                 text: {
                     var score = boardScreen.scoring;
-                    return score.blackPoints === undefined ? "" : qsTr("Japanese score (provisional)") + "\n" + qsTr("Black: %1").arg(score.blackPoints) + "\n" + qsTr("White: %1").arg(score.whitePoints) + "\n" + qsTr("White includes %1 komi").arg(score.komi);
+                    return score.blackPoints === undefined ? "" : qsTr("Japanese score (provisional)") + "\n" + qsTr("Black: %1 territory + %2 prisoners = %3 points").arg(score.blackTerritory).arg(score.blackPrisoners).arg(score.blackPoints) + "\n" + qsTr("White: %1 territory + %2 prisoners + %3 komi = %4 points").arg(score.whiteTerritory).arg(score.whitePrisoners).arg(score.komi).arg(score.whitePoints) + "\n" + qsTr("Difference: %1").arg(score.difference);
                 }
                 horizontalAlignment: Text.AlignHCenter
             }
@@ -536,6 +536,7 @@ Rectangle {
         height: width * 90 / 420
         playerName: boardScreen.opponentPlayerName
         currentPoints: boardScreen.pointsForColor(1 - boardScreen.localPlayerColor)
+        finalScoring: boardScreen.scoring.phase === "final"
         showServerPoints: gameManager.online && boardScreen.serverScoring.blackPoints !== undefined && boardScreen.serverScoring.whitePoints !== undefined
         serverPoints: (boardScreen.localPlayerColor === 0 ? boardScreen.serverScoring.whitePoints : boardScreen.serverScoring.blackPoints) ?? 0
         scoresMatch: boardScreen.scoringComparison.status === "matched"
@@ -552,6 +553,7 @@ Rectangle {
         height: width * 90 / 420
         playerName: boardScreen.localPlayerName
         currentPoints: boardScreen.pointsForColor(boardScreen.localPlayerColor)
+        finalScoring: boardScreen.scoring.phase === "final"
         showServerPoints: gameManager.online && boardScreen.serverScoring.blackPoints !== undefined && boardScreen.serverScoring.whitePoints !== undefined
         serverPoints: (boardScreen.localPlayerColor === 0 ? boardScreen.serverScoring.blackPoints : boardScreen.serverScoring.whitePoints) ?? 0
         scoresMatch: boardScreen.scoringComparison.status === "matched"

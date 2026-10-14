@@ -11,6 +11,7 @@ Item {
     property bool scoresMatch: true
     property bool isJapanRule: true
     property bool provisionalPoints: true
+    property bool finalScoring: false
     property url avatarSource: "qrc:/images/avatar.png"
     property bool avatarOnRight: false
     property color frameColor: "#7f94a4"
@@ -117,7 +118,7 @@ Item {
             id: pointsHover
         }
         ToolTip.visible: pointsHover.hovered
-        ToolTip.text: root.provisionalPoints ? qsTr("Secured territory + prisoners; White includes komi. Open or unsettled regions are not counted.") : qsTr("Territory + prisoners; White includes komi.")
+        ToolTip.text: root.finalScoring ? qsTr("Enclosed territory + prisoners; White includes komi. Dead stones and seki still need confirmation.") : root.provisionalPoints ? qsTr("Secured territory + prisoners; White includes komi. Open or unsettled regions are not counted.") : qsTr("Territory + prisoners; White includes komi.")
         x: root.avatarOnRight ? 90 * root.unit : 100 * root.unit
         width: parent.width - 160 * root.unit
         height: parent.height

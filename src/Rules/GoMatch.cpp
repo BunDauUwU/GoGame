@@ -156,7 +156,7 @@ QJsonArray GoMatch::state() const
         data.append(color);
     return data;
 }
-QJsonObject GoMatch::scoreDetails() const
+QJsonObject GoMatch::scoreDetails(ScoringPhase phase) const
 {
     std::array<int, Count> parent, size;
     std::array<unsigned char, Count> borders{};
@@ -184,66 +184,84 @@ QJsonObject GoMatch::scoreDetails() const
                     parent[b] = a;
                     size[a] += size[b];
                 }
-    const auto &chains = groups();
-    std::array<std::bitset<Count>, Count> regionCells, boundaryChains, vitalChains;
-    std::bitset<Count> aliveChains, activeRegions;
-    for (int pos = 0; pos < Count; ++pos) {
-        if (board[pos] >= 0) {
-            aliveChains.set(chains.root(pos));
-            continue;
-        }
-        const int region = root(pos);
-        regionCells[region].set(pos);
-        for (int next : neighbors()[pos])
-            if (next >= 0 && board[next] >= 0) {
-                borders[region] |= 1 << board[next];
-                boundaryChains[region].set(chains.root(next));
+    int unsettledPoints = 0;
+    if (phase == ScoringPhase::Final) {
+        for (int pos = 0; pos < Count; ++pos)
+            if (board[pos] == -1)
+                for (int next : neighbors()[pos])
+                    if (next >= 0 && board[next] >= 0)
+                        borders[root(pos)] |= 1 << board[next];
+        for (int pos = 0; pos < Count; ++pos)
+            if (board[pos] == -1 && root(pos) == pos) {
+                if (borders[pos] == 1)
+                    territory[0] += size[pos];
+                else if (borders[pos] == 2)
+                    territory[1] += size[pos];
+                else
+                    unsettledPoints += size[pos];
             }
-    }
-    for (int region = 0; region < Count; ++region) {
-        if (regionCells[region].none() || (borders[region] != 1 && borders[region] != 2))
-            continue;
-        activeRegions.set(region);
-        for (int chain = 0; chain < Count; ++chain)
-            if (boundaryChains[region].test(chain)
-                && (regionCells[region] & ~chains.liberties[chain]).none())
-                vitalChains[region].set(chain);
-    }
-    bool changed;
-    do {
-        changed = false;
-        std::array<int, Count> eyes{};
+    } else {
+        const auto &chains = groups();
+        std::array<std::bitset<Count>, Count> regionCells, boundaryChains, vitalChains;
+        std::bitset<Count> aliveChains, activeRegions;
+        for (int pos = 0; pos < Count; ++pos) {
+            if (board[pos] >= 0) {
+                aliveChains.set(chains.root(pos));
+                continue;
+            }
+            const int region = root(pos);
+            regionCells[region].set(pos);
+            for (int next : neighbors()[pos])
+                if (next >= 0 && board[next] >= 0) {
+                    borders[region] |= 1 << board[next];
+                    boundaryChains[region].set(chains.root(next));
+                }
+        }
         for (int region = 0; region < Count; ++region) {
-            if (!activeRegions.test(region))
+            if (regionCells[region].none() || (borders[region] != 1 && borders[region] != 2))
                 continue;
-            if ((boundaryChains[region] & ~aliveChains).any()) {
-                activeRegions.reset(region);
-                changed = true;
-                continue;
+            activeRegions.set(region);
+            for (int chain = 0; chain < Count; ++chain)
+                if (boundaryChains[region].test(chain)
+                    && (regionCells[region] & ~chains.liberties[chain]).none())
+                    vitalChains[region].set(chain);
+        }
+        bool changed;
+        do {
+            changed = false;
+            std::array<int, Count> eyes{};
+            for (int region = 0; region < Count; ++region) {
+                if (!activeRegions.test(region))
+                    continue;
+                if ((boundaryChains[region] & ~aliveChains).any()) {
+                    activeRegions.reset(region);
+                    changed = true;
+                    continue;
+                }
+                for (int chain = 0; chain < Count; ++chain)
+                    if (vitalChains[region].test(chain))
+                        ++eyes[chain];
             }
             for (int chain = 0; chain < Count; ++chain)
-                if (vitalChains[region].test(chain))
-                    ++eyes[chain];
+                if (aliveChains.test(chain) && eyes[chain] < 2) {
+                    aliveChains.reset(chain);
+                    changed = true;
+                }
+        } while (changed);
+        for (int region = 0; region < Count; ++region) {
+            if (regionCells[region].none())
+                continue;
+            if (activeRegions.test(region) && (vitalChains[region] & aliveChains).any())
+                territory[borders[region] == 1 ? 0 : 1] += size[region];
+            else
+                unsettledPoints += size[region];
         }
-        for (int chain = 0; chain < Count; ++chain)
-            if (aliveChains.test(chain) && eyes[chain] < 2) {
-                aliveChains.reset(chain);
-                changed = true;
-            }
-    } while (changed);
-    int unsettledPoints = 0;
-    for (int region = 0; region < Count; ++region) {
-        if (regionCells[region].none())
-            continue;
-        if (activeRegions.test(region) && (vitalChains[region] & aliveChains).any())
-            territory[borders[region] == 1 ? 0 : 1] += size[region];
-        else
-            unsettledPoints += size[region];
     }
     const double blackPoints = territory[0] + capturedStones[0];
     const double whitePoints = territory[1] + capturedStones[1] + 6.5;
     return {{"rules", "Japanese"},
-            {"scoreBasis", "SecuredTerritory"},
+            {"phase", phase == ScoringPhase::Final ? "final" : "current"},
+            {"scoreBasis", phase == ScoringPhase::Final ? "EnclosedTerritory" : "SecuredTerritory"},
             {"unsettledPoints", unsettledPoints},
             {"blackTerritory", territory[0]},
             {"whiteTerritory", territory[1]},
@@ -257,7 +275,7 @@ QJsonObject GoMatch::scoreDetails() const
 }
 double GoMatch::score() const
 {
-    return scoreDetails()["difference"].toDouble();
+    return scoreDetails(ScoringPhase::Final)["difference"].toDouble();
 }
 QJsonObject GoMatch::toJson() const
 {

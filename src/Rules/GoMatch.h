@@ -10,6 +10,7 @@ class GoMatch {
 public:
   static constexpr int Size = 19;
   static constexpr int Count = Size * Size;
+  enum class ScoringPhase { Current, Final };
   struct Groups {
     std::array<int, Count> parent;
     std::array<int, Count> size{};
@@ -25,7 +26,7 @@ public:
   bool validMove(int row, int col) const;
   void pass();
   double score() const;
-  QJsonObject scoreDetails() const;
+  QJsonObject scoreDetails(ScoringPhase phase = ScoringPhase::Current) const;
   QJsonArray state() const;
   QJsonObject toJson() const;
   static bool fromJson(const QJsonObject &json, GoMatch &game, QString &error);

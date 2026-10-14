@@ -316,7 +316,8 @@ void GameManager::resetGame()
 }
 void GameManager::updateScoring(const QVariantMap &serverScoring)
 {
-    const auto client = m_position.scoreDetails().toVariantMap();
+    const auto phase = m_finished ? GoMatch::ScoringPhase::Final : GoMatch::ScoringPhase::Current;
+    const auto client = m_position.scoreDetails(phase).toVariantMap();
     const auto server = online() && m_ready ? serverScoring : QVariantMap{};
     QVariantMap differences;
     const auto numeric = [](const QVariant &value) {
@@ -564,7 +565,9 @@ bool GameManager::loadGame(bool ai, int slot)
     emit matchInfoChanged();
     emit aiStateChanged();
     syncLocalPosition();
-    m_snapshot["winnerIndex"] = data.winnerIndex;
+    m_snapshot["winnerIndex"] = m_finished && m_position.consecutivePasses >= 2
+                                    ? (m_position.score() > 0 ? 0 : 1)
+                                    : data.winnerIndex;
     m_snapshot["endReason"] = m_resultMessage;
     emit snapshotChanged();
     emit savesChanged();

@@ -434,7 +434,8 @@ void Server::sendSnapshot(QWebSocket *socket, const Match &match)
                    {"boardSize", 19},
                    {"board", match.game.state()},
                    {"position", match.game.toJson()},
-                   {"scoring", match.game.scoreDetails()},
+                   {"scoring", match.game.scoreDetails(match.started ? GoMatch::ScoringPhase::Current
+                                                                   : GoMatch::ScoringPhase::Final)},
                    {"moveCount", match.game.moveCount},
                    {"consecutivePasses", match.game.consecutivePasses},
                    {"currentPlayerIndex", match.game.currentPlayer},
@@ -468,7 +469,7 @@ void Server::endWithWinner(Match &match, int winner, const QString &reason)
             m_clients[socket]["matchId"] = "";
     QJO event{{"eventType", "GameEnded"}, {"winnerIndex", winner}, {"reason", reason}};
     if (match.game.consecutivePasses >= 2)
-        event["scoring"] = match.game.scoreDetails();
+        event["scoring"] = match.game.scoreDetails(GoMatch::ScoringPhase::Final);
     broadcast(match, "GameEvent", {{"matchId", match.id}, {"events", QJsonArray{event}}});
     sendSnapshot(match);
     m_matches.remove(match.id);
