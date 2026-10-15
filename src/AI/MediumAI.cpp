@@ -42,7 +42,7 @@ double MediumAI ::evaluate(const GoMatch &game) const
         int sign = board[pos] == 0 ? 1 : -1;
         val += sign * 12;
         int root = groups.root(pos);
-        if (root = pos) {
+        if (root == pos) {
             int count = int(groups.liberties[root].count());
             val += sign
                    * (count == 1   ? -5.0 * groups.size[root]
@@ -108,6 +108,7 @@ public:
         if ((cancel && cancel->load()) || timer.elapsed() >= options.timeBudgetMs) {
             return incomplete = true;
         }
+        return false;
     }
 
     vector<Candidate> candidates(const GoMatch &game)

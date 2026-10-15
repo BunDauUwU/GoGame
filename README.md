@@ -2,6 +2,14 @@
 
 Game cờ vây C++/Qt 6: client Qt Quick/QML và server console WebSocket. Tài liệu cập nhật ngày **13/10/2026** sau khi dọn các thành phần không dùng. Client đã gửi lệnh online và áp dụng snapshot của server; hai người có thể ghép trận trên cùng máy. Server quyết định luật, lượt và đồng hồ Byo-yomi.
 
+## Solo với AI từ menu chính
+
+Chọn **Play against AI → Medium** để bắt đầu ván offline: bạn cầm đen, AI cầm trắng. Không cần kết nối server; nút tạm khóa khi đang tìm trận online. Easy/Hard hiện chưa khả dụng. Bản Medium dùng thuật toán Minimax/Alpha-Beta hiện có, chưa phải MCTS/RAVE hoặc mạng neuron.
+
+AI tìm nước trong một worker riêng với ngân sách mặc định 1 giây, không chặn UI. Ván được tự lưu trong tối đa 20 slot; khi đầy, chọn slot và xác nhận ghi đè. **Load AI game** ở menu tiếp tục ván đã lưu; các nút Save/Load/Exit trong trận cũng hoạt động với AI.
+
+Kiểm tra tính năng bằng `ctest --test-dir build/solo-ai --output-on-failure` sau khi configure/build tại `build/solo-ai` (bật `BUILD_TESTING`). Test `soloAI` dùng thư mục tạm, xác nhận AI trả lời, mở đầu khi người chơi cầm trắng, lưu/tải, hủy worker cũ và luồng menu offline tới bàn đấu bằng Qt offscreen.
+
 ## Chạy dự án
 
 Cần CMake ≥ 3.16, compiler C++17 cho server và Qt 6 với Core, Gui, Quick/QML, Network, WebSockets, Sql. CMake khai báo Qt ≥ 6.2; client dùng `QWebSocket::errorOccurred`, nên kit Qt phải cung cấp signal này (kit cũ có thể cần điều chỉnh code).
@@ -726,3 +734,18 @@ Kiểm tra: không còn conflict marker trong mã nguồn. Configure client bị
 Kiểm tra bổ sung: phát hiện Server.h đang lấy GoMatch.h cũ ở server/ thay vì implementation chung mà CMake build ở src/Rules/. Sửa include thành ../src/Rules/GoMatch.h, giữ logic scoring/ko mới của server. Đây là sửa tương thích build cần thiết; client vẫn cần bổ sung các file AI bị thiếu có sẵn từ local HEAD.
 
 Kết quả build server riêng: thành công tại build/merge-server-20261014. Kiểm tra git diff --check đạt.
+
+
+### 15/10/2026 — Thêm solo AI vào MainMenu.qml
+
+Nội dung prompt của người dùng:
+
+```text
+Thêm tính năng cho phép solo với AI vào MainMenu.qml
+```
+
+Kết quả: mở nút Play against AI và lựa chọn Medium, nối startMediumGame tới MatchScreen, dùng savedSlots đúng tên property, bật tải ván và xử lý đầy 20 slot bằng xác nhận ghi đè. Giữ Easy/Hard chưa khả dụng và cho chơi offline. Hoàn thiện backend đang dở: bỏ return false chặn khởi tạo, khởi chạy MediumAI bằng QtConcurrent/QThreadPool một worker, áp dụng kết quả trên luồng UI, dùng generation/cancel token bỏ kết quả cũ khi thoát/load/undo/chuyển chế độ. Khôi phục member/include MediumAI, sửa phép so sánh root trong evaluation và return bị thiếu ở stopped(). Sửa luồng save/load và dừng AI khi màn hình bị hủy. Giữ các chỉnh sửa có sẵn của người dùng trong bốn file đang thay đổi.
+
+Kiểm tra: build client/server tại build/solo-ai thành công. Thêm tests/SoloAI.cpp và CTest soloAI để kiểm tra controller cùng điều hướng MainMenu thực ở chế độ offscreen; kết quả cuối ghi bên dưới.
+
+Kết quả cuối: CTest soloAI đạt 1/1 (1,58 giây), gồm offline controller, AI trả lời/mở đầu, lưu/tải, hủy kết quả cũ, nút menu/chọn Medium/điều hướng MatchScreen qua QML thật, đủ 20 slot/từ chối ghi đè ngầm và ghi đè đã chọn. Test giao diện cần Qt runtime ngoài sandbox trong môi trường này; build và git diff --check đạt. Không commit/push.

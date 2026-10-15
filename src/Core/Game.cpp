@@ -112,7 +112,7 @@ void GameManager::update_pieces(int row, int col)
     m_position = std::move(candidate);
     recordMove({{"row", row}, {"col", col}});
     notifyMove();
-    // requestAIMove();
+    requestMove();
 }
 void GameManager::pass_turn()
 {
@@ -126,9 +126,7 @@ void GameManager::pass_turn()
     recordMove({{"pass", true}});
     if (m_position.consecutivePasses >= 2)
         finishLocalGame(m_position.score() > 0 ? 0 : 1, QStringLiteral("Two consecutive passes"));
-    else
-        ;
-    // requestAIMove();
+    requestMove();
 }
 void GameManager::setMatchInfo(const QString &id, int player, const QString &opponent)
 {
@@ -136,7 +134,7 @@ void GameManager::setMatchInfo(const QString &id, int player, const QString &opp
         return;
     if (id == m_matchId && player == m_playerIndex && opponent == m_opponentName)
         return;
-    // stopAIGame();
+    stopAI();
     m_sandbox = false;
     m_position = GoMatch();
     m_snapshot.clear();
@@ -278,7 +276,7 @@ bool GameManager::startSandbox()
 {
     if (online() && !m_finished)
         return false;
-    // stopAIGame();
+    stopAI();
     m_matchId.clear();
     m_sandbox = true;
     m_playerIndex = 0;
@@ -492,12 +490,12 @@ void GameManager::redo()
     else {
         if (m_aiEnabled)
             saveGame();
-        // requestAIMove();
+        requestMove();
     }
 }
-QVariantList GameManager::savedAISlots() const
+QVariantList GameManager::savedSlots() const
 {
-    return DataManager::savedAISlots();
+    return DataManager::savedSlots();
 }
 bool GameManager::saveGame(int slot)
 {
@@ -532,10 +530,7 @@ bool GameManager::loadSandbox()
 }
 bool GameManager::loadAIGame(int slot)
 {
-    // return loadGame(true, slot);
-    Q_UNUSED(slot);
-    emit gameError(tr("AI is currently disabled"));
-    return false;
+    return loadGame(true, slot);
 }
 bool GameManager::loadGame(bool ai, int slot)
 {
@@ -572,6 +567,6 @@ bool GameManager::loadGame(bool ai, int slot)
     emit snapshotChanged();
     emit savesChanged();
     notify("Saved game loaded");
-    // requestAIMove();
+    requestMove();
     return true;
 }

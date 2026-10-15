@@ -11,6 +11,24 @@ Rectangle {
     implicitHeight: 720
     property string matchmakingError: ""
 
+    function openAIMatch() {
+        AppState.difficultyLevel = 1;
+        AppState.playingAgainstAI = true;
+        stack.push("./MatchScreen.qml", {
+            localPlayerName: authManager.username || qsTr("Player"),
+            opponentPlayerName: qsTr("Medium AI"),
+            localPlayerColor: gameManager.playerIndex
+        });
+    }
+
+    function startMediumMatch(slot) {
+        mainMenuRoot.matchmakingError = "";
+        if (gameManager.startMediumGame(0, slot)) {
+            selectionMenu.close();
+            openAIMatch();
+        }
+    }
+
     // ==========================================
     // LOGIC & CONNECTIONS (Đặt ngoài hệ thống bố cục)
     // ==========================================
@@ -143,28 +161,17 @@ Rectangle {
 
                         text: modelData
                         Layout.fillWidth: true
-                        enabled: false
+                        objectName: "aiDifficulty" + modelData
+                        enabled: index === 1
 
                         onClicked: {
-                            /*
-                            console.log("Selected:", modelData);
-
-                            if (gameManager.savedAISlots.length >= 20) {
-                                newAIDialog.open();
+                            gameManager.refreshSaves();
+                            if (gameManager.savedSlots.length >= 20) {
                                 selectionMenu.close();
+                                newAIDialog.open();
                                 return;
                             }
-                            if (!gameManager.startMediumGame(0))
-                                return;
-                            AppState.difficultyLevel = index;
-                            AppState.playingAgainstAI = true;
-                            stack.push("./MatchScreen.qml", {
-                                localPlayerName: authManager.username || "Player",
-                                opponentPlayerName: "Medium AI"
-                            });
-
-                            selectionMenu.close();
-                            */
+                            mainMenuRoot.startMediumMatch(0);
                         }
                     }
                 }
@@ -306,11 +313,12 @@ Rectangle {
         GameButton {
             height: 60
             width: 400
-            text: "Play against AI"
-            enabled: false
+            objectName: "playAgainstAIButton"
+            text: qsTr("Play against AI")
+            enabled: !matchmakingManager.searching
             onClicked: {
-                // console.log("Matchmaking action triggered");
-                // selectionMenu.open();
+                console.log("Matchmaking action triggered");
+                selectionMenu.open();
             }
         }
 
@@ -330,11 +338,11 @@ Rectangle {
         GameButton {
             height: 48
             width: 400
-            text: "Load game"
-            enabled: false
+            text: qsTr("Load AI game")
+            enabled: !matchmakingManager.searching
             onClicked: {
-                // gameManager.refreshSaves();
-                // loadAIDialog.open();
+                gameManager.refreshSaves();
+                loadAIDialog.open();
             }
         }
 
@@ -378,7 +386,7 @@ Rectangle {
         id: newAIDialog
         anchors.centerIn: parent
         modal: true
-        title: "Medium"
+        title: qsTr("All slots full — overwrite selected slot?")
         standardButtons: Dialog.Ok | Dialog.Cancel
         ComboBox {
             id: newSlotSelector
@@ -386,14 +394,7 @@ Rectangle {
             displayText: "Slot " + (currentIndex + 1)
         }
         onAccepted: {
-            /*
-            if (gameManager.startMediumGame(0, newSlotSelector.currentIndex + 1)) {
-                stack.push("./MatchScreen.qml", {
-                    localPlayerName: authManager.username || "Player",
-                    opponentPlayerName: "Medium AI"
-                });
-            }
-            */
+            mainMenuRoot.startMediumMatch(newSlotSelector.currentIndex + 1);
         }
     }
 
@@ -405,18 +406,13 @@ Rectangle {
         standardButtons: Dialog.Ok | Dialog.Cancel
         ComboBox {
             id: loadAISelector
-            model: gameManager.savedAISlots
+            model: gameManager.savedSlots
             displayText: currentIndex >= 0 ? "Slot " + currentText : "No saved AI battles"
         }
         onAccepted: {
-            /*
             if (loadAISelector.currentIndex >= 0 && gameManager.loadAIGame(Number(loadAISelector.currentText))) {
-                stack.push("./MatchScreen.qml", {
-                    localPlayerName: authManager.username || "Player",
-                    opponentPlayerName: "Medium AI"
-                });
+                mainMenuRoot.openAIMatch();
             }
-            */
         }
     }
 

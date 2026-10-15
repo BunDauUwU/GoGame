@@ -30,8 +30,8 @@ Rectangle {
     property bool previewEnabled: true
 
     Component.onDestruction: {
-        // if (gameManager.aiEnabled)
-        //     gameManager.stopAIGame();
+        if (gameManager.aiEnabled)
+            gameManager.stopAI();
         AppState.playingAgainstAI = false;
     }
 
@@ -426,15 +426,14 @@ Rectangle {
             textRole: ""
             delegate: ItemDelegate {
                 required property int index
-                text: "Slot " + (index + 1) + (gameManager.savedAISlots.indexOf(index + 1) >= 0 ? " · saved" : " · empty")
+                text: "Slot " + (index + 1) + (gameManager.savedSlots.indexOf(index + 1) >= 0 ? " · saved" : " · empty")
                 width: slotSelector.width
             }
             displayText: "Slot " + (currentIndex + 1)
         }
         onAccepted: {
-            Saved;
             if (loading) {
-                // gameManager.loadAIGame(slotSelector.currentIndex + 1);
+                gameManager.loadAIGame(slotSelector.currentIndex + 1);
             } else if (gameManager.saveGame(slotSelector.currentIndex + 1))
                 saveStatus.text = qsTr(" ~!");
         }

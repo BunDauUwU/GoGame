@@ -3,7 +3,7 @@
 #include <QThreadPool>
 #include <QVariantList>
 #include <QVariantMap>
-// #include "../AI/MediumAI.h"
+#include "../AI/MediumAI.h"
 #include "../Managers/DataManager.h"
 #include "../Network/NetworkClient.h"
 #include "Enums.h"
@@ -29,7 +29,7 @@ class GameManager : public QObject
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
     Q_PROPERTY(int undoRemaining READ undoRemaining NOTIFY historyChanged)
     Q_PROPERTY(int redoRemaining READ redoRemaining NOTIFY historyChanged)
-    Q_PROPERTY(QVariantList savedAISlots READ savedAISlots NOTIFY savesChanged)
+    Q_PROPERTY(QVariantList savedSlots READ savedSlots NOTIFY savesChanged)
     Q_PROPERTY(int currentSaveSlot READ currentSaveSlot NOTIFY savesChanged)
     Q_PROPERTY(QString notification READ notification NOTIFY notificationChanged)
 public:
@@ -37,9 +37,9 @@ public:
     static constexpr int AISaveSlots = DataManager::AISaveSlots;
     explicit GameManager(QObject *parent = nullptr);
     ~GameManager() override;
-    // Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
+    Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
     Q_INVOKABLE bool startSandbox();
-    // Q_INVOKABLE void stopAIGame();
+    Q_INVOKABLE void stopAI();
     Q_INVOKABLE bool exitLocalGame();
     Q_INVOKABLE void resetGame();
     Q_INVOKABLE void undo();
@@ -54,7 +54,7 @@ public:
     bool canRedo() const;
     int undoRemaining() const { return m_undoRemaining; }
     int redoRemaining() const { return m_redoRemaining; }
-    QVariantList savedAISlots() const;
+    QVariantList savedSlots() const;
     int currentSaveSlot() const { return m_currentSlot; }
     QString notification() const { return m_notification; }
     void setNetworkClient(NetworkClient *client);
@@ -104,7 +104,7 @@ private:
     QVariantMap m_snapshot;
     QVariantMap m_scoring, m_serverScoring, m_scoringComparison;
     QThreadPool m_aiPool;
-    // AI::MediumAI m_ai;
+    MediumAI m_ai;
     std::shared_ptr<std::atomic_bool> m_aiCancel;
     quint64 m_aiGeneration = 0;
     std::vector<GoMatch> m_history;
@@ -116,7 +116,7 @@ private:
     void updateScoring(const QVariantMap &serverScoring = {});
     void notifyScore();
     void recordMove(const QJsonObject &move);
-    // void requestAIMove();
+    void requestMove();
     void finishLocalGame(int winner, const QString &reason);
     void submit(GameCommandType type, const QJsonObject &command = {});
     void notify(const QString &text);
