@@ -83,9 +83,9 @@ qt_add_qml_module(appGoGame
         main.cpp
 
         # Client AI
-        # src/AI/AIGame.cpp
-        # src/AI/MediumAI.cpp
-        # src/AI/MediumAI.h
+        src/AI/AIGame.cpp
+        src/AI/MediumAI.cpp
+        src/AI/MediumAI.h
 
         # Shared Go rules
         src/Rules/GoMatch.cpp

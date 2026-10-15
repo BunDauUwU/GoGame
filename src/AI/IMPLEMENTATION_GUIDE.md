@@ -96,30 +96,30 @@ Python 3.10+; prepare/inspect chỉ dùng standard library. Training/export cầ
 ```bash
 python3 -m venv .venv-ai
 . .venv-ai/bin/activate
-python -m pip install -r src/AI/training/requirements.txt
+python -m pip install -r training/requirements.txt
 ```
 
 Chọn bản PyTorch CPU/CUDA tương ứng máy theo [hướng dẫn PyTorch](https://pytorch.org/get-started/locally/); không chạy pip vào môi trường hệ thống nếu muốn giữ dự án cô lập.
 
 ```bash
 # Kiểm tra corpus, chưa cần PyTorch
-python src/AI/trainAI.py --inspect /path/to/sgf
-python src/AI/trainAI.py --describe-model --architecture 6b
+python trainAI.py --inspect /path/to/sgf
+python trainAI.py --describe-model --architecture 6b
 
 # Replay SGF, tạo train.jsonl / validation.jsonl / manifest.json
-python src/AI/trainAI.py --prepare /path/to/sgf --output training-data --seed 42
+python trainAI.py --prepare /path/to/sgf --output training-data --seed 42
 
 # Huấn luyện và lưu checkpoint sau mỗi epoch
-python src/AI/trainAI.py --train training-data --architecture 6b --output models/gonet6b.pt --epochs 10 --batch-size 1 --threads 3
+python trainAI.py --train training-data --architecture 6b --output models/gonet6b.pt --epochs 10 --batch-size 1 --threads 3
 
 # Thử pipeline nhỏ trước khi cấp phát model 6B
-python src/AI/trainAI.py --train training-data --architecture resnet6 --output models/smoke.pt --epochs 1 --batch-size 8
+python trainAI.py --train training-data --architecture resnet6 --output models/smoke.pt --epochs 1 --batch-size 8
 
 # Tiếp tục optimizer/epoch từ checkpoint
-python src/AI/trainAI.py --train training-data --output models/gonet6b.pt --resume models/gonet6b.pt --epochs 5
+python trainAI.py --train training-data --output models/gonet6b.pt --resume models/gonet6b.pt --epochs 5
 
 # Export ONNX và file mô tả tensor .onnx.json
-python src/AI/trainAI.py --export models/gonet6b.pt --output models/gonet6b.onnx
+python trainAI.py --export models/gonet6b.pt --output models/gonet6b.onnx
 ```
 
 Corpus phải có ván 19×19 và kết quả RE biết được (B+/W+/draw). Parser hỗ trợ collection, main variation đầu tiên, escape, setup AB/AW/AE, rectangle setup, HA/PL và pass rỗng/tt. File sai, nước trái luật hoặc kết quả chưa biết bị bỏ và báo rõ. Chỉ lấy nhánh chính; không gán kết quả của ván thật cho các nhánh phân tích. Chia train/validation theo game ID; ván trùng khác annotation được khử trùng. Corpus quá nhỏ có thể không có validation: thêm dữ liệu hoặc đổi seed/split, không lấy các nước của cùng ván sang hai tập. Tham chiếu: [SGF FF4](https://www.red-bean.com/sgf/), [property index](https://www.red-bean.com/sgf/proplist_t.html).
@@ -132,13 +132,13 @@ Loss = cross-entropy policy + MSE value. Dữ liệu được stream theo JSONL,
 
 Input `planes`, float32 NCHW `[batch,5,19,19]`:
 
-| Plane | Ý nghĩa |
-|---|---|
-| 0 | Quân của người **đến lượt**, 0/1 |
-| 1 | Quân đối phương, 0/1 |
-| 2 | Nước đặt quân hợp lệ, 0/1; tính cả tự sát và simple ko |
-| 3 | Toàn 1 nếu đen đến lượt, toàn 0 nếu trắng |
-| 4 | Komi/20 nếu trắng đến lượt; -komi/20 nếu đen |
+| Plane | Ý nghĩa                                                |
+| ----- | ------------------------------------------------------ |
+| 0     | Quân của người **đến lượt**, 0/1                       |
+| 1     | Quân đối phương, 0/1                                   |
+| 2     | Nước đặt quân hợp lệ, 0/1; tính cả tự sát và simple ko |
+| 3     | Toàn 1 nếu đen đến lượt, toàn 0 nếu trắng              |
+| 4     | Komi/20 nếu trắng đến lượt; -komi/20 nếu đen           |
 
 Output `policy_logits` `[batch,362]`, ô `(row,col)` có index `row*19+col`; pass = 361. Output `value` `[batch,1]` theo người **đến lượt**: +1 thắng, -1 thua, 0 hòa. Mạng trả logits thô; client phải mask luật hiện tại rồi softmax, không dùng trực tiếp logits làm xác suất. Không xoay input theo màu người chơi trên màn hình.
 
@@ -146,7 +146,7 @@ Minimax dùng điểm theo đen thì chuyển `v_black = turn == Black ? v : -v`
 
 ## Đọc ONNX từ C++ trên client
 
-Cài/link ONNX Runtime theo [C++ getting started](https://onnxruntime.ai/docs/get-started/with-cpp). Đặt code suy luận riêng, ví dụ `src/AI/NeuralEvaluator.cpp`, rồi gọi trong worker. Giữ một session, không nạp model cho từng nước.
+Cài/link ONNX Runtime theo [C++ getting started](https://onnxruntime.ai/docs/get-started/with-cpp). Đặt code suy luận riêng, ví dụ `NeuralEvaluator.cpp`, rồi gọi trong worker. Giữ một session, không nạp model cho từng nước.
 
 ```cpp
 #include <onnxruntime_cxx_api.h>

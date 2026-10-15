@@ -16,7 +16,7 @@ QString DataManager::savePath(bool ai, int slot)
     return QDir(dir).filePath(ai ? QString("ai-%1.json").arg(slot, 2, 10, QChar('0'))
                                  : "sandbox.json");
 }
-QVariantList DataManager::savedAISlots()
+QVariantList DataManager::savedSlots()
 {
     QVariantList result;
     for (int slot = 1; slot <= AISaveSlots; ++slot)
@@ -24,7 +24,7 @@ QVariantList DataManager::savedAISlots()
             result.append(slot);
     return result;
 }
-int DataManager::firstFreeAISlot()
+int DataManager::firstFreeSlot()
 {
     for (int slot = 1; slot <= AISaveSlots; ++slot)
         if (!QFile::exists(savePath(true, slot)))

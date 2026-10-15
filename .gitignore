@@ -86,3 +86,4 @@ CMakeLists.txt.user*
 # Local server JSON storage
 /server/data/
 /data/
+/ai-reference/

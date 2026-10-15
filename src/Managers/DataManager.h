@@ -25,8 +25,8 @@ public:
     static constexpr int MaxMoves = 5000;
     static constexpr qint64 MaxFileBytes = 4 * 1024 * 1024;
     static QString savePath(bool ai, int slot = 0);
-    static QVariantList savedAISlots();
-    static int firstFreeAISlot();
+    static QVariantList savedSlots();
+    static int firstFreeSlot();
     static bool save(const LocalGameData &game, int slot, QString &error);
     static bool load(bool ai, int slot, int historyLimit, LocalGameData &game, QString &error);
 };
