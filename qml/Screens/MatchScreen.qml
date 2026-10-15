@@ -283,6 +283,7 @@ Rectangle {
 
             delegate: Item {
                 id: stoneDelegate
+                readonly property var lastMove: gameManager.lastMoveCoords
                 property int cellIndex: index
 
                 property int stateValue: board.boardState && board.boardState[cellIndex] !== undefined ? board.boardState[cellIndex] : -1
@@ -309,15 +310,30 @@ Rectangle {
                     return board.margin + row * stepY - height / 2;
                 }
 
+                Image {
+                    anchors.fill: parent
+
+                    source: AssetManager.url((stoneDelegate.stateValue === 0 ? "Black" : "White") + AssetManager.currentStoneSkin)
+
+                    fillMode: Image.PreserveAspectFit
+                    sourceSize: Qt.size(128, 128)
+                    asynchronous: true
+                    smooth: true
+                    mipmap: true
+                }
                 Rectangle {
                     anchors.fill: parent
+                    anchors.margins: 1.5
+
                     radius: width / 2
+                    color: "transparent"
 
-                    color: stoneDelegate.stateValue === 0 ? "#111111" : "#f0f0f0"
-                    border.color: stoneDelegate.stateValue === 0 ? "#000000" : "#cccccc"
-                    border.width: 1
+                    border.color: stoneDelegate.stateValue === 0 ? "#ffd54f"  // Gold for black stones
+                    : "#d32f2f"  // Red for white stones
+                    border.width: 2
+                    antialiasing: true
 
-                    scale: 0.95
+                    visible: stoneDelegate.lastMove && stoneDelegate.lastMove.length >= 2 && Number(stoneDelegate.lastMove[0]) === Math.floor(stoneDelegate.cellIndex / board.boardSize) && Number(stoneDelegate.lastMove[1]) === stoneDelegate.cellIndex % board.boardSize
                 }
             }
         }

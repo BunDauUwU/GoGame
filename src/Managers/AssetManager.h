@@ -35,5 +35,5 @@ signals:
 private:
   static const QHash<QString, QString> paths;
   int m_currentBackground = 1;
-  int m_currentStoneSkin = 0;
+  int m_currentStoneSkin = 1;
 };

@@ -109,30 +109,93 @@ Rectangle {
 
             Item {
                 width: parent.width
-                height: stoneSkinhButtonsRow.implicitHeight
+                height: 60
 
                 Row {
-                    id: stoneSkinhButtonsRow
+                    id: stoneSkinsButtonsRow
 
                     anchors.centerIn: parent
                     spacing: 15
 
                     Repeater {
-                        model: 3
+                        model: 2
 
                         delegate: GameButton {
                             required property int index
 
-                            opacity: AssetManager.currentBackground === index + 1 ? 1.0 : 0.6
-
                             width: 200
                             height: 60
 
-                            text: qsTr("Background %1").arg(index + 1)
+                            text: qsTr("Stone Skin %1").arg(index + 1)
+
+                            opacity: AssetManager.currentStoneSkin === index + 1 ? 1.0 : 0.45
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 180
+                                    easing.type: Easing.InOutQuad
+                                }
+                            }
 
                             onClicked: {
-                                AssetManager.currentBackground = index + 1;
+                                AssetManager.currentStoneSkin = index + 1;
                             }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: stoneSkinPreview
+
+                width: parent.width
+                height: 250
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        width: 340
+
+                        text: qsTr("Stone Skin %1").arg(AssetManager.currentStoneSkin)
+
+                        color: "white"
+                        font.pixelSize: 22
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 50
+
+                        Image {
+                            width: 140
+                            height: 140
+
+                            source: AssetManager.url("Black" + AssetManager.currentStoneSkin)
+
+                            fillMode: Image.PreserveAspectFit
+                            sourceSize: Qt.size(512, 512)
+                            asynchronous: true
+                            smooth: true
+                            mipmap: true
+                            cache: true
+                        }
+
+                        Image {
+                            width: 140
+                            height: 140
+
+                            source: AssetManager.url("White" + AssetManager.currentStoneSkin)
+
+                            fillMode: Image.PreserveAspectFit
+                            sourceSize: Qt.size(512, 512)
+                            asynchronous: true
+                            smooth: true
+                            mipmap: true
+                            cache: true
                         }
                     }
                 }
