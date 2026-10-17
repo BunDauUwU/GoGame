@@ -13,6 +13,7 @@ const QHash<QString, QString> AssetManager::paths = {
     {"White1", "stones/white1.png"},
     {"Black2", "stones/black2.png"},
     {"White2", "stones/white2.png"},
+    {"PlaceSound", "sounds/place.wav"},
 };
 
 int AssetManager::currentBackground() const

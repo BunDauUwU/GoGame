@@ -7,11 +7,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.2 COMPONENTS Quick Sql REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS WebSockets)
 find_package(Qt6 REQUIRED COMPONENTS
     Core
     Concurrent
     Gui
+    WebSockets
+    Multimedia
 )
 
 qt_add_executable(appGoGame

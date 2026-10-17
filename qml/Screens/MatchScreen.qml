@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtMultimedia
 import "../Components/battle"
 import "../Components/controls"
 import "../Core"
@@ -66,6 +67,11 @@ Rectangle {
         onTriggered: boardScreen.clockNow = Date.now()
     }
 
+    SoundEffect {
+        id: placeSound
+        source: AssetManager.url("PlaceSound")
+    }
+
     Connections {
         target: gameManager
         function onGameError() {
@@ -83,6 +89,9 @@ Rectangle {
         }
         function onBoardStateChanged() {
             boardScreen.clearPreview();
+        }
+        function onLastMoveCoordsChanged() {
+            placeSound.play();
         }
     }
 
