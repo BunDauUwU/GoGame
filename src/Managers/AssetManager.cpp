@@ -1,9 +1,7 @@
 // src/Managers/AssetManager.cpp
 #include "AssetManager.h"
 
-AssetManager::AssetManager(QObject *parent)
-    : QObject(parent)
-{}
+AssetManager::AssetManager(QObject *parent) : QObject(parent) {}
 
 const QHash<QString, QString> AssetManager::paths = {
     {"Background1", "background/background1.png"},
@@ -14,40 +12,52 @@ const QHash<QString, QString> AssetManager::paths = {
     {"Black2", "stones/black2.png"},
     {"White2", "stones/white2.png"},
     {"PlaceSound", "sounds/place.wav"},
+    {"BackgroundSong1", "sounds/background1.opus"},
 };
 
-int AssetManager::currentBackground() const
-{
-    return m_currentBackground;
+int AssetManager::currentBackground() const { return m_currentBackground; }
+
+void AssetManager::setCurrentBackground(int index) {
+  if (m_currentBackground == index)
+    return;
+
+  m_currentBackground = index;
+  emit currentBackgroundChanged();
 }
 
-void AssetManager::setCurrentBackground(int index)
-{
-    if (m_currentBackground == index)
-        return;
+int AssetManager::currentStoneSkin() const { return m_currentStoneSkin; }
 
-    m_currentBackground = index;
-    emit currentBackgroundChanged();
+void AssetManager::setCurrentStoneSkin(int index) {
+  if (m_currentStoneSkin == index)
+    return;
+
+  m_currentStoneSkin = index;
+  emit currentStoneSkinChanged();
 }
 
-int AssetManager::currentStoneSkin() const
-{
-    return m_currentStoneSkin;
+int AssetManager::currentBackgroundSong() const { return m_currentBackgroundSong; }
+
+void AssetManager::setCurrentBackgroundSong(int index) {
+  if (m_currentBackgroundSong == index)
+    return;
+
+  m_currentBackgroundSong = index;
+  emit currentBackgroundSongChanged();
 }
 
-void AssetManager::setCurrentStoneSkin(int index)
-{
-    if (m_currentStoneSkin == index)
-        return;
+double AssetManager::volume() const { return m_volume; }
 
-    m_currentStoneSkin = index;
-    emit currentStoneSkinChanged();
+void AssetManager::setVolume(double volume) {
+  if (qFuzzyCompare(m_volume, volume))
+    return;
+
+  m_volume = volume;
+  emit volumeChanged();
 }
 
-QUrl AssetManager::url(const QString &name) const
-{
-    if (!paths.contains(name))
-        return {};
+QUrl AssetManager::url(const QString &name) const {
+  if (!paths.contains(name))
+    return {};
 
-    return QUrl("qrc:/GoGame/assets/" + paths.value(name));
+  return QUrl("qrc:/GoGame/assets/" + paths.value(name));
 }
