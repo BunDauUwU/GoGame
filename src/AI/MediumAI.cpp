@@ -138,6 +138,7 @@ public:
         for (int r : {3, 9, 15})
             for (int c : {3, 9, 15})
                 nxt[r * 19 + c] = true;
+        // các nước gần quan -> quan trọng
         for (int pos = 0; pos < GoMatch::Count; ++pos)
             if (board[pos] >= 0)
                 for (int dr = -2; dr <= 2; ++dr)
@@ -146,6 +147,8 @@ public:
                         if (r >= 0 && r < 19 && c >= 0 && c < 19)
                             nxt[r * 19 + c] = true;
                     }
+        // các nước gần quân đã đặt -> quan trọng.
+
         struct Ranked { int pos; double priorty; };
         vector<Ranked> ranked;
         ranked.reserve(GoMatch::Count);
@@ -199,8 +202,8 @@ public:
             if (int(res.size()) > options.candidateLimit)
                 break;
         }
-        stable_sort(res.begin(), res.end(), [](const Candidate &a, const Candidate &b) {
-            return a.priorty > b.priorty;
+        sort(res.begin(), res.end(), [](const Candidate &a, const Candidate &b) {
+            return a.priorty == b.priorty ? a.pos < b.pos : a.priorty > b.priorty;
         });
         return res;
     }
