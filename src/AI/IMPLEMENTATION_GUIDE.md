@@ -17,17 +17,19 @@ AI chạy hoàn toàn ở client. Server chỉ xử lý luật, đồng hồ và
 
 Baseline Medium được giữ để ứng dụng tiếp tục chạy. MCTS và suy luận ONNX **chưa được nối vào runtime**: tài liệu này dành cho bạn tự triển khai. File trainAI tạo được kiến trúc/training pipeline khi cài dependencies; chưa có trọng số được huấn luyện đi kèm.
 
+Khi sửa các file AI, giữ tên class, hàm và API hiện có. Mã tìm kiếm giữ cách đặt tên cũ: `calc`, `val`, `res`, `cur`, `nxt`, `m_engine`, `Candidate::priorty`, cùng `u`/`v` cho danh sách và ứng viên ở gốc. Các file điều phối và training giữ tên riêng đang có của chúng.
+
 ## Điểm nối trong client
 
-Mở `AIGame.cpp`, tìm `GameManager::requestAIMove()`. Worker hiện gọi:
+Mở `AIGame.cpp`, tìm `GameManager::requestMove()`. Worker hiện gọi:
 
 ```cpp
 return engine.chooseMove(position, cancel);
 ```
 
-`GameManager` sở hữu đối tượng `AI::MediumAI m_ai`; worker nhận bản sao `engine = m_ai`. Class nhận `SearchOptions` qua constructor, giữ cấu hình và hàm đánh giá; class lồng `MediumAI::Search` giữ timer, node count, cancellation và Minimax cho từng lần tìm kiếm. `chooseMove()` là phương thức const, không dùng trạng thái tìm kiếm chung giữa các lần gọi.
+`GameManager` sở hữu đối tượng `MediumAI m_ai`; worker nhận bản sao `engine = m_ai`. Class nhận `SearchOptions` qua constructor, giữ cấu hình và hàm đánh giá; class lồng `MediumAI::Search` giữ timer, node count, cancellation và Minimax cho từng lần tìm kiếm. `chooseMove()` là phương thức const, không dùng trạng thái tìm kiếm chung giữa các lần gọi.
 
-Thay lời gọi này bằng engine của bạn, giữ hợp đồng `AI::SearchResult`:
+Thay lời gọi này bằng engine của bạn, giữ hợp đồng `SearchResult`:
 
 - `row`, `col`: tọa độ dữ liệu, 0–18; tuyệt đối không xoay theo UI.
 - `pass`: true khi bỏ lượt, row/col = -1.
@@ -44,7 +46,17 @@ Worker chỉ đọc bản sao `GoMatch`. Không chạm QObject/QML, lịch sử,
 4. Nếu điểm theo **đen**, node đen lấy max, node trắng lấy min.
 5. Dùng iterative deepening; chỉ công bố nước của depth đã hoàn thành. Hết giờ dùng kết quả depth trước hoặc nước hợp lệ dự phòng.
 
-Baseline chỉ sinh vùng gần quân + hoshi rồi chọn top-k, nên đây là tìm kiếm trên tập ứng viên, không quét toàn bộ cây cờ vây. Khi đổi heuristic, kiểm tra bắt quân/cứu atari và những nước xa vùng ứng viên; giới hạn ứng viên có thể bỏ sót chiến thuật.
+Baseline xếp hạng các ô trống bằng DSU, ưu tiên bắt quân/cứu atari, vùng gần quân và hoshi; kiểm tra luật đến khi đủ `candidateLimit` nước hợp lệ. Pass luôn được giữ riêng. Chỉ đánh giá đầy đủ các ứng viên đã chọn và dùng lại danh sách gốc qua các độ sâu. Giới hạn ứng viên có thể bỏ sót chiến thuật, nên không bảo đảm tối ưu toàn bộ cây cờ vây.
+
+## So sánh với Pass và dừng tìm kiếm
+
+Hàm đánh giá dùng điểm đất cuối ván theo luật Nhật, tù binh, komi, an toàn nhóm và ảnh hưởng cục bộ; không thưởng điểm đơn thuần cho số quân còn trên bàn. Đây là ước lượng chiến thuật, có thể sai ở vùng chưa phân định hoặc quân chết; không thay đổi cách hiển thị điểm hiện tại của GameManager.
+
+Ở mỗi độ sâu hoàn tất, tìm điểm của Pass và các nước đặt quân với cùng độ sâu. Điểm nội bộ theo đen; `SearchResult.estimatedScore`, `passScore`, `moveScore` và `gainOverPass` đổi sang góc nhìn của AI đang đi. AI chọn nước có điểm cao nhất trong các ứng viên, và chọn Pass khi không có nước vượt `passScore + passMargin`. Điểm âm tuyệt đối nghĩa là AI đang bị dẫn; vẫn đặt quân nếu nước đó tốt hơn Pass. `moveScore` và `gainOverPass` là ước lượng, có thể là cận khi nhánh bị Alpha-Beta cắt. Khi không có nước đặt hợp lệ, `moveScore` lấy bằng `passScore`.
+
+`stableIterations = 3`, `minimumStopDepth = 3`, `improvementEpsilon = 0.05` điều khiển dừng sớm. Chỉ dừng khi lựa chọn giữ nguyên đủ số vòng và lợi ích so với Pass không cải thiện ở cả hai chuỗi độ sâu chẵn/lẻ. So sánh cùng chẵn/lẻ giảm ảnh hưởng dao động do lượt đối phương. Đặt `stableIterations = 0` để tắt. Dừng sớm vẫn là heuristic, có thể bỏ lỡ nước tốt ở độ sâu tiếp theo.
+
+Giữ quyết định của độ sâu hoàn tất gần nhất, bỏ toàn bộ vòng đang tính khi hết giờ; không lấy điểm cao nhất của một độ sâu nông làm kết quả vì nó có thể chưa xét được phản công. `SearchResult.stopReason` cho biết `stable-or-declining`, `time-budget`, `max-depth`, `cancelled` hoặc `terminal`. Callback công bố số đo trong `GameManager.snapshot.aiSearch`. Runtime hiện là Minimax/Alpha-Beta; cơ chế này chưa phải MCTS.
 
 ## Alpha-Beta Pruning
 

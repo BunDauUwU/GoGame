@@ -5,9 +5,13 @@
 
 struct SearchOptions
 {
-    int maxDepth = 3;
-    int candidateLimit = 10;
-    int timeBudgetMs = 1000;
+    int maxDepth = 5;
+    int candidateLimit = 20;
+    int timeBudgetMs = 2000;
+    int stableIterations = 3;
+    int minimumStopDepth = 3;
+    double improvementEpsilon = 0.05;
+    double passMargin = 0.0;
 };
 
 struct SearchResult
@@ -19,6 +23,12 @@ struct SearchResult
     int completedDepth = 0;
     int nodes = 0;
     qint64 elapsedMs = 0;
+    double estimatedScore = 0;
+    double passScore = 0;
+    double moveScore = 0;
+    double gainOverPass = 0;
+    bool stoppedEarly = false;
+    QString stopReason;
 };
 
 class MediumAI
@@ -26,7 +36,7 @@ class MediumAI
 public:
     explicit MediumAI(SearchOptions options = {});
     const SearchOptions &options() const { return m_options; }
-    SearchResult chooseMove(const GoMatch &position,
+    SearchResult chooseMove(const GoMatch &cur,
                             const std::shared_ptr<std::atomic_bool> &cancel = {}) const;
 
 private:

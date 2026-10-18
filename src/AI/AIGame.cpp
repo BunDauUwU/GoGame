@@ -98,6 +98,17 @@ void GameManager::requestMove()
             recordMove({{"row", result.row}, {"col", result.col}});
             notifyMove();
         }
+        m_snapshot["aiSearch"] = QVariantMap{
+            {"estimatedScore", result.estimatedScore},
+            {"passScore", result.passScore},
+            {"moveScore", result.moveScore},
+            {"gainOverPass", result.gainOverPass},
+            {"completedDepth", result.completedDepth},
+            {"nodes", result.nodes},
+            {"elapsedMs", result.elapsedMs},
+            {"stoppedEarly", result.stoppedEarly},
+            {"stopReason", result.stopReason}};
+        emit snapshotChanged();
         if (m_position.consecutivePasses >= 2)
             finishLocalGame(m_position.score() > 0 ? 0 : 1, tr("Two consecutive passes"));
     });
