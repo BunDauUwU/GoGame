@@ -84,6 +84,11 @@ Rectangle {
             volume: AssetManager.bgmVolume
         }
 
+        onSourceChanged: {
+            stop();
+            play();
+        }
+
         Component.onCompleted: play()
     }
 

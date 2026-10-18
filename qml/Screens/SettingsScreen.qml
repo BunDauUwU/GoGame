@@ -202,6 +202,37 @@ Rectangle {
             }
 
             Item {
+                width: parent.width
+                height: backgroundSongButtonsRow.implicitHeight
+
+                Row {
+                    id: backgroundSongButtonsRow
+
+                    anchors.centerIn: parent
+                    spacing: 15
+
+                    Repeater {
+                        model: 2
+
+                        delegate: GameButton {
+                            required property int index
+
+                            opacity: AssetManager.currentBackgroundSong === index + 1 ? 1.0 : 0.6
+
+                            width: 200
+                            height: 60
+
+                            text: qsTr("Background Song %1").arg(index + 1)
+
+                            onClicked: {
+                                AssetManager.currentBackgroundSong = index + 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
                 id: bgmVolumeSettings
 
                 width: parent.width
