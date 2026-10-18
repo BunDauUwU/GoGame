@@ -202,7 +202,38 @@ Rectangle {
             }
 
             Item {
-                id: volumeSettings
+                width: parent.width
+                height: backgroundSongButtonsRow.implicitHeight
+
+                Row {
+                    id: backgroundSongButtonsRow
+
+                    anchors.centerIn: parent
+                    spacing: 15
+
+                    Repeater {
+                        model: 2
+
+                        delegate: GameButton {
+                            required property int index
+
+                            opacity: AssetManager.currentBackgroundSong === index + 1 ? 1.0 : 0.6
+
+                            width: 200
+                            height: 60
+
+                            text: qsTr("Background Song %1").arg(index + 1)
+
+                            onClicked: {
+                                AssetManager.currentBackgroundSong = index + 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: bgmVolumeSettings
 
                 width: parent.width
                 height: 100
@@ -213,7 +244,7 @@ Rectangle {
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: "Volume"
+                        text: "BGM Volume"
                         color: "black"
                         font.pixelSize: 22
                         font.bold: true
@@ -223,8 +254,36 @@ Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
                         from: 0.0
                         to: 1.0
-                        value: AssetManager.volume
-                        onMoved: AssetManager.volume = value
+                        value: AssetManager.bgmVolume
+                        onMoved: AssetManager.bgmVolume = value
+                    }
+                }
+            }
+
+            Item {
+                id: sfxVolumeSettings
+
+                width: parent.width
+                height: 100
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "SFX Volume"
+                        color: "black"
+                        font.pixelSize: 22
+                        font.bold: true
+                    }
+
+                    Slider {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        from: 0.0
+                        to: 1.0
+                        value: AssetManager.sfxVolume
+                        onMoved: AssetManager.sfxVolume = value
                     }
                 }
             }

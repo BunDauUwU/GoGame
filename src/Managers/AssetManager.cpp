@@ -12,7 +12,8 @@ const QHash<QString, QString> AssetManager::paths = {
     {"Black2", "stones/black2.png"},
     {"White2", "stones/white2.png"},
     {"PlaceSound", "sounds/place.wav"},
-    {"BackgroundSong1", "sounds/background1.opus"},
+    {"BackgroundSong1", "sounds/background1.mp3"},
+    {"BackgroundSong2", "sounds/background2.opus"},
 };
 
 int AssetManager::currentBackground() const { return m_currentBackground; }
@@ -35,7 +36,9 @@ void AssetManager::setCurrentStoneSkin(int index) {
   emit currentStoneSkinChanged();
 }
 
-int AssetManager::currentBackgroundSong() const { return m_currentBackgroundSong; }
+int AssetManager::currentBackgroundSong() const {
+  return m_currentBackgroundSong;
+}
 
 void AssetManager::setCurrentBackgroundSong(int index) {
   if (m_currentBackgroundSong == index)
@@ -45,14 +48,24 @@ void AssetManager::setCurrentBackgroundSong(int index) {
   emit currentBackgroundSongChanged();
 }
 
-double AssetManager::volume() const { return m_volume; }
+double AssetManager::bgmVolume() const { return m_bgmVolume; }
 
-void AssetManager::setVolume(double volume) {
-  if (qFuzzyCompare(m_volume, volume))
+void AssetManager::setBgmVolume(double volume) {
+  if (qFuzzyCompare(m_bgmVolume, volume))
     return;
 
-  m_volume = volume;
-  emit volumeChanged();
+  m_bgmVolume = volume;
+  emit bgmVolumeChanged();
+}
+
+double AssetManager::sfxVolume() const { return m_sfxVolume; }
+
+void AssetManager::setSfxVolume(double volume) {
+  if (qFuzzyCompare(m_sfxVolume, volume))
+    return;
+
+  m_sfxVolume = volume;
+  emit sfxVolumeChanged();
 }
 
 QUrl AssetManager::url(const QString &name) const {
