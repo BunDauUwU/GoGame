@@ -149,7 +149,7 @@ Rectangle {
                 id: stoneSkinPreview
 
                 width: parent.width
-                height: 250
+                height: 200
 
                 Column {
                     anchors.centerIn: parent
@@ -160,7 +160,7 @@ Rectangle {
 
                         text: qsTr("Stone Skin %1").arg(AssetManager.currentStoneSkin)
 
-                        color: "white"
+                        color: "black"
                         font.pixelSize: 22
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
@@ -197,6 +197,34 @@ Rectangle {
                             mipmap: true
                             cache: true
                         }
+                    }
+                }
+            }
+
+            Item {
+                id: volumeSettings
+
+                width: parent.width
+                height: 100
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "Volume"
+                        color: "black"
+                        font.pixelSize: 22
+                        font.bold: true
+                    }
+
+                    Slider {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        from: 0.0
+                        to: 1.0
+                        value: AssetManager.volume
+                        onMoved: AssetManager.volume = value
                     }
                 }
             }

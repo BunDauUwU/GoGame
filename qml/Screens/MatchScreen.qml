@@ -60,6 +60,7 @@ Rectangle {
 
     property double snapshotReceivedAt: Date.now()
     property double clockNow: Date.now()
+
     Timer {
         interval: 200
         repeat: true
@@ -70,6 +71,20 @@ Rectangle {
     SoundEffect {
         id: placeSound
         source: AssetManager.url("PlaceSound")
+        volume: AssetManager.volume
+    }
+
+    MediaPlayer {
+        id: backgroundMusic
+
+        source: AssetManager.url("BackgroundSong" + AssetManager.currentBackgroundSong)
+        loops: MediaPlayer.Infinite
+
+        audioOutput: AudioOutput {
+            volume: AssetManager.volume
+        }
+
+        Component.onCompleted: play()
     }
 
     Connections {
@@ -105,6 +120,17 @@ Rectangle {
 
         source: AssetManager.url("Background" + AssetManager.currentBackground)
         fillMode: Image.PreserveAspectCrop
+    }
+
+    GameButton {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: 40
+        width: 200
+        text: qsTr("Settings")
+        onClicked: {
+            stack.push("./SettingsScreen.qml");
+        }
     }
 
     ColumnLayout {
