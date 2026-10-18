@@ -71,7 +71,7 @@ Rectangle {
     SoundEffect {
         id: placeSound
         source: AssetManager.url("PlaceSound")
-        volume: AssetManager.volume
+        volume: AssetManager.sfxVolume
     }
 
     MediaPlayer {
@@ -81,7 +81,7 @@ Rectangle {
         loops: MediaPlayer.Infinite
 
         audioOutput: AudioOutput {
-            volume: AssetManager.volume
+            volume: AssetManager.bgmVolume
         }
 
         Component.onCompleted: play()

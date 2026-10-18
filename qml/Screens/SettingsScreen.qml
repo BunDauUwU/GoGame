@@ -202,7 +202,7 @@ Rectangle {
             }
 
             Item {
-                id: volumeSettings
+                id: bgmVolumeSettings
 
                 width: parent.width
                 height: 100
@@ -213,7 +213,7 @@ Rectangle {
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: "Volume"
+                        text: "BGM Volume"
                         color: "black"
                         font.pixelSize: 22
                         font.bold: true
@@ -223,8 +223,36 @@ Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
                         from: 0.0
                         to: 1.0
-                        value: AssetManager.volume
-                        onMoved: AssetManager.volume = value
+                        value: AssetManager.bgmVolume
+                        onMoved: AssetManager.bgmVolume = value
+                    }
+                }
+            }
+
+            Item {
+                id: sfxVolumeSettings
+
+                width: parent.width
+                height: 100
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "SFX Volume"
+                        color: "black"
+                        font.pixelSize: 22
+                        font.bold: true
+                    }
+
+                    Slider {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        from: 0.0
+                        to: 1.0
+                        value: AssetManager.sfxVolume
+                        onMoved: AssetManager.sfxVolume = value
                     }
                 }
             }
