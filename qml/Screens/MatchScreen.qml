@@ -396,7 +396,7 @@ Rectangle {
             width: parent.width - 24
             spacing: 8
             Text {
-                text: gameManager.sandbox ? qsTr("Sandbox") : "AI · Slot " + gameManager.currentSaveSlot
+                text: gameManager.sandbox ? qsTr("Sandbox · Dedicated slot") : gameManager.aiDifficulty + " AI · Slot " + gameManager.currentSaveSlot
                 color: "#f3ede1"
                 font.bold: true
             }

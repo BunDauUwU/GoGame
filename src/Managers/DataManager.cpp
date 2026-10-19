@@ -16,6 +16,8 @@ QString DataManager::savePath(bool ai, int slot)
     return QDir(dir).filePath(ai ? QString("ai-%1.json").arg(slot, 2, 10, QChar('0'))
                                  : "sandbox.json");
 }
+bool DataManager::hasSandboxSave()
+{ return QFile::exists(savePath(false, 0)); }
 QVariantList DataManager::savedSlots()
 {
     QVariantList result;
@@ -34,7 +36,9 @@ int DataManager::firstFreeSlot()
 bool DataManager::save(const LocalGameData &game, int slot, QString &error)
 {
     error.clear();
-    if ((game.ai && (slot < 1 || slot > AISaveSlots)) || game.moves.size() > MaxMoves) {
+    if ((game.ai && (slot < 1 || slot > AISaveSlots ||
+         (game.difficulty != "Medium" && game.difficulty != "Hard"))) ||
+         (!game.ai && slot != 0) || game.moves.size() > MaxMoves) {
         error = "Invalid slot or save exceeds move limit";
         return false;
     }
@@ -42,7 +46,7 @@ bool DataManager::save(const LocalGameData &game, int slot, QString &error)
     for (const auto &move : game.moves)
         moves.append(move);
     QJsonObject json{{"version", 1},
-                     {"mode", game.ai ? "Medium" : "Sandbox"},
+                     {"mode", game.ai ? game.difficulty : QStringLiteral("Sandbox")},
                      {"humanColor", game.humanColor},
                      {"moves", moves},
                      {"cursor", game.cursor},
@@ -76,7 +80,7 @@ bool DataManager::load(bool ai, int slot, int historyLimit, LocalGameData &game,
         error = "Invalid saved game; current game was preserved";
         return false;
     };
-    if (ai && (slot < 1 || slot > AISaveSlots))
+    if ((ai && (slot < 1 || slot > AISaveSlots)) || (!ai && slot != 0))
         return fail();
     QFile file(savePath(ai, slot));
     if (!file.open(QIODevice::ReadOnly) || file.size() > MaxFileBytes) {
@@ -88,7 +92,8 @@ bool DataManager::load(bool ai, int slot, int historyLimit, LocalGameData &game,
     auto data = document.object();
     if (parse.error != QJsonParseError::NoError || !document.isObject()
         || !data["version"].isDouble() || data["version"].toDouble() != 1
-        || data["mode"].toString() != (ai ? "Medium" : "Sandbox"))
+        || (ai ? (data["mode"].toString() != "Medium" && data["mode"].toString() != "Hard")
+               : data["mode"].toString() != "Sandbox"))
         return fail();
     auto integer = [&](QString key, int low, int high) {
         const auto v = data.value(key);
@@ -132,6 +137,7 @@ bool DataManager::load(bool ai, int slot, int historyLimit, LocalGameData &game,
 
     LocalGameData loaded;
     loaded.ai = ai;
+    loaded.difficulty = ai ? data["mode"].toString() : QStringLiteral("Medium");
     loaded.humanColor = data["humanColor"].toInt();
     loaded.moves = std::move(moves);
     loaded.history = std::move(history);

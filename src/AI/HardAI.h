@@ -1,47 +1,58 @@
 #pragma once
+#include "SearchTypes.h"
 #include "../Rules/GoMatch.h"
+#include <array>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 
-struct SearchOptions
-{
-    int maxDepth = 5;
-    int candidateLimit = 20;
-    int timeBudgetMs = 2000;
-    int stableIterations = 3;
-    int minimumStopDepth = 3;
-    double improvementEpsilon = 0.05;
-    double passMargin = 0.0;
+struct HardSearchOptions {
+    int timeBudgetMs = 1800;
+    int memoryMB = 64;
+    int maxDepth = 256;
+    std::uint32_t maxSimulations = 100000;
+    float cpuct = 1.5f;
+    float fpuReduction = 0.2f;
 };
 
-struct SearchResult
-{
-    int row = -1;
-    int col = -1;
-    bool pass = true;
-    bool cancelled = false;
-    int completedDepth = 0;
-    int nodes = 0;
-    qint64 elapsedMs = 0;
-    double estimatedScore = 0;
-    double passScore = 0;
-    double moveScore = 0;
-    double gainOverPass = 0;
-    bool stoppedEarly = false;
-    QString stopReason;
-};
-
-class HardAI
-{
+class HardAI {
 public:
-    explicit HardAI(SearchOptions options = {});
-    const SearchOptions &options() const { return m_options; }
-    SearchResult chooseMove(const GoMatch &cur,
-                            const std::shared_ptr<std::atomic_bool> &cancel = {}) const;
+    static constexpr int PolicySize = GoMatch::Count + 1;
+    using LegalMask = std::array<std::uint8_t, PolicySize>;
+    // Snapshot contract for a replaceable policy/value backend.
+    struct Position {
+        std::array<int, GoMatch::Count> cells{}; // -1 empty, 0 black, 1 white
+        int currentPlayer = 0;
+        int koPoint = -1;
+        int consecutivePasses = 0;
+        int moveCount = 0;
+        std::array<int, 2> capturedStones{};
+        double komi = 6.5;
+    };
+    struct Evaluation {
+        std::array<float, PolicySize> policyLogits{}; // row*19+col; pass=361
+        float value = 0; // [-1,1], from position.currentPlayer's perspective
+    };
+    class Evaluator {
+    public:
+        virtual ~Evaluator() = default;
+        virtual Evaluation evaluate(const Position& position, const LegalMask& legal,
+                                    const std::atomic_bool* cancel) = 0;
+        virtual QString name() const { return QStringLiteral("Custom policy/value"); }
+    };
 
+    explicit HardAI(HardSearchOptions options = {});
+    const HardSearchOptions& options() const { return m_options; }
+    SearchResult chooseMove(const GoMatch& position,
+                            const std::shared_ptr<std::atomic_bool>& cancel = {}) const;
+    // Install/load the model once in this backend. Copies already executing keep
+    // their old backend; changes don't block the GUI waiting for that search.
+    void setEvaluator(std::shared_ptr<Evaluator> evaluator);
+    void reset();
+    QString backendName() const;
+    static std::array<float, 5 * GoMatch::Count> inputPlanes(const Position&, const LegalMask&);
 private:
-    class Search;
-    SearchOptions m_options;
-    double evaluate(const GoMatch &game) const;
+    struct Impl;
+    HardSearchOptions m_options;
+    std::shared_ptr<Impl> m_impl;
 };
-

@@ -393,7 +393,7 @@ void GameManager::notifyScore() {
           .arg(m_scoring.value("difference").toDouble()));
 }
 void GameManager::syncLocalPosition() {
-  m_snapshot = {{"mode", m_aiEnabled ? "Medium" : "Sandbox"},
+  m_snapshot = {{"mode", m_aiEnabled ? m_aiDifficulty : QStringLiteral("Sandbox")},
                 {"started", !m_finished},
                 {"moveCount", m_position.moveCount},
                 {"currentPlayerIndex", currentPlayer()},
@@ -513,6 +513,7 @@ bool GameManager::saveGame(int slot) {
     slot = m_currentSlot;
   LocalGameData data;
   data.ai = m_aiEnabled;
+  data.difficulty = m_aiDifficulty;
   data.humanColor = m_playerIndex;
   data.moves = m_moves;
   data.cursor = m_cursor;
@@ -546,6 +547,9 @@ bool GameManager::loadGame(bool ai, int slot) {
   cancelSearch();
   m_matchId.clear();
   m_aiEnabled = ai;
+  m_aiDifficulty = data.difficulty;
+  m_opponentName = ai ? m_aiDifficulty + QStringLiteral(" AI") : QStringLiteral("White");
+  m_hardAI.reset();
   m_sandbox = !ai;
   m_playerIndex = data.humanColor;
   m_currentSlot = ai ? slot : 0;

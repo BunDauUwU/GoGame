@@ -1,5 +1,6 @@
 #pragma once
 #include "../AI/MediumAI.h"
+#include "../AI/HardAI.h"
 #include "../Managers/DataManager.h"
 #include "../Network/NetworkClient.h"
 #include "Enums.h"
@@ -23,6 +24,8 @@ class GameManager : public QObject {
   Q_PROPERTY(bool online READ online NOTIFY matchInfoChanged)
   Q_PROPERTY(bool aiEnabled READ aiEnabled NOTIFY aiStateChanged)
   Q_PROPERTY(bool sandbox READ sandbox NOTIFY aiStateChanged)
+  Q_PROPERTY(QString aiDifficulty READ aiDifficulty NOTIFY aiStateChanged)
+  Q_PROPERTY(bool hasSandboxSave READ hasSandboxSave NOTIFY savesChanged)
   Q_PROPERTY(bool canAct READ canAct NOTIFY interactionChanged)
   Q_PROPERTY(bool finished READ finished NOTIFY interactionChanged)
   Q_PROPERTY(bool pending READ pending NOTIFY interactionChanged)
@@ -41,6 +44,7 @@ public:
   ~GameManager() override;
   QVariantList lastMoveCoords() const { return m_lastMoveCoords; }
   Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
+  Q_INVOKABLE bool startHardGame(int humanColor = 0, int slot = 0);
   Q_INVOKABLE bool startSandbox();
   Q_INVOKABLE void stopAI();
   Q_INVOKABLE bool exitLocalGame();
@@ -53,6 +57,12 @@ public:
   Q_INVOKABLE void refreshSaves() { emit savesChanged(); }
   bool aiEnabled() const { return m_aiEnabled; }
   bool sandbox() const { return m_sandbox; }
+  QString aiDifficulty() const { return m_aiDifficulty; }
+  bool hasSandboxSave() const { return DataManager::hasSandboxSave(); }
+  // Model backends are configured before dispatch; the worker gets a safe copy.
+  void setHardEvaluator(std::shared_ptr<HardAI::Evaluator> evaluator) {
+    cancelSearch(); m_hardAI.setEvaluator(std::move(evaluator)); requestMove();
+  }
   bool canUndo() const;
   bool canRedo() const;
   int undoRemaining() const { return m_undoRemaining; }
@@ -111,6 +121,8 @@ private:
   QVariantMap m_scoring, m_serverScoring, m_scoringComparison;
   QThreadPool m_aiPool;
   MediumAI m_ai;
+  HardAI m_hardAI;
+  QString m_aiDifficulty = QStringLiteral("Medium");
   std::shared_ptr<std::atomic_bool> m_aiCancel;
   quint64 m_aiGeneration = 0;
   std::vector<GoMatch> m_history;
@@ -126,6 +138,7 @@ private:
   void notifyScore();
   void recordMove(const QJsonObject &move);
   void requestMove();
+  bool startAIGame(const QString& difficulty, int playerColor, int slot);
   void finishLocalGame(int winner, const QString &reason);
   void submit(GameCommandType type, const QJsonObject &command = {});
   void notify(const QString &text);

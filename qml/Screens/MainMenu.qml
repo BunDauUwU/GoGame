@@ -10,20 +10,23 @@ Rectangle {
     implicitWidth: 1280
     implicitHeight: 720
     property string matchmakingError: ""
+    property int selectedAIDifficulty: 1
 
     function openAIMatch() {
-        AppState.difficultyLevel = 1;
+        AppState.difficultyLevel = gameManager.aiDifficulty === "Hard" ? 2 : 1;
         AppState.playingAgainstAI = true;
         stack.push("./MatchScreen.qml", {
             localPlayerName: authManager.username || qsTr("Player"),
-            opponentPlayerName: qsTr("Medium AI"),
+            opponentPlayerName: gameManager.aiDifficulty === "Hard" ? qsTr("Hard AI") : qsTr("Medium AI"),
             localPlayerColor: gameManager.playerIndex
         });
     }
 
-    function startMediumMatch(slot) {
+    function startSelectedAIMatch(slot) {
         mainMenuRoot.matchmakingError = "";
-        if (gameManager.startMediumGame(0, slot)) {
+        const started = selectedAIDifficulty === 2
+            ? gameManager.startHardGame(0, slot) : gameManager.startMediumGame(0, slot);
+        if (started) {
             selectionMenu.close();
             openAIMatch();
         }
@@ -162,16 +165,17 @@ Rectangle {
                         text: modelData
                         Layout.fillWidth: true
                         objectName: "aiDifficulty" + modelData
-                        enabled: index === 1
+                        enabled: index !== 0
 
                         onClicked: {
+                            mainMenuRoot.selectedAIDifficulty = index;
                             gameManager.refreshSaves();
                             if (gameManager.savedSlots.length >= 20) {
                                 selectionMenu.close();
                                 newAIDialog.open();
                                 return;
                             }
-                            mainMenuRoot.startMediumMatch(0);
+                            mainMenuRoot.startSelectedAIMatch(0);
                         }
                     }
                 }
@@ -325,13 +329,27 @@ Rectangle {
         GameButton {
             height: 48
             width: 400
-            text: "Sandbox"
+            objectName: "newSandboxButton"
+            text: qsTr("Sandbox · New game")
             onClicked: {
                 if (gameManager.startSandbox())
                     stack.push("./MatchScreen.qml", {
                         localPlayerName: "Black",
                         opponentPlayerName: "White",
                         localPlayerColor: 0
+                    });
+            }
+        }
+        GameButton {
+            height: 48
+            width: 400
+            objectName: "loadSandboxSlotButton"
+            text: qsTr("Load Sandbox · Dedicated slot")
+            enabled: gameManager.hasSandboxSave && !matchmakingManager.searching
+            onClicked: {
+                if (gameManager.loadSandbox())
+                    stack.push("./MatchScreen.qml", {
+                        localPlayerName: "Black", opponentPlayerName: "White", localPlayerColor: 0
                     });
             }
         }
@@ -394,7 +412,7 @@ Rectangle {
             displayText: "Slot " + (currentIndex + 1)
         }
         onAccepted: {
-            mainMenuRoot.startMediumMatch(newSlotSelector.currentIndex + 1);
+            mainMenuRoot.startSelectedAIMatch(newSlotSelector.currentIndex + 1);
         }
     }
 

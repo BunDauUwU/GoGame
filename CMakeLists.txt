@@ -87,6 +87,9 @@ qt_add_qml_module(appGoGame
         src/AI/AIGame.cpp
         src/AI/MediumAI.cpp
         src/AI/MediumAI.h
+        src/AI/SearchTypes.h
+        src/AI/HardAI.cpp
+        src/AI/HardAI.h
 
         # Shared Go rules
         src/Rules/GoMatch.cpp
@@ -117,7 +120,6 @@ qt_add_qml_module(appGoGame
 
     RESOURCES
         ${GAME_ASSETS}
-        SOURCES src/AI/HardAI.h src/AI/HardAI.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

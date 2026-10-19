@@ -4,7 +4,7 @@ Game cờ vây C++/Qt 6: client Qt Quick/QML và server console WebSocket. Tài 
 
 ## Solo với AI từ menu chính
 
-Chọn **Play against AI → Medium** để bắt đầu ván offline: bạn cầm đen, AI cầm trắng. Không cần kết nối server; nút tạm khóa khi đang tìm trận online. Easy/Hard hiện chưa khả dụng. Bản Medium dùng thuật toán Minimax/Alpha-Beta hiện có, chưa phải MCTS/RAVE hoặc mạng neuron.
+Chọn **Play against AI → Medium hoặc Hard** để bắt đầu ván offline: bạn cầm đen, AI cầm trắng. Không cần kết nối server; nút tạm khóa khi đang tìm trận online. Hard đã có bằng PUCT/MCTS; Easy hiện chưa khả dụng. Bản Medium dùng thuật toán Minimax/Alpha-Beta hiện có, chưa phải MCTS/RAVE hoặc mạng neuron.
 
 AI tìm nước trong một worker riêng với ngân sách mặc định 1 giây, không chặn UI. Ván được tự lưu trong tối đa 20 slot; khi đầy, chọn slot và xác nhận ghi đè. **Load AI game** ở menu tiếp tục ván đã lưu; các nút Save/Load/Exit trong trận cũng hoạt động với AI.
 
@@ -145,12 +145,12 @@ Mỗi bên có **10 hoặc 15 phút chính + 3 lần Byo-yomi × 20 giây**. H�
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Server        | Guest nickname, queue theo mode, nhiều trận riêng, luật cơ bản, xác nhận lượt/thành viên, timer và snapshot từng người. | Tài khoản server thật, TLS/phân quyền, khôi phục trận sau reconnect.                                                 |
 | Client online | MatchFound, gửi Play/EndRound/Concede, chỉ áp dụng bàn/lượt sau snapshot, pending lock, lỗi và kết quả trận.            | Kiểm thử trực tiếp toàn bộ thao tác UI; hiện tên/avatar vẫn có giá trị mặc định khi chạy local.                      |
-| Luật          | Ăn quân, tự sát, simple ko, hai pass tính đất + quân bắt theo công thức Nhật với komi 6,5.                                                       | Superko, xử lý/thỏa thuận quân chết, xác nhận quân chết/seki để hoàn thiện tính điểm Nhật.                                        |
+| Luật          | Ăn quân, tự sát, simple ko, hai pass tính đất + quân bắt theo công thức Nhật với komi 6,5.                              | Superko, xử lý/thỏa thuận quân chết, xác nhận quân chết/seki để hoàn thiện tính điểm Nhật.                           |
 | Đồng hồ       | Byo-yomi do server quản lý, hiển thị clock hai bên, timer gửi snapshot.                                                 | Tùy chọn time control trong UI; hiện 10/15 phút chọn qua CLI.                                                        |
 | Auth          | SQLite local, gửi guest nickname khi login và kết nối lại.                                                              | Server chưa xác thực password/tài khoản local; logout local không hủy danh tính guest trên server.                   |
 | Settings      | Chọn background qua AppState trong phiên.                                                                               | Âm thanh, preview toggle có UI/lưu lựa chọn, avatar/frame/title/level/rank. Preview vẫn là property của MatchScreen. |
 | Dữ liệu       | ReadData/WriteData nguyên tử bằng QSaveFile.                                                                            | Match chỉ ở RAM; chưa tự lưu match, replay 5 ván hoặc phục hồi sau restart. API file vẫn chưa phân quyền.            |
-| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font.                                                                           | Medium đã có trong `src/AI/`; Easy/Hard và nhạc/âm thanh đặt quân/báo lỗi chưa triển khai.         |
+| AI / âm thanh | Có kế hoạch bên dưới và tài nguyên hình/font.                                                                           | Medium đã có trong `src/AI/`; Easy/Hard và nhạc/âm thanh đặt quân/báo lỗi chưa triển khai.                           |
 
 ## Những thay đổi trong lần dọn project này
 
@@ -426,7 +426,7 @@ Các file test, executable test và cấu hình CTest đã được xóa khỏi 
 | Độ khó     | Dự định                                                                               |
 | ---------- | ------------------------------------------------------------------------------------- |
 | Dễ         | Minimax suy nghĩ nông, tính trước 1–2 nước.                                           |
-| Trung bình | Đã có Minimax trong `src/AI/`: depth tối đa 3, 10 ứng viên/nút, ngân sách 1 giây.                    |
+| Trung bình | Đã có Minimax trong `src/AI/`: depth tối đa 3, 10 ứng viên/nút, ngân sách 1 giây.     |
 | Khó        | Alpha-Beta Pruning kết hợp MCTS để tối ưu; hướng tới dùng mạng 6-block ONNX trên CPU. |
 
 Medium được tách thành module riêng tại [src/AI/README.md](src/AI/README.md). Chọn **Play against AI → Medium** để chơi offline. Luồng: nước người chơi → luật GoMatch → worker Minimax → áp nước AI trên GUI. Dùng một worker, có hủy khi rời/reset ván và giữ chế độ preview/Fast mode. Sau tối ưu DSU/vùng ứng viên: bàn trống hoàn thành depth 3, 586 nodes, khoảng 61 ms; độ sâu và thời gian thực tế tùy vị trí. Easy/Hard chưa triển khai, đồng hồ Byo-yomi hiện chỉ có trong trận online.
@@ -556,7 +556,9 @@ Tài liệu tham khảo:
 7. https://github.com/27rg5/AI-bot-for-GO-game (Q-learning algorithm tham khảo trên bàn cờ 5x5)
 8. https://durhamgo.club/GoByGo.pdf (Tài liệu tham khảo)
 9. https://deepmind-media.storage.googleapis.com/alphago/AlphaGoNaturePaper.pdf (Tài liệu tham khảo)
-3) Khai báo AI: Hãy viết tất cả những gì tôi đã prompt cho bạn của dự án này kể cả hiện tại và sau này vô đây
+10. SplitMix64 là một thuật toán sinh số giả ngẫu nhiên (PRNG) 64-bit tốc độ cao và dung lượng bộ nhớ siêu nhỏ. Thuật toán này ban đầu được thiết kế bởi Guy L. Steele Jr., Doug Lea và Christine H. Flood vào năm 2014 như một phần của thư viện Java 8 (SplittableRandom), sau đó được Sebastiano Vigna chuẩn hóa và đưa vào sử dụng rộng rãi trong thế giới C/C++.
+Điểm đặc biệt của SplitMix64 là nó có thể tách (split) một trình sinh số ngẫu nhiên thành nhiều trình sinh độc lập hoạt động song song mà không sợ bị trùng lặp chuỗi kết quả.
+3) Khai báo AI: Hãy viết tất cả những gì tôi đã prompt cho bạn của dự án này kể cả10 hiện tại và sau này vô đây
 ```
 
 Kết quả: tạo README.md với cấu trúc hiện tại, đủ 12 mục kế hoạch và nhật ký prompt này. Đối chiếu cây mã nguồn/tài nguyên với hệ thống file; không chạy build hoặc test vì chỉ thay đổi tài liệu.
@@ -718,7 +720,6 @@ Qua tài liệu tôi nhận thấy MCTS + RAVE là phương án tốt. So sánh 
 
 Kết quả: đối chiếu thiết kế Alpha-Beta nông + MCTS + mạng 6-block với hướng MCTS/RAVE; kiểm tra nghiên cứu MC-RAVE, neural MCTS và tài liệu ONNX Runtime về threading/quantization. Đề xuất thử baseline không mạng trước, tactical search cục bộ hỗ trợ xếp hạng, rồi đo phương án mạng nhỏ nếu cần; chưa chốt thay đổi roadmap hoặc triển khai AI. Chất lượng và tốc độ cần benchmark với cùng thời gian trên máy mục tiêu.
 
-
 ### 14/10/2026 — Resolve merge conflict
 
 Nội dung prompt của người dùng:
@@ -735,7 +736,6 @@ Kiểm tra bổ sung: phát hiện Server.h đang lấy GoMatch.h cũ ở server
 
 Kết quả build server riêng: thành công tại build/merge-server-20261014. Kiểm tra git diff --check đạt.
 
-
 ### 15/10/2026 — Thêm solo AI vào MainMenu.qml
 
 Nội dung prompt của người dùng:
@@ -749,3 +749,36 @@ Kết quả: mở nút Play against AI và lựa chọn Medium, nối startMediu
 Kiểm tra: build client/server tại build/solo-ai thành công. Thêm tests/SoloAI.cpp và CTest soloAI để kiểm tra controller cùng điều hướng MainMenu thực ở chế độ offscreen; kết quả cuối ghi bên dưới.
 
 Kết quả cuối: CTest soloAI đạt 1/1 (1,58 giây), gồm offline controller, AI trả lời/mở đầu, lưu/tải, hủy kết quả cũ, nút menu/chọn Medium/điều hướng MatchScreen qua QML thật, đủ 20 slot/từ chối ghi đè ngầm và ghi đè đã chọn. Test giao diện cần Qt runtime ngoài sandbox trong môi trường này; build và git diff --check đạt. Không commit/push.
+
+
+## Hard AI và slot Sandbox (19/10/2026)
+
+Đã bật **Play against AI → Hard**, tích hợp class `HardAI` theo MCTS được cung cấp, tách type chung, giữ generation/cancellation khi Undo/Load/Exit. Save AI giữ lại độ khó Hard/Medium. Sandbox có slot riêng `sandbox.json` và nút Load riêng trong menu, không chiếm 20 slot AI.
+
+Xem [HardAI: tích hợp, model adapter và tối ưu](src/AI/HARD_AI.md). Hard hiện dùng heuristic mặc định; public `HardAI::Evaluator`/`GameManager::setHardEvaluator()` là chỗ gắn backend policy/value. Chưa tự nạp model KataGo`.bin.gz`; không coi nhãn Hard là chứng nhận trình độ hoặc bảo đảm mạnh hơn Medium.
+
+
+### 19/10/2026 — Hoàn thiện HardAI MCTS/PUCT/FPU và slot Sandbox riêng
+
+Nội dung prompt của người dùng (chuẩn hóa khoảng trắng; kèm file Pasted text.txt):
+
+```text
+Build MCTS theo code tôi gửi với hệ số cpuct = 1.5, fpuReduction = 0.2, 19652. Tránh thay đổi cách đặt tên biến trong file HardAI đã code sẵn và dựa vào đó vì để tôi debug. Ngoài ra cần lưu ý những thứ sau:
+
+- Edge chỉ 8 byte
+- Cấp phát theo arena, tạo node khi cần
+- Lưu cache: gặp lại đúng trạng thái thì dùng lại policy/value,
+- giữ nhánh còn phù hợp sau nước mình và đối thủ; kiểm tra chính xác trước khi dùng lại
+- Mảng cố định và đếm khí theo nhóm, có thể kết hơp thêm dsu để tối ưu hoàn toàn thời gian.
+- Giớii hạn 1 worker, giới hạn RAM/thời gian.
+- HardAI build theo dạng class c++, có chỗ để dễ dàng thêm model katago vào. Hãy thêm HardAI và cho phép chế độ Hard trong game. Ngoài ra tạo một slot save riêng cho chế độ sandbox.
+- Sử dụng puct + fpu theo công thức file code tôi đã gửi. Đồng thời giải thích vì sao lại có công thức này, tối ưu như thế nào,vì tôi copy paste từ tài liệu bên ngoài.
+- Sử dụng mix64 để sinh cho hợp lí và tối ưu.
+- Tạo groups, boards, ... riêng mang tính tối ưu hơn ở class HardAI này thay vì sử dụng lại của những class khác.
+```
+
+Kết quả: hoàn thiện trên bản HardAI đang có trong working tree, giữ tên biến và công thức lựa chọn. Sửa kích thước bàn nháp cho nhất quán 19×19; Board/Groups/legal mask/scorer riêng dùng mảng cố định. Arena có Edge 8 byte, node tạo khi cần, compact in-place giữ subtree và thống kê workspace theo ngân sách. Cache policy/value so sánh toàn trạng thái ngoài hash mix64 có salt metadata; kết quả bị hủy không lưu cache. Giữ nhánh sau nước mình/đối thủ chỉ khi tái hiện chính xác; trạng thái không khớp tạo root mới. Deadline chung từ đầu chooseMove; giới hạn 1 worker trong game. Giữ và kiểm tra tích hợp Hard vào menu, save đúng độ khó và slot sandbox.json độc lập. Bổ sung hook evaluator/model, diagnostics trong snapshot.aiSearch và giải thích PUCT/FPU/mix64/arena trong src/AI/HARD_AI.md. Chưa cài inference/trọng số KataGo; không tuyên bố độ mạnh của heuristic. Không đổi luật hoặc scorer các mode khác.
+
+Kiểm tra: build Release client/server tại build/hard-mcts; CTest kiểm tra controller/QML, HardAI public adapter và core riêng. Các test mới kiểm tra PUCT/FPU/value sign, depth boundary, va chạm hash có chủ đích, metadata identity, own/opponent root reuse, compact index, cap RAM, zero deadline, cancellation trong evaluator, NaN, ăn quân/ko và so sánh legal/scoring với GoMatch. Kết quả cuối ghi bên dưới.
+
+Kết quả cuối ngày 19/10/2026: Release client/server build thành công, CTest **3/3 đạt** (soloAI/hardAI/hardCore); AddressSanitizer + UBSan cho lõi/API đạt **2/2**. Core có 10.830 đối chiếu legal, collision hash chủ đích, kiểm tra compaction và giới hạn arena 4 MiB. Tài liệu HardAI giải thích từng thành phần PUCT/FPU, mốc 19652, phạm vi cap RAM và giới hạn deadline mềm. Không commit hoặc push.

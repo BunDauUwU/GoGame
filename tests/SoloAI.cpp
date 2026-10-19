@@ -9,6 +9,8 @@
 #include <QQmlContext>
 #include <QElapsedTimer>
 #include <QTemporaryDir>
+#include <QFile>
+#include <QJsonDocument>
 #include <QThread>
 #include <cstdio>
 #include <cstdlib>
@@ -65,6 +67,32 @@ int main(int argc, char **argv) {
     check(game.sandbox() && game.snapshot()["moveCount"].toInt() == 0,
           "Stale AI result changed sandbox");
 
+    check(game.startHardGame(0), "Cannot start Hard as black");
+    check(game.aiDifficulty() == "Hard" && game.snapshot()["mode"].toString() == "Hard", "Wrong Hard mode");
+    game.update_pieces(3,3);
+    waitFor([&] { return !game.pending(); });
+    check(game.snapshot()["moveCount"].toInt() == 2, "Hard did not reply");
+    const int hardSlot = game.currentSaveSlot();
+    check(game.exitLocalGame() && game.loadAIGame(hardSlot), "Hard save did not load");
+    check(game.aiDifficulty() == "Hard", "Hard difficulty lost after load");
+    QFile hardFile(DataManager::savePath(true, hardSlot));
+    check(game.startSandbox(), "Cannot start independent sandbox");
+    // Leaving AI intentionally auto-saves it; compare after that operation.
+    check(hardFile.open(QIODevice::ReadOnly), "Cannot inspect Hard save");
+    const auto hardBytes = hardFile.readAll(); hardFile.close();
+    game.update_pieces(0,0);
+    check(game.saveGame() && game.hasSandboxSave(), "Sandbox slot not saved");
+    check(DataManager::savePath(false,0) != DataManager::savePath(true,hardSlot), "Sandbox path overlaps AI slot");
+    game.resetGame();
+    check(game.loadSandbox() && game.snapshot()["moveCount"].toInt() == 1 && !game.aiEnabled(), "Sandbox slot failed to restore");
+    check(hardFile.open(QIODevice::ReadOnly) && hardFile.readAll() == hardBytes, "Sandbox overwrote Hard slot"); hardFile.close();
+    check(game.startHardGame(1), "Cannot start Hard as white");
+    check(game.pending(), "Hard opening not dispatched");
+    check(game.startSandbox(), "Cannot cancel Hard into sandbox");
+    timer.restart();
+    while (timer.elapsed() < 400) { QCoreApplication::processEvents(); QThread::msleep(1); }
+    check(game.sandbox() && game.snapshot()["moveCount"].toInt() == 0, "Stale Hard result changed sandbox");
+
     AuthManager auth;
     MatchmakingManager matchmaking;
     matchmaking.setNetworkClient(&network);
@@ -103,11 +131,16 @@ int main(int argc, char **argv) {
     auto easy = find("aiDifficultyEasy");
     auto hard = find("aiDifficultyHard");
     check(medium && medium->property("enabled").toBool(), "Medium not selectable");
-    check(easy && hard && !easy->property("enabled").toBool() && !hard->property("enabled").toBool(),
-          "Unavailable difficulty enabled");
+    check(easy && hard && !easy->property("enabled").toBool() && hard->property("enabled").toBool(),
+          "Hard must be selectable while Easy remains unavailable");
+    check(QMetaObject::invokeMethod(hard, "clicked"), "Cannot choose Hard");
+    waitFor([&] { return find("goBoard") != nullptr; });
+    check(game.aiDifficulty() == "Hard", "Hard menu selected Medium instead");
     check(QMetaObject::invokeMethod(medium, "clicked"), "Cannot choose Medium");
     waitFor([&] { return find("goBoard") != nullptr; });
-    check(game.aiEnabled() && !game.online(), "Menu did not start offline solo");
+    check(game.aiEnabled() && !game.online() && game.aiDifficulty() == "Medium", "Menu did not start Medium solo");
+    auto sandboxLoad = find("loadSandboxSlotButton");
+    check(sandboxLoad && sandboxLoad->property("enabled").toBool(), "Dedicated sandbox load slot unavailable");
     for (int slot = 1; slot <= DataManager::AISaveSlots; ++slot)
         check(game.saveGame(slot), "Cannot fill save slot");
     check(!game.startMediumGame(0) && game.aiEnabled(), "Full slots silently overwritten");
