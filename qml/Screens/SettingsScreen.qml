@@ -212,7 +212,7 @@ Rectangle {
                     spacing: 15
 
                     Repeater {
-                        model: 2
+                        model: 3
 
                         delegate: GameButton {
                             required property int index
