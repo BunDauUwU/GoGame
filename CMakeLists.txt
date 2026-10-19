@@ -85,9 +85,11 @@ qt_add_qml_module(appGoGame
 
         # Client AI
         src/AI/AIGame.cpp
+        src/AI/SearchTypes.h
+        src/AI/EasyAI.cpp
+        src/AI/EasyAI.h
         src/AI/MediumAI.cpp
         src/AI/MediumAI.h
-        src/AI/SearchTypes.h
         src/AI/HardAI.cpp
         src/AI/HardAI.h
 

@@ -165,7 +165,6 @@ Rectangle {
                         text: modelData
                         Layout.fillWidth: true
                         objectName: "aiDifficulty" + modelData
-                        enabled: index !== 0
 
                         onClicked: {
                             mainMenuRoot.selectedAIDifficulty = index;
