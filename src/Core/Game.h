@@ -97,6 +97,7 @@ public:
 public slots:
   void handleServerMessage(const QJsonObject &message);
 signals:
+  void invalidMovePlayed();
   void lastMoveChanged();
   void boardStateChanged();
   void currentPlayerChanged();

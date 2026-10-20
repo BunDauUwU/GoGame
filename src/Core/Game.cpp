@@ -7,16 +7,20 @@ GameManager::GameManager(QObject *parent) : QObject(parent) {
   m_history.push_back(m_position);
   connect(this, &GameManager::gameError, this, [this](const QString &message) {
     if (message == "Occupied")
-      notify(tr("Invalid move: intersection is occupied"));
+      notify(tr("Invalid move: Intersection is occupied"));
     else if (message == "Suicide")
-      notify(tr("Invalid move: suicide is not allowed"));
+      notify(tr("Invalid move: Suicide is not allowed"));
     else if (message == "OutsideBoard")
-      notify(tr("Invalid move: outside the board"));
+      notify(tr("Invalid move: Outside the board"));
     else if (message == "Ko")
       notify(
-          tr("Ko: immediate recapture is forbidden; play elsewhere or pass"));
-    else
+          tr("Ko: Immediate recapture is forbidden; play elsewhere or pass"));
+    else {
       notify(message);
+      return;
+    }
+
+    emit invalidMovePlayed();
   });
   updateScoring();
 }
