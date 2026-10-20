@@ -60,6 +60,10 @@ public:
   QString aiDifficulty() const { return m_aiDifficulty; }
   bool hasSandboxSave() const { return DataManager::hasSandboxSave(); }
   // Model backends are configured before dispatch; the worker gets a safe copy.
+  void configureHard(HardSearchOptions options, std::shared_ptr<HardAI::Evaluator> evaluator) {
+    cancelSearch(); m_hardAI = HardAI(options);
+    m_hardAI.setEvaluator(std::move(evaluator)); requestMove();
+  }
   void setHardEvaluator(std::shared_ptr<HardAI::Evaluator> evaluator) {
     cancelSearch(); m_hardAI.setEvaluator(std::move(evaluator)); requestMove();
   }

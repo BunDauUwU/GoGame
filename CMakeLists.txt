@@ -6,6 +6,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(GOGAME_ENABLE_KATAGO "Build native KataGo model evaluation for HardAI" OFF)
+if(GOGAME_ENABLE_KATAGO)
+    include(cmake/KataGoBackend.cmake)
+endif()
+
 find_package(Qt6 6.2 COMPONENTS Quick Sql REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS
     Core
@@ -90,6 +95,8 @@ qt_add_qml_module(appGoGame
         src/AI/SearchTypes.h
         src/AI/HardAI.cpp
         src/AI/HardAI.h
+        src/AI/KataGoEvaluator.cpp
+        src/AI/KataGoEvaluator.h
 
         # Shared Go rules
         src/Rules/GoMatch.cpp
@@ -158,4 +165,9 @@ add_subdirectory(server)
 include(CTest)
 if(BUILD_TESTING)
     add_subdirectory(tests)
+endif()
+
+if(GOGAME_ENABLE_KATAGO)
+    target_compile_definitions(appGoGame PRIVATE GOGAME_KATAGO)
+    target_link_libraries(appGoGame PRIVATE gogameKataGoNative)
 endif()

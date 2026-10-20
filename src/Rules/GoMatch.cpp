@@ -69,6 +69,18 @@ bool GoMatch::validMove(int row, int col) const
     QString error;
     return copy.play(row, col, error);
 }
+GoMatch::Replay GoMatch::replay() const {
+    if (m_replay) return *m_replay;
+    Replay r; r.initialCells = board; r.initialPlayer = currentPlayer;
+    r.initialKo = koPoint; r.initialPasses = consecutivePasses;
+    r.initialMoveCount = moveCount; r.initialCaptured = capturedStones;
+    return r;
+}
+void GoMatch::recordMove(int player, int point) {
+    if (!m_replay) m_replay = std::make_shared<Replay>(replay());
+    else if (!m_replay.unique()) m_replay = std::make_shared<Replay>(*m_replay);
+    m_replay->moves.push_back({player, point});
+}
 bool GoMatch::play(int row, int col, QString &error)
 {
     error.clear();
@@ -77,6 +89,7 @@ bool GoMatch::play(int row, int col, QString &error)
         return false;
     }
     int pos = row * Size + col;
+    if (pos == koPoint) { error = "Ko"; return false; }
     if (board[pos] != -1) {
         error = "Occupied";
         return false;
@@ -123,6 +136,7 @@ bool GoMatch::play(int row, int col, QString &error)
                     threat = true;
             }
     koThreatLastMove = threat;
+    recordMove(currentPlayer, pos);
     previousBoard = board;
     hasPrevious = true;
     board = candidate;
@@ -140,6 +154,7 @@ bool GoMatch::play(int row, int col, QString &error)
 }
 void GoMatch::pass()
 {
+    recordMove(currentPlayer, Count);
     previousBoard = board;
     hasPrevious = true;
     capturedLastMove = 0;
@@ -282,7 +297,15 @@ QJsonObject GoMatch::toJson() const
     QJsonArray previous;
     for (int color : previousBoard)
         previous.append(color);
-    return {{"board", state()},
+    const auto r = replay();
+    QJsonArray initial, moves;
+    for (int c : r.initialCells) initial.append(c);
+    for (const auto& m : r.moves) moves.append(QJsonArray{m.player, m.point});
+    QJsonObject history{{"initialCells", initial}, {"initialPlayer", r.initialPlayer},
+        {"initialKo", r.initialKo}, {"initialPasses", r.initialPasses},
+        {"initialMoveCount", r.initialMoveCount},
+        {"initialCaptured", QJsonArray{r.initialCaptured[0], r.initialCaptured[1]}}, {"moves", moves}};
+    return {{"history", history}, {"board", state()},
             {"previousBoard", previous},
             {"hasPrevious", hasPrevious},
             {"currentPlayerIndex", currentPlayer},
@@ -342,6 +365,42 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
     parsed.koThreatLastMove = json.value("koThreatLastMove").toBool();
     parsed.hasPrevious = json.value("hasPrevious").toBool();
     parsed.m_groups = buildGroups(parsed.board);
+    if (json.contains("history")) {
+        const auto h = json.value("history").toObject();
+        const auto initial = h.value("initialCells").toArray();
+        QJsonObject setup = json;
+        setup.remove("history");
+        setup["board"] = initial; setup["previousBoard"] = initial; setup["hasPrevious"] = false;
+        setup["currentPlayerIndex"] = h.value("initialPlayer"); setup["moveCount"] = h.value("initialMoveCount");
+        setup["consecutivePasses"] = h.value("initialPasses"); setup["capturedStones"] = h.value("initialCaptured");
+        setup["capturedLastMove"] = 0; setup["koPoint"] = h.value("initialKo");
+        GoMatch rebuilt;
+        if (!fromJson(setup, rebuilt, error) || !h.value("moves").isArray()) {
+            error = "Invalid Go history setup"; return false;
+        }
+        const auto moves = h.value("moves").toArray();
+        if (moves.size() > 100000) { error = "Go history too long"; return false; }
+        for (const auto& item : moves) {
+            const auto move = item.toArray();
+            if (move.size() != 2 || !move[0].isDouble() || !move[1].isDouble()
+                || move[0].toDouble() != rebuilt.currentPlayer
+                || move[1].toDouble() != std::floor(move[1].toDouble())
+                || move[1].toInt(-1) < 0 || move[1].toInt() > Count) {
+                error = "Invalid Go history move"; return false;
+            }
+            const int point = move[1].toInt();
+            if (point == Count) rebuilt.pass();
+            else if (!rebuilt.play(point / Size, point % Size, error)) return false;
+        }
+        if (rebuilt.board != parsed.board || rebuilt.currentPlayer != parsed.currentPlayer
+            || rebuilt.moveCount != parsed.moveCount || rebuilt.koPoint != parsed.koPoint
+            || rebuilt.capturedStones != parsed.capturedStones
+            || rebuilt.consecutivePasses != parsed.consecutivePasses
+            || (!moves.empty() && (rebuilt.previousBoard != parsed.previousBoard || rebuilt.hasPrevious != parsed.hasPrevious))) {
+            error = "Go history does not match position"; return false;
+        }
+        parsed.m_replay = rebuilt.m_replay;
+    }
     game = std::move(parsed);
     error.clear();
     return true;

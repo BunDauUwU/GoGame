@@ -22,6 +22,12 @@ cmake --build build/server --parallel 3
 ./build/server/appserver --data-file server/data/state.json
 ```
 
+Tại thư mục gốc mở **terminal**:
+
+```
+./tools/run-katago-hard.sh
+```
+
 **Giữ terminal này chạy trong khi dùng client.** Server nghe `ws://127.0.0.1:14509`, dừng bằng `Ctrl+C`. Nếu CMake chưa tìm được Qt, thêm `-DCMAKE_PREFIX_PATH=/duong/dan/toi/Qt` khi configure. File chưa tồn tại được tạo bằng `{}`; file hỏng khiến server dừng và giữ nguyên dữ liệu.
 
 Mở terminal khác cho client:
@@ -750,13 +756,11 @@ Kiểm tra: build client/server tại build/solo-ai thành công. Thêm tests/So
 
 Kết quả cuối: CTest soloAI đạt 1/1 (1,58 giây), gồm offline controller, AI trả lời/mở đầu, lưu/tải, hủy kết quả cũ, nút menu/chọn Medium/điều hướng MatchScreen qua QML thật, đủ 20 slot/từ chối ghi đè ngầm và ghi đè đã chọn. Test giao diện cần Qt runtime ngoài sandbox trong môi trường này; build và git diff --check đạt. Không commit/push.
 
-
 ## Hard AI và slot Sandbox (19/10/2026)
 
 Đã bật **Play against AI → Hard**, tích hợp class `HardAI` theo MCTS được cung cấp, tách type chung, giữ generation/cancellation khi Undo/Load/Exit. Save AI giữ lại độ khó Hard/Medium. Sandbox có slot riêng `sandbox.json` và nút Load riêng trong menu, không chiếm 20 slot AI.
 
 Xem [HardAI: tích hợp, model adapter và tối ưu](src/AI/HARD_AI.md). Hard hiện dùng heuristic mặc định; public `HardAI::Evaluator`/`GameManager::setHardEvaluator()` là chỗ gắn backend policy/value. Chưa tự nạp model KataGo`.bin.gz`; không coi nhãn Hard là chứng nhận trình độ hoặc bảo đảm mạnh hơn Medium.
-
 
 ### 19/10/2026 — Hoàn thiện HardAI MCTS/PUCT/FPU và slot Sandbox riêng
 
@@ -782,3 +786,7 @@ Kết quả: hoàn thiện trên bản HardAI đang có trong working tree, gi�
 Kiểm tra: build Release client/server tại build/hard-mcts; CTest kiểm tra controller/QML, HardAI public adapter và core riêng. Các test mới kiểm tra PUCT/FPU/value sign, depth boundary, va chạm hash có chủ đích, metadata identity, own/opponent root reuse, compact index, cap RAM, zero deadline, cancellation trong evaluator, NaN, ăn quân/ko và so sánh legal/scoring với GoMatch. Kết quả cuối ghi bên dưới.
 
 Kết quả cuối ngày 19/10/2026: Release client/server build thành công, CTest **3/3 đạt** (soloAI/hardAI/hardCore); AddressSanitizer + UBSan cho lõi/API đạt **2/2**. Core có 10.830 đối chiếu legal, collision hash chủ đích, kiểm tra compaction và giới hạn arena 4 MiB. Tài liệu HardAI giải thích từng thành phần PUCT/FPU, mốc 19652, phạm vi cap RAM và giới hạn deadline mềm. Không commit hoặc push.
+
+## Hard với model KataGo (2026-10-19)
+
+Chạy `./tools/run-katago-hard.sh`, sau đó chọn Hard trong menu AI. Backend C++ nạp model `.bin.gz` một lần; MCTS của GoGame tiếp tục chọn nhánh/nước đi, có concurrent leaves, batch inference và pacing mặc định 0.30 để chừa tải GPU. Hướng dẫn CPU/CUDA, lịch sử save tương thích và các giới hạn về chấm điểm/thời gian nằm ở [KATAGO_BACKEND.md](src/AI/KATAGO_BACKEND.md). Đây chưa phải sức mạnh đã được kiểm chứng ngang engine KataGo.
