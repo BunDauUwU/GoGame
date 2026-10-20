@@ -401,19 +401,20 @@ Các file test, executable test và cấu hình CTest đã được xóa khỏi 
 
 ### 6. Tài nguyên âm thanh
 
-- [ ] Tìm nhạc game.
-- [ ] Tìm âm thanh đặt quân và âm thanh báo lỗi.
+- [x] Tìm nhạc game.
+- [x] Tìm âm thanh đặt quân.
+- [ ] Tìm âm thanh báo lỗi.
 
 ### 7. Settings trong trận
 
-- [ ] Cho phép tùy chỉnh âm thanh.
+- [x] Cho phép tùy chỉnh âm thanh.
 - [ ] Cho phép bật/tắt chế độ preview.
 
 ### 8. Settings ngoài trận
 
 - [ ] Đổi giao diện bàn đấu, avatar, khung avatar và danh hiệu.
 - [ ] Có tùy chỉnh level và rank theo yêu cầu; cơ chế cụ thể sẽ xác định khi triển khai.
-- [ ] Bao gồm mọi tùy chỉnh của settings trong trận.
+- [x] Bao gồm mọi tùy chỉnh của settings trong trận.
 
 ### 9. Đấu với người qua JSON
 

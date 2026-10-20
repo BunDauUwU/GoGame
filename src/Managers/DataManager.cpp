@@ -37,7 +37,7 @@ bool DataManager::save(const LocalGameData &game, int slot, QString &error)
 {
     error.clear();
     if ((game.ai && (slot < 1 || slot > AISaveSlots ||
-         (game.difficulty != "Medium" && game.difficulty != "Hard"))) ||
+         (game.difficulty != "Easy" && game.difficulty != "Medium" && game.difficulty != "Hard"))) ||
          (!game.ai && slot != 0) || game.moves.size() > MaxMoves) {
         error = "Invalid slot or save exceeds move limit";
         return false;
