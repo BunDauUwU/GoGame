@@ -9,7 +9,7 @@ if [[ ! -f "$model_path" ]]; then printf 'Model not found: %s\n' "$model_path" >
 build_path="${GOGAME_KATAGO_BUILD:-$game_root/build/katago-native}"
 backend="${GOGAME_KATAGO_BACKEND:-CUDA}"
 cmake_options=(-S "$game_root" -B "$build_path" -G Ninja
-    -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DGOGAME_ENABLE_KATAGO=ON
+    -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DGOGAME_ENABLE_KATAGO=ON
     "-DGOGAME_KATAGO_BACKEND=$backend")
 source_path="${GOGAME_KATAGO_SOURCE_DIR:-$ai_root/training/match-tools/KataGo-1.18.1}"
 if [[ -d "$source_path/cpp" ]]; then cmake_options+=("-DGOGAME_KATAGO_SOURCE_DIR=$source_path"); fi
