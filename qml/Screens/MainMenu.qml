@@ -209,7 +209,7 @@ Rectangle {
         }
 
         Text {
-            text: "The Go Adventure"
+            text: ""
             font.pixelSize: 22
             color: "#D8D8D8"
             font.italic: true
@@ -237,7 +237,7 @@ Rectangle {
         Button {
             id: connectionStatusButton
 
-            text: networkClient.connected ? "● Server Connected" : "○ Offline Mode (Click here to retry connection)"
+            text: networkClient.connected ? "Server Connected" : "Offline Mode (Click here to retry connection)"
 
             enabled: !networkClient.connected
             hoverEnabled: true
@@ -283,9 +283,8 @@ Rectangle {
         }
     }
 
-    // ==========================================
     // MENU NAVIGATION BUTTONS (Bottom-Right)
-    // ==========================================
+
     Column {
         id: menuButtonsColumn
         anchors.bottom: parent.bottom
@@ -316,7 +315,7 @@ Rectangle {
             height: 60
             width: 400
             objectName: "playAgainstAIButton"
-            text: qsTr("Play against AI")
+            text: qsTr("Practice Mode (play against AI)")
             enabled: !matchmakingManager.searching
             onClicked: {
                 console.log("Matchmaking action triggered");
@@ -327,8 +326,19 @@ Rectangle {
         GameButton {
             height: 48
             width: 400
+            text: qsTr("Load practice game")
+            enabled: !matchmakingManager.searching
+            onClicked: {
+                gameManager.refreshSaves();
+                loadAIDialog.open();
+            }
+        }
+
+        GameButton {
+            height: 48
+            width: 400
             objectName: "newSandboxButton"
-            text: qsTr("Sandbox · New game")
+            text: qsTr("Sandbox")
             onClicked: {
                 if (gameManager.startSandbox())
                     stack.push("./MatchScreen.qml", {
@@ -342,25 +352,11 @@ Rectangle {
             height: 48
             width: 400
             objectName: "loadSandboxSlotButton"
-            text: qsTr("Load Sandbox · Dedicated slot")
+            text: qsTr("Load Sandbox game")
             enabled: gameManager.hasSandboxSave && !matchmakingManager.searching
             onClicked: {
-                if (gameManager.loadSandbox())
-                    stack.push("./MatchScreen.qml", {
-                        localPlayerName: "Black",
-                        opponentPlayerName: "White",
-                        localPlayerColor: 0
-                    });
-            }
-        }
-        GameButton {
-            height: 48
-            width: 400
-            text: qsTr("Load AI game")
-            enabled: !matchmakingManager.searching
-            onClicked: {
                 gameManager.refreshSaves();
-                loadAIDialog.open();
+                loadSandboxDialog.open();
             }
         }
 
@@ -400,37 +396,64 @@ Rectangle {
         }
     }
 
-    Dialog {
+    SaveGameDialog {
         id: newAIDialog
-        anchors.centerIn: parent
-        modal: true
-        title: qsTr("All slots full — overwrite selected slot?")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        ComboBox {
+        objectName: "newAIDialog"
+        title: qsTr("Choose a save to overwrite")
+        actionText: qsTr("Overwrite")
+        canAccept: newSlotSelector.canAccept
+        onOpened: newSlotSelector.selectAvailable()
+        contentItem: SaveSlotTable {
             id: newSlotSelector
-            model: 20
-            displayText: "Slot " + (currentIndex + 1)
+            objectName: "newSlotSelector"
+            model: gameManager.savedGames
+            loading: false
         }
         onAccepted: {
             mainMenuRoot.startSelectedAIMatch(newSlotSelector.currentIndex + 1);
         }
     }
 
-    Dialog {
+    SaveGameDialog {
         id: loadAIDialog
-        anchors.centerIn: parent
-        modal: true
-        title: "Load AI battle | 20 slots"
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        ComboBox {
+        objectName: "loadAIDialog"
+        title: qsTr("Load game")
+        actionText: qsTr("Load")
+        canAccept: loadAISelector.canAccept
+        onOpened: loadAISelector.selectAvailable()
+        contentItem: SaveSlotTable {
             id: loadAISelector
-            model: gameManager.savedSlots
-            displayText: currentIndex >= 0 ? "Slot " + currentText : "No saved AI battles"
+            objectName: "loadAISelector"
+            model: gameManager.savedGames
+            loading: true
         }
         onAccepted: {
-            if (loadAISelector.currentIndex >= 0 && gameManager.loadAIGame(Number(loadAISelector.currentText))) {
+            if (loadAISelector.currentIndex >= 0 && gameManager.loadAIGame(loadAISelector.currentValue)) {
                 mainMenuRoot.openAIMatch();
             }
+        }
+    }
+
+    SaveGameDialog {
+        id: loadSandboxDialog
+        objectName: "loadSandboxDialog"
+        title: qsTr("Load game")
+        actionText: qsTr("Load")
+        canAccept: loadSandboxSelector.canAccept
+        onOpened: loadSandboxSelector.selectAvailable()
+        contentItem: SaveSlotTable {
+            id: loadSandboxSelector
+            objectName: "loadSandboxSelector"
+            model: gameManager.sandboxSavedGames
+            loading: true
+        }
+        onAccepted: {
+            if (loadSandboxSelector.currentIndex >= 0 && gameManager.loadSandbox(loadSandboxSelector.currentValue))
+                stack.push("./MatchScreen.qml", {
+                    localPlayerName: "Black",
+                    opponentPlayerName: "White",
+                    localPlayerColor: 0
+                });
         }
     }
 

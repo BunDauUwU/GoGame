@@ -3,12 +3,18 @@
 #include "../Core/Game.h"
 
 bool GameManager::startEasyGame(int playerColor, int slot)
-{ return startAIGame(QStringLiteral("Easy"), playerColor, slot); }
+{
+    return startAIGame(QStringLiteral("Easy"), playerColor, slot);
+}
 bool GameManager::startMediumGame(int playerColor, int slot)
-{ return startAIGame(QStringLiteral("Medium"), playerColor, slot); }
+{
+    return startAIGame(QStringLiteral("Medium"), playerColor, slot);
+}
 bool GameManager::startHardGame(int playerColor, int slot)
-{ return startAIGame(QStringLiteral("Hard"), playerColor, slot); }
-bool GameManager::startAIGame(const QString& difficulty, int playerColor, int slot)
+{
+    return startAIGame(QStringLiteral("Hard"), playerColor, slot);
+}
+bool GameManager::startAIGame(const QString &difficulty, int playerColor, int slot)
 {
     if (online() && !m_finished) {
         emit gameError(tr("Finish the online game before starting an AI game"));
@@ -85,8 +91,7 @@ void GameManager::requestMove()
     auto cancel = std::make_shared<std::atomic_bool>(false);
     m_aiCancel = cancel;
     auto watcher = new QFutureWatcher<SearchResult>(this);
-    connect(watcher, &QFutureWatcher<SearchResult>::finished, this,
-            [this, watcher, generation] {
+    connect(watcher, &QFutureWatcher<SearchResult>::finished, this, [this, watcher, generation] {
         const auto result = watcher->result();
         watcher->deleteLater();
         // Undo, load, exit or a new match may have replaced the searched position.
@@ -115,29 +120,34 @@ void GameManager::requestMove()
             recordMove({{"row", result.row}, {"col", result.col}});
             notifyMove();
         }
-        m_snapshot["aiSearch"] = QVariantMap{
-            {"estimatedScore", result.estimatedScore},
-            {"difficulty", m_aiDifficulty},
-            {"winValue", result.winValue},
-            {"passScore", result.passScore},
-            {"moveScore", result.moveScore},
-            {"gainOverPass", result.gainOverPass},
-            {"completedDepth", result.completedDepth},
-            {"nodes", result.nodes},
-            {"elapsedMs", result.elapsedMs},
-            {"stoppedEarly", result.stoppedEarly},
-            {"stopReason", result.stopReason},
-            {"evaluations", QVariant::fromValue<qulonglong>(result.evaluations)},
-            {"cacheHits", QVariant::fromValue<qulonglong>(result.cacheHits)},
-            {"rootVisits", result.rootVisits}, {"reusedVisits", result.reusedVisits},
-            {"allocatedBytes", QVariant::fromValue<qulonglong>(result.allocatedBytes)},
-            {"memoryLimited", result.memoryLimited}};
+        m_snapshot["aiSearch"]
+            = QVariantMap{{"estimatedScore", result.estimatedScore},
+                          {"difficulty", m_aiDifficulty},
+                          {"winValue", result.winValue},
+                          {"passScore", result.passScore},
+                          {"moveScore", result.moveScore},
+                          {"gainOverPass", result.gainOverPass},
+                          {"completedDepth", result.completedDepth},
+                          {"nodes", result.nodes},
+                          {"elapsedMs", result.elapsedMs},
+                          {"stoppedEarly", result.stoppedEarly},
+                          {"stopReason", result.stopReason},
+                          {"evaluations", QVariant::fromValue<qulonglong>(result.evaluations)},
+                          {"cacheHits", QVariant::fromValue<qulonglong>(result.cacheHits)},
+                          {"rootVisits", result.rootVisits},
+                          {"reusedVisits", result.reusedVisits},
+                          {"allocatedBytes", QVariant::fromValue<qulonglong>(result.allocatedBytes)},
+                          {"memoryLimited", result.memoryLimited}};
         emit snapshotChanged();
         if (m_position.consecutivePasses >= 2)
             finishLocalGame(m_position.score() > 0 ? 0 : 1, tr("Two consecutive passes"));
     });
     // Capture independent data, never GameManager, in the background worker.
-    watcher->setFuture(QtConcurrent::run(&m_aiPool, [easyEngine ,mediumEngine, hardEngine, easy, hard, position, cancel] {
-        return hard ? hardEngine.chooseMove(position, cancel) : easy ? easyEngine.chooseMove(position, cancel) : mediumEngine.chooseMove(position, cancel);
-    }));
+    watcher->setFuture(
+        QtConcurrent::run(&m_aiPool,
+                          [easyEngine, mediumEngine, hardEngine, easy, hard, position, cancel] {
+                              return hard   ? hardEngine.chooseMove(position, cancel)
+                                     : easy ? easyEngine.chooseMove(position, cancel)
+                                            : mediumEngine.chooseMove(position, cancel);
+                          }));
 }

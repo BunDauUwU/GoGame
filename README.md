@@ -1,26 +1,38 @@
 # GoGame
 
-Game cờ vây viết bằng **C++17 và Qt 6**, với client Qt Quick/QML và server WebSocket JSON. Có đấu hai người qua server, chơi offline với **Easy / Medium / Hard**, và **Sandbox** để tự điều khiển hai bên. Server quản lý luật, lượt và đồng hồ trận online; AI chạy ở client. Hard dùng MCTS/PUCT/FPU, có thể bật backend KataGo native để nạp model `.bin.gz`.
+GoGame is an application that allows users to play the classic board game Go. It provides a simple and interactive interface to enjoy the game. It is written in **C++17 and Qt 6**, featuring a Qt Quick/QML client and a JSON WebSocket server. It supports local two-player matches, offline play against **Easy / Medium / Hard** AI opponents, and a **Sandbox** mode where players can control both sides.
 
-## Yêu cầu
+# Table of contents
 
-CMake ≥ 3.16, compiler C++17 và Qt 6 (CMake yêu cầu ≥ 6.2) với Core, Gui, Quick/QML, Network, WebSockets, Sql, Concurrent và Multimedia. Cần Qt hỗ trợ `QWebSocket::errorOccurred` như mã nguồn hiện tại và plugin SQLite cho đăng nhập local. Nếu CMake chưa tìm thấy Qt, thêm `-DCMAKE_PREFIX_PATH=/duong/dan/toi/Qt` khi configure.
+- [Requirement](#requirements)
+- [Installation](#installation)
+- [Setup and Run](#setup-and-run)
+- [Usage](#usage)
+- [Rule](#rules)
+- [Contributing](#contributing)
+- [License](#license)
 
-Mọi lệnh bên dưới chạy từ thư mục gốc dự án. Các ví dụ executable dùng đường dẫn Linux.
+# Requirements
 
-## Build và mở client
+CMake ≥ 3.16, a C++17 compiler, and Qt 6 (CMake requires ≥ 6.2) with Core, Gui, Quick/QML, Network, WebSockets, Sql, Concurrent, and Multimedia. Qt must support `QWebSocket::errorOccurred`, as required by the current source code. The SQLite plugin is also required for local account authentication.
+
+# Installation
+
+- I don't know but just don't load **Cmake** and continue reading.
+
+# Usage
+
+## Build and Launch the Client
 
 ```bash
-cmake -S . -B build/local -DBUILD_TESTING=OFF
-cmake --build build/local --parallel 3
-./build/local/appGoGame
+./tools/run-katago-hard.sh --ai-time-ms 1800 --ai-threads 4 --katago-duty 0.30
 ```
 
-Dùng `BUILD_TESTING=OFF` vì cây nguồn hiện chưa có thư mục `tests/` mà CMake tham chiếu. Có thể mở `CMakeLists.txt` bằng Qt Creator. Bản build mặc định không cần model KataGo; Hard dùng evaluator heuristic.
+You can also open `CMakeLists.txt` in Qt Creator. The default build does not require a KataGo model; Hard uses a heuristic evaluator instead.
 
-## Chạy server và đấu hai người
+## Run the Server and Play Local
 
-Mở một terminal riêng, chạy và giữ server hoạt động:
+Open a separate terminal and run the following commands to build and start the server. Keep the server running while playing:
 
 ```bash
 cmake -S server -B build/server
@@ -28,41 +40,55 @@ cmake --build build/server --parallel 3
 ./build/server/appserver --data-file server/data/state.json
 ```
 
-Server nghe tại `ws://127.0.0.1:14509`; dừng bằng `Ctrl+C`. File JSON chưa có sẽ được tạo; file hỏng khiến server dừng và giữ nguyên dữ liệu. `state.json` phục vụ API đọc/ghi JSON, chưa phải file tự lưu các trận đang chơi. Có thể thêm `--port 14509` hoặc `--main-minutes 15`; mặc định mỗi bên 10 phút chính + 3 lần Byo-yomi × 20 giây.
+The server listens at `ws://127.0.0.1:14509`.
 
-Ở terminal khác, mở hai instance client, đăng ký/đăng nhập hai tài khoản local, rồi chọn **Find Match** ở cả hai để ghép trận. Server hiện chỉ nghe localhost. Đăng nhập SQLite ở client và danh tính guest nickname ở server là hai phần riêng.
+If the file is corrupted, the server will stop without modifying the existing data. `state.json` is used by the JSON read/write API; it is not a file that automatically saves ongoing matches.
 
-Client mặc định dùng URL trên. Khi đổi cổng, đặt URL tương ứng trước khi mở client:
+By default, each player has 10 minutes of main time plus 3 periods of 20-second Byo-yomi.
+
+The server currently listens on localhost only. Client-side SQLite authentication and server-side guest nickname identities are separate systems.
+
+The client uses the default server URL. If you change the port, set the corresponding URL before launching the client but you should not change it due to potential bugs:
 
 ```bash
 GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/local/appGoGame
 ```
 
-## Chơi AI và Sandbox
+In another terminal, launch two client instances, register or log in with two local accounts, and select **Find Match** in both clients to get matched.
 
-- **Play against AI → Easy / Medium / Hard**: chơi offline, người chơi cầm đen. Có 20 slot lưu AI; dùng nút tải ván ở menu để tiếp tục, chọn slot và xác nhận ghi đè khi đầy.
-- **Sandbox**: điều khiển cả hai bên, hỗ trợ Reset, Undo, Redo, Save và Load. Slot `sandbox.json` riêng; Reset/Exit không tự ghi đè bản lưu thủ công.
-- Mặc định dữ liệu ván ở `QStandardPaths::AppDataLocation/games`; biến môi trường `GOGAME_SAVE_DIR` cho phép đổi thư mục.
-- Lần nhấn đầu tại ô hợp lệ hiện preview, lần thứ hai xác nhận. Nút **Fast mode** cho phép đặt ngay bằng một lần nhấn.
+## Play Against AI, use Sandbox Mode and Fast Mode
 
-Không cần chạy server khi chơi AI hoặc Sandbox. Scorer hiện còn giới hạn trong phân xử quân chết/seki; nhãn độ khó chưa phải chứng nhận rank của AI.
+- **Play against AI → Easy / Medium / Hard**: Play offline, with the human player controlling Black. You can save up to 20 games angainst AI. Use the game-loading button in the menu to resume a saved game, select a slot, and confirm overwriting if all slots are occupied.
+- **Sandbox**: Control both sides, with support for Reset, Undo, Redo, Save, and Load. The `sandbox.json` slot is separate. Reset and Exit do not automatically overwrite manually saved games.
+- By default, game data is stored in `QStandardPaths::AppDataLocation/games`. Set the `GOGAME_SAVE_DIR` environment variable to use a different directory.
+- The first click on a valid intersection displays a move preview; the second click confirms the move. **Fast mode** allows a move to be placed with a single click.
 
-## Chạy Hard với model KataGo
+The server is not required for AI matches or Sandbox mode.
 
-Cần model `.bin.gz` và dependencies backend tương ứng. Launcher build rồi mở **client**:
+The current scorer still has limitations when adjudicating dead stones and seki.
 
-```bash
-./tools/run-katago-hard.sh /duong/dan/model.bin.gz --ai-time-ms 1800 --ai-threads 4 --katago-duty 0.30
-```
+# Rule
 
-Sau khi mở, chọn **Play against AI → Hard**. Launcher mặc định dùng CUDA; các đường dẫn tự dò phụ thuộc máy phát triển. Không có NVIDIA, dùng backend CPU với model nhỏ và thư mục build riêng:
+This game currently uses Japanese rules, however there may be some inaccuracies, so please report them for debugging.
 
-```bash
-GOGAME_KATAGO_BACKEND=EIGEN GOGAME_KATAGO_BUILD="$PWD/build/katago-cpu" ./tools/run-katago-hard.sh /duong/dan/model-nho.bin.gz --ai-threads 2
-```
+# Project Documentation
 
-Cách cài dependency, build thủ công và tùy chỉnh model ở [hướng dẫn KataGo](docs/ai/KATAGO_BACKEND.md). Bản build không bật backend sẽ báo lỗi nếu truyền `--katago-model`.
+All of these files were written by Vietnamese people to support debugging for developers and assist AI. The translation will not be implemented.
 
-## Tài liệu dự án
+- [Project Structure and References](docs/STRUCTUREANDREF.md)
+- [Prompt / Feedback / Change Log](docs/PROMPT.md)
+- [Architecture and Protocol](docs/ARCHITECTURE.md)
+- [Server Documentation](docs/SERVER.md)
 
-Xem [cấu trúc và tài liệu tham khảo](docs/STRUCTUREANDREF.md), [nhật ký prompt / phản hồi / thay đổi](docs/PROMPT.md), [kiến trúc và giao thức](docs/ARCHITECTURE.md), [server](docs/SERVER.md), [kế hoạch phát triển](docs/ROADMAP.md) và [ghi chú thay đổi lịch sử](docs/CHANGELOG.md).
+# Contributing
+
+This application developed by two members:
+
+- Hoang Minh Vu
+- Nguyen Cao Long Khanh
+
+We work together to develop this Go Game application as part of a university project.
+
+# License
+
+This project is for educational purposes only and is not intended for commercial use.

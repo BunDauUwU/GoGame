@@ -396,7 +396,7 @@ Rectangle {
             width: parent.width - 24
             spacing: 8
             Text {
-                text: gameManager.sandbox ? qsTr("Sandbox · Dedicated slot") : gameManager.aiDifficulty + " AI · Slot " + gameManager.currentSaveSlot
+                text: gameManager.sandbox ? (gameManager.currentSaveSlot > 0 ? qsTr("Sandbox · Slot %1").arg(gameManager.currentSaveSlot) : qsTr("Sandbox · Unsaved")) : gameManager.aiDifficulty + " AI · Slot " + gameManager.currentSaveSlot
                 color: "#f3ede1"
                 font.bold: true
             }
@@ -422,34 +422,32 @@ Rectangle {
                 width: localActions.width
                 text: qsTr("Save")
                 onClicked: {
-                    if (gameManager.sandbox) {
-                        if (gameManager.saveGame())
-                            saveStatus.text = qsTr("Saved~!");
-                    } else {
-                        slotDialog.loading = false;
-                        slotSelector.currentIndex = Math.max(0, gameManager.currentSaveSlot - 1);
-                        slotDialog.open();
-                    }
+                    gameManager.refreshSaves();
+                    slotDialog.loading = false;
+                    slotSelector.currentIndex = Math.max(0, gameManager.currentSaveSlot - 1);
+                    slotDialog.open();
                 }
             }
             Button {
                 width: localActions.width
                 text: qsTr("Load")
                 onClicked: {
-                    if (gameManager.sandbox)
-                        gameManager.loadSandbox();
-                    else {
-                        slotDialog.loading = true;
-                        slotDialog.open();
-                    }
+                    gameManager.refreshSaves();
+                    slotDialog.loading = true;
+                    const games = gameManager.sandbox ? gameManager.sandboxSavedGames : gameManager.savedGames;
+                    const first = games.findIndex(function (game) {
+                        return game.saved;
+                    });
+                    slotSelector.currentIndex = gameManager.currentSaveSlot > 0 ? gameManager.currentSaveSlot - 1 : Math.max(0, first);
+                    slotDialog.open();
                 }
             }
             Button {
                 width: localActions.width
                 text: qsTr("Exit")
                 onClicked: {
-                    if (gameManager.exitLocalGame())
-                        stack.pop();
+                    gameManager.exitLocalGame();
+                    stack.pop();
                 }
             }
             Text {
@@ -467,31 +465,28 @@ Rectangle {
         standardButtons: Dialog.Yes | Dialog.No
         onAccepted: gameManager.resetGame()
     }
-    Dialog {
+    SaveGameDialog {
         id: slotDialog
         objectName: "slotDialog"
         property bool loading: false
-        anchors.centerIn: parent
-        modal: true
-        title: loading ? qsTr("Load game") : qsTr("Save game (overwrite selected game)")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        ComboBox {
+        title: loading ? qsTr("Load game · 20 slots") : qsTr("Save game · Select a slot")
+        actionText: loading ? qsTr("Load") : qsTr("Save")
+        canAccept: slotSelector.canAccept
+        onOpened: slotSelector.selectAvailable()
+        contentItem: SaveSlotTable {
             id: slotSelector
             objectName: "slotSelector"
-            model: 20
-            textRole: ""
-            delegate: ItemDelegate {
-                required property int index
-                text: "Slot " + (index + 1) + (gameManager.savedSlots.indexOf(index + 1) >= 0 ? " · saved" : " · empty")
-                width: slotSelector.width
-            }
-            displayText: "Slot " + (currentIndex + 1)
+            loading: slotDialog.loading
+            model: gameManager.sandbox ? gameManager.sandboxSavedGames : gameManager.savedGames
         }
         onAccepted: {
             if (loading) {
-                gameManager.loadAIGame(slotSelector.currentIndex + 1);
-            } else if (gameManager.saveGame(slotSelector.currentIndex + 1))
-                saveStatus.text = qsTr(" ~!");
+                if (gameManager.sandbox)
+                    gameManager.loadSandbox(slotSelector.currentValue);
+                else
+                    gameManager.loadAIGame(slotSelector.currentValue);
+            } else if (gameManager.saveGame(slotSelector.currentValue))
+                saveStatus.text = qsTr("Saved");
         }
     }
 

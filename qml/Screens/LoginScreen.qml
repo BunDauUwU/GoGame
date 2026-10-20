@@ -55,7 +55,7 @@ Rectangle {
                 spacing: Spacing.xs
 
                 GameText {
-                    text: "✦ Go Game ✦"
+                    text: "Go Game"
                     type: GameText.Display
                     color: "white"
                     font.bold: true
@@ -63,7 +63,7 @@ Rectangle {
                 }
 
                 GameText {
-                    text: "Wanna be a Go master? You chose the wrong place."
+                    text: ""
                     type: GameText.Caption
                     color: "white"
                     font.italic: true

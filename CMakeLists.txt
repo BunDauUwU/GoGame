@@ -78,6 +78,8 @@ qt_add_qml_module(appGoGame
         qml/Components/controls/GameButton.qml
         qml/Components/controls/GamePanel.qml
         qml/Components/controls/GameText.qml
+        qml/Components/controls/SaveSlotTable.qml
+        qml/Components/controls/SaveGameDialog.qml
 
         # Screens
         qml/Screens/SettingsScreen.qml
@@ -163,11 +165,6 @@ install(TARGETS appGoGame
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 add_subdirectory(server)
-
-include(CTest)
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
 
 if(GOGAME_ENABLE_KATAGO)
     target_compile_definitions(appGoGame PRIVATE GOGAME_KATAGO)

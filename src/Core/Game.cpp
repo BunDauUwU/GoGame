@@ -298,6 +298,7 @@ bool GameManager::startSandbox() {
   m_sandbox = true;
   m_playerIndex = 0;
   m_currentSlot = 0;
+  emit savesChanged();
   emit matchInfoChanged();
   emit aiStateChanged();
   resetGame();
@@ -509,8 +510,14 @@ QVariantList GameManager::savedSlots() const {
 bool GameManager::saveGame(int slot) {
   if (online() || (!m_aiEnabled && !m_sandbox))
     return false;
-  if (m_aiEnabled && slot == 0)
+  if (slot == 0)
     slot = m_currentSlot;
+  if (slot == 0)
+    slot = DataManager::firstFreeSlot(m_aiEnabled);
+  if (slot == 0) {
+      emit gameError(tr("Overwrite on slot "));
+      return false;
+  }
   LocalGameData data;
   data.ai = m_aiEnabled;
   data.difficulty = m_aiDifficulty;
@@ -528,12 +535,11 @@ bool GameManager::saveGame(int slot) {
     emit gameError(error);
     return false;
   }
-  if (m_aiEnabled)
-    m_currentSlot = slot;
+  m_currentSlot = slot;
   emit savesChanged();
   return true;
 }
-bool GameManager::loadSandbox() { return loadGame(false, 0); }
+bool GameManager::loadSandbox(int slot) { return loadGame(false, slot); }
 bool GameManager::loadAIGame(int slot) { return loadGame(true, slot); }
 bool GameManager::loadGame(bool ai, int slot) {
   if (online() && !m_finished)
@@ -552,7 +558,7 @@ bool GameManager::loadGame(bool ai, int slot) {
   m_hardAI.reset();
   m_sandbox = !ai;
   m_playerIndex = data.humanColor;
-  m_currentSlot = ai ? slot : 0;
+  m_currentSlot = slot;
   m_history = std::move(data.history);
   m_moves = std::move(data.moves);
   m_cursor = data.cursor;
