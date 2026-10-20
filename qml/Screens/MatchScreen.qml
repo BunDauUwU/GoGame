@@ -74,6 +74,12 @@ Rectangle {
         volume: AssetManager.sfxVolume
     }
 
+    SoundEffect {
+        id: errorSound
+        source: AssetManager.url("ErrorSound")
+        volume: AssetManager.sfxVolume
+    }
+
     MediaPlayer {
         id: backgroundMusic
 
@@ -112,6 +118,10 @@ Rectangle {
         }
         function onLastMoveCoordsChanged() {
             placeSound.play();
+        }
+
+        function onInvalidMovePlayed() {
+            errorSound.play();
         }
     }
 
