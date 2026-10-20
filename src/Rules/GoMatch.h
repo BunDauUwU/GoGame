@@ -5,6 +5,7 @@
 #include <array>
 #include <bitset>
 #include <memory>
+#include <vector>
 
 class GoMatch {
 public:
@@ -21,6 +22,14 @@ public:
       return pos;
     }
   };
+  struct RecordedMove { int player; int point; }; // pass = Count
+  struct Replay {
+    std::array<int, Count> initialCells{};
+    int initialPlayer = 0, initialKo = -1, initialPasses = 0, initialMoveCount = 0;
+    std::array<int, 2> initialCaptured{};
+    std::vector<RecordedMove> moves;
+  };
+  Replay replay() const;
   GoMatch();
   bool play(int row, int col, QString &error);
   bool validMove(int row, int col) const;
@@ -42,6 +51,8 @@ public:
   static const std::array<std::array<int, 4>, Count> &neighbors();
 
 private:
+  std::shared_ptr<Replay> m_replay;
+  void recordMove(int player, int point);
   std::array<int, Count> board;
   std::array<int, Count> previousBoard;
   bool hasPrevious = false;

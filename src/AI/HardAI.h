@@ -8,9 +8,10 @@
 
 struct HardSearchOptions {
     int timeBudgetMs = 1800;
-    int memoryMB = 64;
+    int memoryMB = 64; // Arena/cache only; model and history journal are additional.
     int maxDepth = 256;
     std::uint32_t maxSimulations = 100000;
+    int searchThreads = 1; // Concurrent leaves are batched by the native backend.
     float cpuct = 1.5f;
     float fpuReduction = 0.2f;
 };
@@ -19,6 +20,12 @@ class HardAI {
 public:
     static constexpr int PolicySize = GoMatch::Count + 1;
     using LegalMask = std::array<std::uint8_t, PolicySize>;
+    struct History {
+        std::shared_ptr<const History> parent;
+        std::shared_ptr<const GoMatch::Replay> setup;
+        int player = -1, point = -1;
+        std::uint64_t hash = 0;
+    };
     // Snapshot contract for a replaceable policy/value backend.
     struct Position {
         std::array<int, GoMatch::Count> cells{}; // -1 empty, 0 black, 1 white
@@ -28,11 +35,13 @@ public:
         int moveCount = 0;
         std::array<int, 2> capturedStones{};
         double komi = 6.5;
+        std::shared_ptr<const History> history;
     };
     struct Evaluation {
         std::array<float, PolicySize> policyLogits{}; // row*19+col; pass=361
         float value = 0; // [-1,1], from position.currentPlayer's perspective
     };
+    // Implementations must be thread-safe when searchThreads > 1.
     class Evaluator {
     public:
         virtual ~Evaluator() = default;

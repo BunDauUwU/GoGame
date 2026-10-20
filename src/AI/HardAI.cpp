@@ -42,8 +42,9 @@ struct Board {
     int turn = 1, ko = -1, passes = 0;
     double komi = 6.5;
     uint64_t stonesHash = 0;
-    std::array<int,2> capturedStones{};
+    std::array<int, 2> capturedStones{};
     int moveCount = 0;
+    std::shared_ptr<const HardAI::History> history;
 
     Board() {
         cells.fill(3);
@@ -64,13 +65,26 @@ struct Board {
         uint64_t bits = 0;
         static_assert(sizeof(bits) == sizeof(komi), "double must be 64-bit");
         std::memcpy(&bits, &komi, sizeof(bits));
-        return stonesHash
+        return (history ? history->hash : 0) ^ stonesHash
             ^ mix64(uint64_t(turn + 4 * (ko + 1) + 2048 * passes) ^ 0x243f6a8885a308d3ULL)
             ^ mix64(bits ^ 0x13198a2e03707344ULL)
             ^ mix64((uint64_t(capturedStones[0]) + (uint64_t(capturedStones[1]) << 32)) ^ 0xa4093822299f31d0ULL)
             ^ mix64(uint64_t(moveCount) ^ 0x082efa98ec4e6c89ULL);
     }
     bool same(const Board& b) const {
+        auto aHist = history, bHist = b.history;
+        while (aHist != bHist) {
+            if (!aHist || !bHist || aHist->hash != bHist->hash || aHist->point != bHist->point
+                || aHist->player != bHist->player) return false;
+            if (aHist->setup != bHist->setup && (!aHist->setup || !bHist->setup
+                || aHist->setup->initialCells != bHist->setup->initialCells
+                || aHist->setup->initialPlayer != bHist->setup->initialPlayer
+                || aHist->setup->initialKo != bHist->setup->initialKo
+                || aHist->setup->initialPasses != bHist->setup->initialPasses
+                || aHist->setup->initialMoveCount != bHist->setup->initialMoveCount
+                || aHist->setup->initialCaptured != bHist->setup->initialCaptured)) return false;
+            aHist = aHist->parent; bHist = bHist->parent;
+        }
         return turn == b.turn && ko == b.ko && passes == b.passes && komi == b.komi && cells == b.cells && capturedStones == b.capturedStones && moveCount == b.moveCount;
     }
     Groups groups() const {
@@ -139,6 +153,13 @@ struct Board {
     }
     // Caller MUST have checked legality, normally once when the node was expanded.
     void playKnownLegal(int move) {
+        if (history) {
+            auto next = std::make_shared<HardAI::History>();
+            next->parent = history; next->setup = history->setup;
+            next->point = move; next->player = turn - 1;
+            next->hash = mix64(history->hash ^ uint64_t((move + 1) * 3 + turn));
+            history = std::move(next);
+        }
         ++moveCount;
         if (move == Pass) { ++passes; ko = -1; turn = 3 - turn; return; }
         int p = padded(move), captured = 0, capturedPoint = -1;
@@ -209,7 +230,11 @@ struct Board {
     }
 };
 
-struct Evaluation { std::array<float, Points + 1> logits{}; float value = 0; };
+struct Evaluation
+{
+    std::array<float, Points + 1> logits{};
+    float value = 0;
+};
 struct Evaluator {
     virtual ~Evaluator() = default;
     // Value MUST be from the perspective of board.turn, not always black.
@@ -227,12 +252,15 @@ struct HeuristicEvaluator final : Evaluator {
             int p = padded(m), row = m / Size, col = m % Size;
             float prior = -0.03f * float(std::abs(row - 9) + std::abs(col - 9));
             int captures = 0, saves = 0, friends = 0, empty = 0;
-            std::array<int, 4> seen{-1,-1,-1,-1}; int count = 0;
+            std::array<int, 4> seen{-1, -1, -1, -1};
+            int count = 0;
             for (int d : Directions) {
                 int n = p + d;
                 empty += b.cells[n] == 0; friends += b.cells[n] == b.turn;
                 int id = g.id[n];
-                if (id < 0 || std::find(seen.begin(), seen.begin() + count, id) != seen.begin() + count) continue;
+                if (id < 0
+                    || std::find(seen.begin(), seen.begin() + count, id) != seen.begin() + count)
+                    continue;
                 seen[count++] = id;
                 if (g.liberties[id] == 1) {
                     if (b.cells[n] == b.turn) saves += g.sizes[id];
@@ -243,7 +271,7 @@ struct HeuristicEvaluator final : Evaluator {
             if (friends + empty == 4 && empty == 0 && !captures) prior -= 5.f;
             if (row == 0 || row == 18 || col == 0 || col == 18) prior -= stones < 80 ? 1.2f : 0.1f;
             if (stones < 30) {
-                int edge = std::min({row, col, 18-row, 18-col});
+                int edge = std::min({row, col, 18 - row, 18 - col});
                 prior += edge >= 2 && edge <= 4 ? 0.8f : 0.f;
             }
             result.logits[m] = prior;
@@ -267,7 +295,8 @@ struct HeuristicEvaluator final : Evaluator {
     }
 };
 
-inline std::array<float, 5 * Points> inputPlanes(const Board& b, const Legal& legal) {
+inline std::array<float, 5 * Points> inputPlanes(const Board &b, const Legal &legal)
+{
     std::array<float, 5 * Points> planes{};
     for (int m = 0; m < Points; ++m) {
         int color = b.cells[padded(m)];
@@ -280,10 +309,9 @@ inline std::array<float, 5 * Points> inputPlanes(const Board& b, const Legal& le
     return planes;
 }
 
-
-
-struct SearchOptions {
-    int timeMs = 1800, maxDepth = 256;
+struct SearchOptions
+{
+    int timeMs = 1800, maxDepth = 256, searchThreads = 1;
     uint32_t maxSimulations = 100000;
     size_t memoryMB = 64;
     float cpuct = 1.5f, fpuReduction = 0.2f;
@@ -304,7 +332,8 @@ class Engine {
 #endif
     struct Node {
         uint32_t first = None, visits = 0;
-        uint16_t count = 0;
+        uint16_t count = 0, inFlight = 0;
+        bool pending = false;
         float value = 0, sum = 0;
     };
     struct Edge {
@@ -377,6 +406,7 @@ class Engine {
         memoryLimited_ = false;
     }
 
+    uint32_t effectiveVisits(const Edge& e) const { return e.child == None ? 0 : nodes_[e.child].visits + nodes_[e.child].inFlight; }
     uint32_t visits(const Edge& e) const { return e.child == None ? 0 : nodes_[e.child].visits; }
     float prior(const Edge& e) const { return float(e.prior) / 65535.f; }
     // Child node sums are in the CHILD's perspective, hence the minus sign.
@@ -386,13 +416,21 @@ class Engine {
         nodes_.clear(); edges_.clear(); nodes_.push_back(Node{});
         root_ = 0; board_ = b; initialized_ = true; memoryLimited_ = false;
     }
-    CacheEntry& evaluate(const Board& b, const Legal& legal, const Groups& g,
-                         const std::atomic_bool* cancel = nullptr) {
+    CacheEntry &evaluate(const Board &b,
+                         const Legal &legal,
+                         const Groups &g,
+                         const std::atomic_bool *cancel = nullptr,
+                         std::unique_lock<std::mutex> *treeLock = nullptr)
+    {
         uint64_t key = b.key();
         auto& cached = cache_[key % cache_.size()];
         if (cached.valid && cached.hash == key && cached.position.same(b)) { ++hits_; return cached; }
         auto began = Clock::now();
-        Evaluation evaluation = evaluator_.evaluate(b, legal, g);
+        Evaluation evaluation;
+        if (treeLock) treeLock->unlock();
+        try { evaluation = evaluator_.evaluate(b, legal, g); }
+        catch (...) { if (treeLock) treeLock->lock(); throw; }
+        if (treeLock) treeLock->lock();
         if (cancel && cancel->load(std::memory_order_relaxed))
             throw std::runtime_error("HardAI evaluation cancelled");
         double ms = std::chrono::duration<double, std::milli>(Clock::now() - began).count();
@@ -400,16 +438,21 @@ class Engine {
         ++evaluations_;
         // Do not publish partially filled entries if a model throws/cancels.
         cached.valid = false; cached.hash = key; cached.position = b;
-        cached.value = std::isfinite(evaluation.value) ? std::clamp(evaluation.value, -1.f, 1.f) : 0.f;
+        cached.value = std::isfinite(evaluation.value) ? std::clamp(evaluation.value, -1.f, 1.f)
+                                                       : 0.f;
         float maximum = -std::numeric_limits<float>::infinity();
         for (int m = 0; m <= Pass; ++m)
-            if (legal[m] && std::isfinite(evaluation.logits[m])) maximum = std::max(maximum, evaluation.logits[m]);
+            if (legal[m] && std::isfinite(evaluation.logits[m]))
+                maximum = std::max(maximum, evaluation.logits[m]);
         double sum = 0;
         for (int m = 0; m <= Pass; ++m) {
             float weight = 0;
             if (legal[m]) {
-                weight = std::isfinite(maximum) ? (std::isfinite(evaluation.logits[m]) ?
-                    std::exp(std::max(-80.f, evaluation.logits[m] - maximum)) : 0.f) : 1.f;
+                weight = std::isfinite(maximum)
+                             ? (std::isfinite(evaluation.logits[m])
+                                    ? std::exp(std::max(-80.f, evaluation.logits[m] - maximum))
+                                    : 0.f)
+                             : 1.f;
                 // Tiny floor keeps every legal action searchable, including pass.
                 weight = std::max(weight, 1e-8f);
             }
@@ -419,13 +462,16 @@ class Engine {
         cached.valid = true;
         return cached;
     }
-    float expand(uint32_t index, const Board& b, const std::atomic_bool* cancel = nullptr) {
+    float expand(uint32_t index, const Board &b, const std::atomic_bool *cancel = nullptr,
+                 std::unique_lock<std::mutex> *treeLock = nullptr)
+    {
         if (b.terminal()) return b.terminalValue();
         const auto g = b.groups();
         auto legal = b.legalMoves(g);
-        auto& evaluation = evaluate(b, legal, g, cancel);
+        auto& evaluation = evaluate(b, legal, g, cancel, treeLock);
         nodes_[index].value = evaluation.value;
-        std::array<uint16_t, Points + 1> moves{}; int count = 0;
+        std::array<uint16_t, Points + 1> moves{};
+        int count = 0;
         for (int m = 0; m <= Pass; ++m) if (legal[m]) moves[count++] = uint16_t(m);
         if (edges_.size() + size_t(count) > maxEdges_) { memoryLimited_ = true; return evaluation.value; }
         std::sort(moves.begin(), moves.begin() + count, [&](int a, int c) {
@@ -434,7 +480,8 @@ class Engine {
         nodes_[index].first = uint32_t(edges_.size()); nodes_[index].count = uint16_t(count);
         for (int i = 0; i < count; ++i) {
             Edge e; e.move = moves[i];
-            e.prior = uint16_t(std::clamp(std::lround(evaluation.priors[e.move] * 65535.f), 1L, 65535L));
+            e.prior = uint16_t(
+                std::clamp(std::lround(evaluation.priors[e.move] * 65535.f), 1L, 65535L));
             edges_.push_back(e);
         }
         return evaluation.value;
@@ -445,28 +492,105 @@ class Engine {
         for (uint32_t i = node.first; i < node.first + node.count; ++i)
             if (visits(edges_[i])) visitedPrior += prior(edges_[i]);
         float fpu = std::max(-1.f, node.value - options_.fpuReduction * std::sqrt(visitedPrior));
-        float exploration = (options_.cpuct + std::log1p(float(node.visits) / 19652.f)) *
-                            std::sqrt(float(std::max(1u, node.visits)));
-        uint32_t best = node.first; float score = -std::numeric_limits<float>::infinity();
+        float exploration = (options_.cpuct + std::log1p(float(node.visits) / 19652.f))
+                            * std::sqrt(float(std::max(1u, node.visits + node.inFlight)));
+        uint32_t best = None;
+        float score = -std::numeric_limits<float>::infinity();
         for (uint32_t i = node.first; i < node.first + node.count; ++i) {
             const Edge& e = edges_[i];
-            auto n = visits(e);
-            float q = n ? qValue(e) : fpu;
+            if (e.child != None && nodes_[e.child].pending) continue;
+            auto n = effectiveVisits(e);
+            float q = visits(e) ? qValue(e) : fpu;
+            if (e.child != None && nodes_[e.child].inFlight)
+                q = (q * float(visits(e)) - float(nodes_[e.child].inFlight)) / float(n);
             float s = q + exploration * prior(e) / (1.f + float(n));
             if (s > score) { score = s; best = i; }
         }
         return best;
     }
+    void searchParallel(const Board& b, SearchResult& result, const std::atomic_bool* cancel,
+                        Clock::time_point deadline) {
+        std::mutex treeMutex;
+        std::exception_ptr failure;
+        std::atomic_bool abort{false};
+        uint32_t startedSimulations = 0;
+        auto worker = [&] {
+            std::vector<uint32_t> localParents;
+            localParents.reserve(options_.maxDepth);
+            while (!abort.load(std::memory_order_relaxed)) {
+                std::unique_lock<std::mutex> lock(treeMutex);
+                auto stop = [&] {
+                    const double margin = std::max(1., latencyMs_ * 1.2);
+                    return (cancel && cancel->load(std::memory_order_relaxed)) ||
+                        Clock::now() + std::chrono::duration<double, std::milli>(margin) >= deadline;
+                };
+                if (stop() || memoryLimited_ || startedSimulations >= options_.maxSimulations) break;
+                Board position = b; uint32_t node = root_; float value = 0;
+                localParents.clear(); bool busy = false;
+                for (int depth = 0; ; ++depth) {
+                    result.completedDepth = std::max(result.completedDepth, depth);
+                    if (position.terminal()) { value = position.terminalValue(); break; }
+                    if (nodes_[node].pending) { busy = true; break; }
+                    if (depth >= options_.maxDepth || nodes_[node].first == None) break;
+                    const uint32_t edge = select(node);
+                    if (edge == None) { busy = true; break; }
+                    if (edges_[edge].child == None) {
+                        if (nodes_.size() >= maxNodes_) { memoryLimited_ = true; busy = true; break; }
+                        edges_[edge].child = uint32_t(nodes_.size()); nodes_.push_back(Node{});
+                    }
+                    localParents.push_back(node);
+                    position.playKnownLegal(edges_[edge].move); node = edges_[edge].child;
+                }
+                if (busy) { lock.unlock(); std::this_thread::sleep_for(std::chrono::microseconds(100)); continue; }
+                if (stop()) break;
+                ++startedSimulations;
+                for (auto parent : localParents) ++nodes_[parent].inFlight;
+                ++nodes_[node].inFlight;
+                const bool needsEvaluation = !position.terminal() && nodes_[node].first == None;
+                if (needsEvaluation) nodes_[node].pending = true;
+                try {
+                    if (needsEvaluation) {
+                        if (localParents.size() >= size_t(options_.maxDepth)) {
+                            const auto g = position.groups();
+                            value = evaluate(position, position.legalMoves(g), g, cancel, &lock).value;
+                            nodes_[node].value = value;
+                        } else value = expand(node, position, cancel, &lock);
+                    } else if (!position.terminal()) value = nodes_[node].value;
+                    nodes_[node].pending = false; --nodes_[node].inFlight;
+                    ++nodes_[node].visits; nodes_[node].sum += value;
+                    for (size_t i = localParents.size(); i > 0; --i) {
+                        value = -value;
+                        auto& parent = nodes_[localParents[i-1]];
+                        --parent.inFlight; ++parent.visits; parent.sum += value;
+                    }
+                    ++result.simulations;
+                } catch (...) {
+                    nodes_[node].pending = false; --nodes_[node].inFlight;
+                    for (auto parent : localParents) --nodes_[parent].inFlight;
+                    if (!failure) failure = std::current_exception();
+                    abort.store(true, std::memory_order_relaxed);
+                }
+            }
+        };
+        std::vector<std::thread> workers;
+        try {
+            for (int i = 1; i < options_.searchThreads; ++i) workers.emplace_back(worker);
+            worker();
+        } catch (...) { abort.store(true); for (auto& t : workers) t.join(); throw; }
+        for (auto& t : workers) t.join();
+        if (failure) std::rethrow_exception(failure);
+    }
 public:
     explicit Engine(Evaluator& evaluator, SearchOptions options = {}) : evaluator_(evaluator), options_(options) {
-        if (options.timeMs < 0 || options.maxDepth < 1 || options.maxDepth > 4096 ||
-            options.memoryMB < 4 || options.memoryMB > 4096 ||
-            !std::isfinite(options.cpuct) || options.cpuct <= 0 ||
-            !std::isfinite(options.fpuReduction) || options.fpuReduction < 0)
+        if (options.searchThreads < 1 || options.searchThreads > 16
+            || options.timeMs < 0 || options.maxDepth < 1 || options.maxDepth > 4096
+            || options.memoryMB < 4 || options.memoryMB > 4096 || !std::isfinite(options.cpuct)
+            || options.cpuct <= 0 || !std::isfinite(options.fpuReduction)
+            || options.fpuReduction < 0)
             throw std::invalid_argument("Invalid search options");
         const size_t bytes = options.memoryMB * size_t(1024 * 1024);
         // Leave headroom for scalar objects and the fixed Board/Groups work arrays.
-        const size_t workspace = size_t(options.maxDepth) * 2 * sizeof(uint32_t) + 64 * 1024;
+        const size_t workspace = size_t(options.maxDepth) * 2 * sizeof(uint32_t) * size_t(options.searchThreads + 1) + 64 * 1024;
         cache_.resize(std::max(size_t(1), (bytes - workspace) / 4 / sizeof(CacheEntry)));
         const size_t treeBytes = bytes - workspace - cache_.capacity() * sizeof(CacheEntry);
         // remap/order permit compaction without another arena or a RAM spike.
@@ -498,14 +622,17 @@ public:
         }
         return true;
     }
-    SearchResult search(const Board& b, const std::atomic_bool* cancel = nullptr,
-                        Clock::time_point deadline = Clock::time_point::max()) {
+    SearchResult search(const Board &b,
+                        const std::atomic_bool *cancel = nullptr,
+                        Clock::time_point deadline = Clock::time_point::max())
+    {
         const auto started = Clock::now();
         deadline = std::min(deadline, started + std::chrono::milliseconds(options_.timeMs));
         auto cancelled = [&] { return cancel && cancel->load(std::memory_order_relaxed); };
         auto stop = [&] {
             double margin = std::max(1.0, latencyMs_ * 1.2);
-            return cancelled() || Clock::now() + std::chrono::duration<double, std::milli>(margin) >= deadline;
+            return cancelled()
+                   || Clock::now() + std::chrono::duration<double, std::milli>(margin) >= deadline;
         };
         if (!initialized_ || !board_.same(b)) resetTree(b);
         else if (root_ != 0 && (memoryLimited_ || edges_.size() > maxEdges_ * 3 / 4 || nodes_.size() > maxNodes_ * 3 / 4))
@@ -518,7 +645,8 @@ public:
             auto legal = b.legalMoves();
             for (int m = 0; m <= Pass; ++m) if (legal[m]) { result.move = m; break; }
             if (!stop() && nodes_[root_].first == None) expand(root_, b, cancel);
-            while (!stop() && !memoryLimited_ && result.simulations < options_.maxSimulations) {
+            if (options_.searchThreads > 1) searchParallel(b, result, cancel, deadline);
+            else while (!stop() && !memoryLimited_ && result.simulations < options_.maxSimulations) {
                 Board position = b; uint32_t node = root_; float value = 0;
                 path.clear(); parents.clear(); bool incomplete = false;
                 for (int depth = 0; ; ++depth) {
@@ -583,7 +711,7 @@ public:
 struct HardAI::Impl {
     struct Adapter final : HardMCTS::Evaluator {
         std::shared_ptr<HardAI::Evaluator> model;
-        const std::atomic_bool* cancel = nullptr;
+        const std::atomic_bool *cancel = nullptr;
         HardMCTS::HeuristicEvaluator heuristic;
         HardMCTS::Evaluation evaluate(const HardMCTS::Board& b, const HardMCTS::Legal& legal, const HardMCTS::Groups& g) override {
             if (!model) return heuristic.evaluate(b, legal, g);
@@ -592,7 +720,7 @@ struct HardAI::Impl {
                 p.cells[m] = int(b.cells[HardMCTS::padded(m)]) - 1;
             p.currentPlayer = b.turn - 1; p.koPoint = b.ko < 0 ? -1 : HardMCTS::unpadded(b.ko);
             p.consecutivePasses = b.passes; p.komi = b.komi;
-            p.capturedStones = b.capturedStones; p.moveCount = b.moveCount;
+            p.capturedStones = b.capturedStones; p.moveCount = b.moveCount; p.history = b.history;
             auto result = model->evaluate(p, legal, cancel);
             return {result.policyLogits, result.value};
         }
@@ -601,20 +729,28 @@ struct HardAI::Impl {
     std::unique_ptr<HardMCTS::Engine> engine;
 };
 
-HardAI::HardAI(HardSearchOptions options) : m_options(options), m_impl(std::make_shared<Impl>()) {
-    if (options.timeBudgetMs < 0 || options.memoryMB < 4 || options.memoryMB > 4096 ||
-        options.maxDepth < 1 || options.maxDepth > 4096 || !std::isfinite(options.cpuct) ||
-        options.cpuct <= 0 || !std::isfinite(options.fpuReduction) || options.fpuReduction < 0)
+HardAI::HardAI(HardSearchOptions options)
+    : m_options(options)
+    , m_impl(std::make_shared<Impl>())
+{
+    if (options.searchThreads < 1 || options.searchThreads > 16
+        || options.timeBudgetMs < 0 || options.memoryMB < 4 || options.memoryMB > 4096
+        || options.maxDepth < 1 || options.maxDepth > 4096 || !std::isfinite(options.cpuct)
+        || options.cpuct <= 0 || !std::isfinite(options.fpuReduction) || options.fpuReduction < 0)
         throw std::invalid_argument("Invalid HardAI search options");
 }
-void HardAI::setEvaluator(std::shared_ptr<Evaluator> evaluator) {
-    auto next = std::make_shared<Impl>(); next->adapter.model = std::move(evaluator); m_impl = std::move(next);
+void HardAI::setEvaluator(std::shared_ptr<Evaluator> evaluator)
+{
+    auto next = std::make_shared<Impl>();
+    next->adapter.model = std::move(evaluator);
+    m_impl = std::move(next);
 }
 void HardAI::reset() { setEvaluator(m_impl->adapter.model); }
 QString HardAI::backendName() const {
     return m_impl->adapter.model ? m_impl->adapter.model->name() : QStringLiteral("PUCT heuristic");
 }
-std::array<float, 5 * GoMatch::Count> HardAI::inputPlanes(const Position& p, const LegalMask& legal) {
+std::array<float, 5 * GoMatch::Count> HardAI::inputPlanes(const Position &p, const LegalMask &legal)
+{
     std::array<float, 5 * GoMatch::Count> planes{};
     for (int m = 0; m < GoMatch::Count; ++m) {
         planes[m] = float(p.cells[m] == p.currentPlayer);
@@ -625,12 +761,16 @@ std::array<float, 5 * GoMatch::Count> HardAI::inputPlanes(const Position& p, con
     }
     return planes;
 }
-SearchResult HardAI::chooseMove(const GoMatch& current, const std::shared_ptr<std::atomic_bool>& token) const {
+SearchResult HardAI::chooseMove(const GoMatch &current,
+                                const std::shared_ptr<std::atomic_bool> &token) const
+{
     const auto started = std::chrono::steady_clock::now();
     const auto deadline = started + std::chrono::milliseconds(m_options.timeBudgetMs);
     SearchResult out;
     const auto finish = [&] {
-        out.elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        out.elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - started)
+                            .count();
         return out;
     };
     const auto cancelled = [&] { return token && token->load(std::memory_order_relaxed); };
@@ -654,9 +794,24 @@ SearchResult HardAI::chooseMove(const GoMatch& current, const std::shared_ptr<st
         board.passes = current.consecutivePasses;
         board.moveCount = current.moveCount;
         board.capturedStones = current.capturedStones;
+        if (state->adapter.model) {
+            auto setup = std::make_shared<GoMatch::Replay>(current.replay());
+            const auto moves = std::move(setup->moves); setup->moves.clear();
+            auto initial = std::make_shared<History>(); initial->setup = setup;
+            uint64_t hash = 0x6a09e667f3bcc909ULL;
+            for (int c : setup->initialCells) hash = HardMCTS::mix64(hash ^ uint64_t(c + 2));
+            hash ^= HardMCTS::mix64(uint64_t(setup->initialMoveCount));
+            initial->hash = hash; board.history = initial;
+            for (const auto& m : moves) {
+                auto next = std::make_shared<History>(); next->parent = board.history; next->setup = setup;
+                next->player = m.player; next->point = m.point;
+                next->hash = HardMCTS::mix64(board.history->hash ^ uint64_t((m.point + 1)*3 + m.player + 1));
+                board.history = next;
+            }
+        }
         if (!state->engine) {
             HardMCTS::SearchOptions options;
-            options.timeMs = m_options.timeBudgetMs;
+            options.timeMs = m_options.timeBudgetMs; options.searchThreads = m_options.searchThreads;
             options.memoryMB = size_t(m_options.memoryMB);
             options.maxDepth = m_options.maxDepth;
             options.maxSimulations = m_options.maxSimulations;
@@ -694,7 +849,7 @@ SearchResult HardAI::chooseMove(const GoMatch& current, const std::shared_ptr<st
         // Keep own reply as the root; the next request may supply an opponent
         // move. Incompatible/new positions are always rebuilt by search().
         if (!out.cancelled) state->engine->advance(result.move);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         state->adapter.cancel = nullptr;
         if (cancelled()) out.cancelled = true;
         else { out.error = QString::fromUtf8(e.what()); out.stopReason = QStringLiteral("HardAI backend error"); }

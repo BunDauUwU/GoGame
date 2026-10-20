@@ -2,9 +2,11 @@
 
 `HardAI.h/.cpp` là class C++17 độc lập với giao diện, dùng PUCT/FPU dựa trên MCTS đã cung cấp. Bàn được cố định nhất quán 19×19; `Size=10` trong bản nháp không khớp 361 giao điểm và có thể làm truy cập sai biên. Các type chung của Medium/Hard nằm ở `SearchTypes.h`, không khai báo trùng `SearchOptions`/`SearchResult`.
 
+Đường dẫn source và lệnh tính từ thư mục gốc dự án. Các kết quả/lệnh test ngày 19/10/2026 là lịch sử: thư mục `tests/` hiện không còn trong cây nguồn. Để build hiện tại dùng `-DBUILD_TESTING=OFF` theo [README](../../README.md).
+
 ## Luồng chạy trong game
 
-Chọn **Play against AI → Hard**. `GameManager::startHardGame()` khởi tạo ván; worker nhận snapshot `GoMatch` và bản sao engine. Kết quả chỉ được áp trên GUI nếu generation còn đúng và ván chưa thay đổi. Undo, load, chuyển Sandbox hoặc thoát sẽ hủy request cũ. Có một search worker, mặc định 1800 ms, arena/cache 64 MiB. Ngân sách thời gian mềm; evaluator đồng bộ phải hỗ trợ cancellation/timeout riêng để tránh treo khi nạp hoặc suy luận model.
+Chọn **Play against AI → Hard**. `GameManager::startHardGame()` khởi tạo ván; worker nhận snapshot `GoMatch` và bản sao engine. Kết quả chỉ được áp trên GUI nếu generation còn đúng và ván chưa thay đổi. Undo, load, chuyển Sandbox hoặc thoát sẽ hủy request cũ. Có một tác vụ Qt quản lý mỗi lượt; bên trong Hard có thể dùng nhiều worker MCTS. Mặc định class là một worker, 1800 ms, arena/cache 64 MiB; launcher KataGo dùng bốn worker. Trọng số model và journal lịch sử nằm ngoài ngân sách arena này. Ngân sách thời gian mềm; evaluator đồng bộ phải hỗ trợ cancellation/timeout riêng để tránh treo khi nạp hoặc suy luận model.
 
 `GameManager.aiDifficulty`/snapshot phân biệt Medium/Hard; các save AI vẫn có 20 slot chung, nhưng `mode` lưu đúng độ khó và tải lại bằng đúng engine. Save Medium phiên bản 1 cũ vẫn đọc được. Các file đã có không được đổi tên hoặc di chuyển.
 
@@ -12,25 +14,9 @@ Sandbox có slot riêng `sandbox.json`, tách khỏi `ai-01.json`…`ai-20.json`
 
 ## Chỗ gắn model
 
-Mặc định Hard dùng heuristic, **chưa tự nạp model KataGo** và chưa có bằng chứng luôn mạnh hơn Medium. `HardAI::Evaluator` là ranh giới policy/value để gắn model mà không sửa selection/backup, luật hoặc UI:
+Đã có `KataGoEvaluator` chạy model `.bin.gz` bằng native backend của KataGo. Xem [hướng dẫn build/chạy và giới hạn](KATAGO_BACKEND.md). Không truyền model thì Hard vẫn dùng heuristic; chưa có bằng chứng đạt sức mạnh ngang engine KataGo.
 
-```cpp
-class MyKataGoEvaluator final : public HardAI::Evaluator {
-public:
-    // Load/own your persistent KataGo backend/session in this object.
-    HardAI::Evaluation evaluate(const HardAI::Position& position,
-                               const HardAI::LegalMask& legal,
-                               const std::atomic_bool* cancel) override;
-    QString name() const override { return QStringLiteral("KataGo policy/value"); }
-};
-
-// Before a game/request, e.g. while configuring GameManager:
-gameManager.setHardEvaluator(std::make_shared<MyKataGoEvaluator>());
-```
-
-`evaluate()` nhận mảng quân `-1` trống / `0` đen / `1` trắng, lượt, ko, số pass, quân bắt, số nước và komi. Nó trả 362 logits thô, index`row*19+col`, pass 361, và value trong [-1,1] theo **người đến lượt**. Nếu backend trả xác suất thì đổi thành`log(max(p,1e-30))`; nếu trả value theo trắng/đen cố định phải đổi dấu đúng lượt. Cache được kiểm chứng cả trạng thái/capture counts/move count; thay evaluator tạo cache mới. Evaluator được gọi trong worker và không chạm QObject/QML ở GUI. Nó cần kiểm tra token cancellation trong tác vụ dài. Lỗi evaluator trả về`SearchResult.error` và thông báo lỗi, không âm thầm áp một nước pass.
-
-Các trọng số KataGo`.bin.gz` có kiến trúc/features riêng, **không thể đọc trực tiếp bằng model ONNX 5 planes của GoNet**. Cần backend KataGo phù hợp hoặc adapter inference của KataGo để triển khai phương thức trên; ví dụ không phải một bộ nạp`.bin.gz` đã hoàn chỉnh. `HardAI::inputPlanes()` chỉ hỗ trợ hợp đồng GoNet 5 planes đã dùng trong huấn luyện, không phải feature encoder của KataGo. Không dùng GTP`genmove` làm một value/prior vì lệnh đó đã tự tìm kiếm; backend policy/value phải trả đánh giá của thế cờ.
+`HardAI::Evaluator` trả policy/value theo người đang đi. `Position::history` chứa setup và journal các nước thật/giả lập; evaluator phải an toàn khi gọi đồng thời nếu `searchThreads > 1`. `HardAI::inputPlanes()` chỉ dành cho GoNet 5 planes, không phải feature encoder của KataGo.
 
 ## Vì sao nhẹ và các đánh đổi
 
@@ -79,7 +65,7 @@ Các hệ số này là heuristic theo yêu cầu, chưa có benchmark chứng m
 
 `mix64` giữ phép trộn SplitMix64 trong code đính kèm. Nó dùng để sinh khóa Zobrist cho `(vị trí padded, màu)` và trộn metadata với salt riêng; không cấp phát bộ sinh số ngẫu nhiên ở mỗi nước. Khi đặt/bắt quân, `stonesHash` được XOR tăng dần. Đây là phép ánh xạ xác định để phân bố khóa, không phải RNG mật mã và không bảo đảm hết collision.
 
-Cache kiểm tra cả hash **và** `Board::same`: toàn bộ `cells`, lượt, ko, pass, komi, quân bắt và moveCount. Hai thế cờ cùng hình quân nhưng khác các metadata này không được dùng lẫn. Cache dùng bảng direct-mapped có dung lượng cố định: collision đè một entry cũ sau khi đánh giá mới thành công. Nó chỉ chia sẻ policy/value, không gộp visits của các nhánh khác nhau. Kết quả evaluator bị hủy không được ghi vào cache. Thay model/reset tạo backend/cache riêng; worker đã chạy giữ backend cũ đến khi kết thúc.
+Cache kiểm tra cả hash **và** `Board::same`: toàn bộ `cells`, lượt, ko, pass, komi, quân bắt, moveCount và lịch sử khi có model. Hai thế cờ cùng hình quân nhưng khác các metadata này không được dùng lẫn. Cache dùng bảng direct-mapped có dung lượng cố định: collision đè một entry cũ sau khi đánh giá mới thành công. Nó chỉ chia sẻ policy/value, không gộp visits của các nhánh khác nhau. Kết quả evaluator bị hủy không được ghi vào cache. Thay model/reset tạo backend/cache riêng; worker đã chạy giữ backend cũ đến khi kết thúc.
 
 Hard dùng `Board` padded 21×21, biên sentinel, `Groups`/queue/visited/legal mask là mảng cố định riêng. Mỗi group đếm một giao điểm khí chung đúng một lần. `Groups` tính một lần ở expansion và truyền lại cho heuristic, tránh BFS hai lần. Hiện dùng flood-fill mảng, **không thêm DSU cho có**: chưa có benchmark cho thấy giữ DSU tăng dần với việc copy board/capture sẽ tốt hơn. Chỉ `GoMatch` tại biên API cung cấp snapshot/kiểm chứng; selection/di chuyển trong cây/scorer của Hard không gọi luật hoặc nhóm của class đó.
 
@@ -93,13 +79,13 @@ Khi arena gần đầy, engine bỏ sibling không còn liên quan và **compact
 
 Ngân sách `memoryMB` gồm capacity của nodes, edges, cache, path/parents và workspace compact; chừa 64 KiB cho fixed work arrays/đối tượng phụ. Không phải giới hạn RSS của cả ứng dụng: chưa tính UI, lịch sử undo, allocator metadata, stack worker của hệ điều hành hoặc trọng số/workspace của model. Khi gắn KataGo cần cấu hình thêm RAM/cache/thread của backend đó. `allocatedBytes` báo heap search đã reserve; không báo toàn bộ RSS.
 
-Deadline tính từ đầu `chooseMove`, gồm chờ mutex, chuẩn bị board, cấp phát và tìm kiếm; không cấp lại toàn bộ 1800 ms sau mỗi bước. Một evaluator đồng bộ không hợp tác vẫn có thể vượt deadline, nên đây là ngân sách mềm. Token hủy được kiểm tra trong search và sau evaluate. Giới hạn worker của game là một; Hard không mở pool riêng. Mặc định: 1800 ms, 64 MiB, depth tối đa 256, 100000 simulation tối đa; dừng theo giới hạn chạm trước.
+Deadline tính từ đầu `chooseMove`, gồm chờ mutex, chuẩn bị board, cấp phát và tìm kiếm; không cấp lại toàn bộ 1800 ms sau mỗi bước. Một evaluator đồng bộ không hợp tác vẫn có thể vượt deadline, nên đây là ngân sách mềm. Token hủy được kiểm tra trong search và sau evaluate. Có một tác vụ Qt điều phối mỗi lượt; Hard mặc định một search worker, còn launcher KataGo cấu hình nhiều worker MCTS bên trong (mặc định bốn). Mặc định: 1800 ms, 64 MiB, depth tối đa 256, 100000 simulation tối đa; dừng theo giới hạn chạm trước.
 
 Các số debug trong `snapshot.aiSearch`: `nodes` (simulations hoàn tất của lượt này), `completedDepth`, `elapsedMs`, `evaluations`, `cacheHits`, `rootVisits`, `reusedVisits`, `allocatedBytes`, `memoryLimited`. `reusedVisits` là visits đã có ở root đầu search, không phải một cam kết rằng mọi lượt đều tái sử dụng được.
 
-## Tích hợp KataGo sau này
+## Hợp đồng tích hợp KataGo
 
-Giữ session/model sống trong `HardAI::Evaluator`, tải trước lúc bắt đầu search; tuân thủ contract logits/value và cancellation. Model cần lịch sử phải mở rộng contract và cache identity tương ứng. API phân tích của KataGo cũng phân biệt moves/history với initialStones; không nên bịa lại lịch sử từ một snapshot: [KataGo Analysis Engine](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md). Hook hiện tại là điểm mở rộng C++, chưa phải triển khai inference KataGo và không tự tải trọng số từ mạng.
+Giữ session/model sống trong `HardAI::Evaluator`, tải trước lúc bắt đầu search; tuân thủ contract logits/value và cancellation. Model cần lịch sử phải mở rộng contract và cache identity tương ứng. API phân tích của KataGo cũng phân biệt moves/history với initialStones; không nên bịa lại lịch sử từ một snapshot: [KataGo Analysis Engine](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md). Hook là điểm mở rộng C++; inference native hiện có trong `KataGoEvaluator` theo [KATAGO_BACKEND.md](KATAGO_BACKEND.md). Hook không tự tải trọng số từ mạng.
 
 ### Kết quả kiểm tra ngày 19/10/2026
 

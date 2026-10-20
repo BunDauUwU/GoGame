@@ -1,5 +1,7 @@
 # Tự triển khai AI client: Minimax, Alpha-Beta, MCTS và mạng 6B
 
+Tất cả đường dẫn source và lệnh trong tài liệu tính từ thư mục gốc dự án, dù tài liệu nằm trong `docs/ai/`. Đây là hướng dẫn thiết kế/huấn luyện ban đầu. Runtime hiện đã có EasyAI, MediumAI và HardAI (MCTS/PUCT/FPU), cùng [backend KataGo native](KATAGO_BACKEND.md); phần hướng dẫn ONNX bên dưới là hướng mở rộng, chưa phải backend ONNX đã tích hợp.
+
 ## Các phần đã có
 
 ```text
@@ -15,7 +17,7 @@ src/
 
 AI chạy hoàn toàn ở client. Server chỉ xử lý luật, đồng hồ và multiplayer, không tìm nước AI hoặc huấn luyện. AI, DataManager và GoMatch được khai báo trực tiếp trong `CMakeLists.txt` gốc, biên dịch vào target client `appGoGame`; không có CMake con hoặc library riêng cho ba phần này. Client link Qt Concurrent để chạy AI. Server có `server/CMakeLists.txt` riêng, biên dịch source GoMatch dùng chung và chỉ dùng Qt Core/Network/WebSockets.
 
-Baseline Medium được giữ để ứng dụng tiếp tục chạy. MCTS và suy luận ONNX **chưa được nối vào runtime**: tài liệu này dành cho bạn tự triển khai. File trainAI tạo được kiến trúc/training pipeline khi cài dependencies; chưa có trọng số được huấn luyện đi kèm.
+Baseline Medium được giữ để ứng dụng tiếp tục chạy. MCTS đã được nối vào runtime qua HardAI; suy luận ONNX trong phần hướng dẫn này **chưa được nối vào runtime**. Inference KataGo native là tích hợp riêng, không dùng ONNX. File trainAI tạo được kiến trúc/training pipeline khi cài dependencies; chưa có trọng số được huấn luyện đi kèm.
 
 Khi sửa các file AI, giữ tên class, hàm và API hiện có. Mã tìm kiếm giữ cách đặt tên cũ: `calc`, `val`, `res`, `cur`, `nxt`, `m_engine`, `Candidate::priorty`, cùng `u`/`v` cho danh sách và ứng viên ở gốc. Các file điều phối và training giữ tên riêng đang có của chúng.
 
@@ -56,7 +58,7 @@ Hàm đánh giá dùng điểm đất cuối ván theo luật Nhật, tù binh, 
 
 `stableIterations = 3`, `minimumStopDepth = 3`, `improvementEpsilon = 0.05` điều khiển dừng sớm. Chỉ dừng khi lựa chọn giữ nguyên đủ số vòng và lợi ích so với Pass không cải thiện ở cả hai chuỗi độ sâu chẵn/lẻ. So sánh cùng chẵn/lẻ giảm ảnh hưởng dao động do lượt đối phương. Đặt `stableIterations = 0` để tắt. Dừng sớm vẫn là heuristic, có thể bỏ lỡ nước tốt ở độ sâu tiếp theo.
 
-Giữ quyết định của độ sâu hoàn tất gần nhất, bỏ toàn bộ vòng đang tính khi hết giờ; không lấy điểm cao nhất của một độ sâu nông làm kết quả vì nó có thể chưa xét được phản công. `SearchResult.stopReason` cho biết `stable-or-declining`, `time-budget`, `max-depth`, `cancelled` hoặc `terminal`. Callback công bố số đo trong `GameManager.snapshot.aiSearch`. Runtime hiện là Minimax/Alpha-Beta; cơ chế này chưa phải MCTS.
+Giữ quyết định của độ sâu hoàn tất gần nhất, bỏ toàn bộ vòng đang tính khi hết giờ; không lấy điểm cao nhất của một độ sâu nông làm kết quả vì nó có thể chưa xét được phản công. `SearchResult.stopReason` cho biết `stable-or-declining`, `time-budget`, `max-depth`, `cancelled` hoặc `terminal`. Callback công bố số đo trong `GameManager.snapshot.aiSearch`. Runtime của Medium là Minimax/Alpha-Beta; cơ chế dừng sớm của Medium này chưa phải MCTS.
 
 ## Alpha-Beta Pruning
 
