@@ -56,7 +56,7 @@ Client có biến môi trường `GOGAME_SERVER_URL`. Khi chạy client có th�
 GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/Desktop_Debug/appGoGame
 ```
 
-Client tự kết nối lúc khởi động, mặc định dùng `ws://127.0.0.1:14509`. Màn hình đăng nhập hiển thị trạng thái/lỗi và có nút kết nối lại. Cần gửi `ReadData`/`WriteData` khi tích hợp đồng bộ dữ liệu. Server hỗ trợ AuthRequest dạng guest và MatchmakingStart/MatchmakingCancel. Đăng nhập bằng mật khẩu ở UI chưa được tích hợp với giao thức guest này.
+Client tự kết nối lúc khởi động, mặc định dùng `ws://127.0.0.1:14509`. Màn hình đăng nhập hiển thị trạng thái/lỗi và có nút kết nối lại. `ReadData`/`WriteData` phục vụ API file JSON riêng; trận online dùng command/snapshot. Server hỗ trợ AuthRequest dạng guest và MatchmakingStart/MatchmakingCancel. Đăng nhập bằng mật khẩu ở UI chưa được tích hợp với giao thức guest này.
 
 ## Class Server
 
@@ -119,7 +119,7 @@ Server phát `GameEvent` với `StonePlayed`, `Passed` hoặc `GameEnded`, và `
 - `serverTimeEpochMs`, `actionDeadlineEpochMs`: mốc đồng bộ hiển thị; deadline là ranh giới thời gian chính/period hiện tại của người đang đi, không phải hạn 30 giây mỗi nước.
 - `winnerIndex`, `endReason`: -1/chuỗi rỗng khi chơi, kết quả khi kết thúc. Clock cuối đóng băng, deadline cuối bằng 0.
 
-Server dùng monotonic time để thực thi clock, epoch chỉ để UI hiển thị. Không gửi snapshot mỗi giây; client tự cập nhật countdown giữa các snapshot. Không có trường round/weather/character/card vì game là cờ vây. Xem [README gốc](../README.md) để biết sơ đồ tương tác, schema và các bước còn thiếu ở client.
+Server dùng monotonic time để thực thi clock, epoch chỉ để UI hiển thị. Không gửi snapshot mỗi giây; client tự cập nhật countdown giữa các snapshot. Không có trường round/weather/character/card vì game là cờ vây. Xem [kiến trúc và schema](ARCHITECTURE.md) để biết sơ đồ tương tác và [kế hoạch](ROADMAP.md) cho các việc còn lại.
 
 ## Chơi hai người trên máy local
 
@@ -157,19 +157,21 @@ Snapshot bổ sung `clocks[0/1]`: `mainRemainingMs`, `periodRemainingMs`, `perio
 
 ## Cleanup và thống kê source (13/10/2026)
 
+Đây là số liệu lịch sử. Hiện `scripts/server_stats.py` và các test được nhắc đến không còn trong cây nguồn; không chạy lệnh tái đếm bên dưới như hướng dẫn hiện hành.
+
 Bỏ API `Server::stop`/`address` không có caller và selection timeout cũ; destructor tiếp tục quản lý việc đóng socket/timer. Bỏ QML server và bản test cũ; giữ GoMatch, ByoYomiClock, snapshot và đủ bốn test đang chạy. Protocol matchmaking của client chỉ gửi mode; không còn trường deckId. Helper Play nhận matchId/row/col.
 
-Runtime server hiện **841 dòng / 28.126 ký tự**; gồm bốn test và CMake là **1.277 dòng / 51.924 ký tự**. Đây là tổng source hiện tại (gồm comment/khoảng trắng), không xác định riêng phần người/AI gõ. Dùng `python3 scripts/server_stats.py` từ thư mục gốc để đo lại. Chi tiết cleanup, phương pháp và từng file tại [README gốc](../README.md).
+Số đo ngày 13/10/2026: runtime server **841 dòng / 28.126 ký tự**; gồm bốn test và CMake là **1.277 dòng / 51.924 ký tự**. Đây là tổng source tại thời điểm đo (gồm comment/khoảng trắng), không xác định riêng phần người/AI gõ. Lệnh tái đếm khi đó là `python3 scripts/server_stats.py`; script hiện không còn. Chi tiết cleanup, phương pháp và từng file tại [nhật ký kỹ thuật](CHANGELOG.md).
 
 ## DSU và thông báo trận
 
 GoMatch sử dụng DSU nhóm quân, bitset khí, cache position bất biến và DSU vùng trống để tính đất. Snapshot thêm `position` (board, previousBoard, simple ko, captures, lượt/số nước) và `scoring` (rules, blackTerritory, whiteTerritory, blackPrisoners, whitePrisoners, blackPoints, whitePoints, komi, provisional, difference). GameEvent StonePlayed bổ sung `captured`, `koPoint`, `koThreat`; GameEnded sau hai pass bổ sung `scoring`. Client hiển thị thông báo ăn quân, ko và kết quả điểm Nhật tạm tính. `koThreat` nhận diện phản ứng sau ko khiến một nhóm đối thủ vừa vào atari; chưa phải phân tích đầy đủ mọi đe dọa ko.
 
-Sandbox và lưu/undo/redo ván AI nằm ở client, không cho phép undo/redo trận online. Xem [tài liệu AI](../src/AI/README.md).
+Sandbox và lưu/undo/redo ván AI nằm ở client, không cho phép undo/redo trận online. Xem [tài liệu AI](ai/IMPLEMENTATION_GUIDE.md).
 
 ## Ranh giới build server/client
 
-Luật chung đặt tại `src/Rules/GoMatch.*`; server biên dịch source luật trực tiếp và chỉ link Qt Core/Network/WebSockets. Standalone server không build AI, DataManager hoặc Qt Concurrent. CMake gốc biên dịch AI, DataManager và luật trực tiếp vào client; chỉ server có CMake riêng. Các file test và cấu hình CTest đã được xóa. `DataManager` thuộc client và giữ Save/Load JSON; huấn luyện SGF và hướng dẫn thuật toán ở `src/AI/IMPLEMENTATION_GUIDE.md`.
+Luật chung đặt tại `src/Rules/GoMatch.*`; server biên dịch source luật trực tiếp và chỉ link Qt Core/Network/WebSockets. Standalone server không build AI, DataManager hoặc Qt Concurrent. CMake gốc biên dịch AI, DataManager và luật trực tiếp vào client; chỉ server có CMake riêng. Các file test hiện không còn, nhưng CMake gốc vẫn tham chiếu `tests/` khi bật `BUILD_TESTING`; dùng `-DBUILD_TESTING=OFF` cho build client hiện tại. `DataManager` thuộc client và giữ Save/Load JSON; huấn luyện SGF và thuật toán xem [hướng dẫn AI](ai/IMPLEMENTATION_GUIDE.md).
 
 PlayerPanel hiển thị Current points từ scoring theo đúng màu của từng người. Công thức đất + quân bắt và komi dựa trên [quy tắc Nhật của Nihon Ki-in](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm). Điểm hiện tại tạm tính, chưa có bước hai bên xác nhận quân chết/seki.
 

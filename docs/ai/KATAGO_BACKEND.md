@@ -2,6 +2,8 @@
 
 `KataGoEvaluator` dùng bộ tạo features và `NNEvaluator` C++ chính thức của KataGo để đọc model `.bin.gz`. Chỉ liên kết phần inference/rules của KataGo; không liên kết `Search`, GTP hoặc Analysis engine. Selection, PUCT/FPU, backup, chọn nước và tái sử dụng cây vẫn thuộc `HardAI`.
 
+Mọi lệnh/đường dẫn bên dưới tính từ thư mục gốc dự án. Script mở **client**, server online chạy riêng theo [README](../../README.md).
+
 ## Chạy trên máy hiện tại
 
 Từ thư mục GoGame:
@@ -26,7 +28,7 @@ Không truyền `--katago-model` thì bản game vẫn dùng heuristic cho Hard.
 
 ```bash
 cmake -S . -B build/katago-native -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
   -DGOGAME_ENABLE_KATAGO=ON -DGOGAME_KATAGO_BACKEND=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=89 \
   -DGOGAME_CUDNN_INCLUDE=/duong/dan/cudnn/include \
@@ -73,9 +75,11 @@ Deadline mềm 1800 ms chừa margin dựa trên latency suy luận; một forwa
 1. `nneval.cpp`: bọc lời gọi forward để đo thời gian và nghỉ theo duty **mỗi batch**, qua registry riêng của từng evaluator. Tất cả workers vẫn dùng chung một NN server.
 2. CUDA convolution: dùng heuristic chọn thuật toán của cuDNN thay giả định FP16 PRECOMP_GEMM; đặt đúng `mathType` tương ứng trước khi hỏi workspace và chạy convolution. Cần thiết với bộ thư viện trên máy này; trước khi sửa cả model nhỏ và transformer đều báo `CUDNN_STATUS_NOT_SUPPORTED`.
 
-Giữ bật các tối ưu có sẵn trong backend như FP16 khi hỗ trợ, QKV gộp và tensor-core attention; không bật kernel CUTLASS tùy chọn trong bản tích hợp này. Giấy phép upstream được kèm ở `KATAGO_LICENSE.txt`; các dependency có giấy phép trong nguồn tải về.
+Giữ bật các tối ưu có sẵn trong backend như FP16 khi hỗ trợ, QKV gộp và tensor-core attention; không bật kernel CUTLASS tùy chọn trong bản tích hợp này. Giấy phép upstream được kèm ở `src/AI/KATAGO_LICENSE.txt`; các dependency có giấy phép trong nguồn tải về.
 
-## Kiểm tra
+## Kiểm tra đã ghi trước khi tách tài liệu
+
+Các lệnh/kết quả test dưới đây là ghi chép lịch sử. Thư mục `tests/` hiện không còn trong cây nguồn; các target kiểm thử này không được tạo bằng lệnh build hiện tại ở trên. Chưa chạy lại build/test trong lần chuyển tài liệu ngày 20/10/2026.
 
 ```bash
 ctest --test-dir build/katago-native --output-on-failure

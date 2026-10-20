@@ -2,6 +2,8 @@
 
 `HardAI.h/.cpp` là class C++17 độc lập với giao diện, dùng PUCT/FPU dựa trên MCTS đã cung cấp. Bàn được cố định nhất quán 19×19; `Size=10` trong bản nháp không khớp 361 giao điểm và có thể làm truy cập sai biên. Các type chung của Medium/Hard nằm ở `SearchTypes.h`, không khai báo trùng `SearchOptions`/`SearchResult`.
 
+Đường dẫn source và lệnh tính từ thư mục gốc dự án. Các kết quả/lệnh test ngày 19/10/2026 là lịch sử: thư mục `tests/` hiện không còn trong cây nguồn. Để build hiện tại dùng `-DBUILD_TESTING=OFF` theo [README](../../README.md).
+
 ## Luồng chạy trong game
 
 Chọn **Play against AI → Hard**. `GameManager::startHardGame()` khởi tạo ván; worker nhận snapshot `GoMatch` và bản sao engine. Kết quả chỉ được áp trên GUI nếu generation còn đúng và ván chưa thay đổi. Undo, load, chuyển Sandbox hoặc thoát sẽ hủy request cũ. Có một tác vụ Qt quản lý mỗi lượt; bên trong Hard có thể dùng nhiều worker MCTS. Mặc định class là một worker, 1800 ms, arena/cache 64 MiB; launcher KataGo dùng bốn worker. Trọng số model và journal lịch sử nằm ngoài ngân sách arena này. Ngân sách thời gian mềm; evaluator đồng bộ phải hỗ trợ cancellation/timeout riêng để tránh treo khi nạp hoặc suy luận model.
@@ -77,13 +79,13 @@ Khi arena gần đầy, engine bỏ sibling không còn liên quan và **compact
 
 Ngân sách `memoryMB` gồm capacity của nodes, edges, cache, path/parents và workspace compact; chừa 64 KiB cho fixed work arrays/đối tượng phụ. Không phải giới hạn RSS của cả ứng dụng: chưa tính UI, lịch sử undo, allocator metadata, stack worker của hệ điều hành hoặc trọng số/workspace của model. Khi gắn KataGo cần cấu hình thêm RAM/cache/thread của backend đó. `allocatedBytes` báo heap search đã reserve; không báo toàn bộ RSS.
 
-Deadline tính từ đầu `chooseMove`, gồm chờ mutex, chuẩn bị board, cấp phát và tìm kiếm; không cấp lại toàn bộ 1800 ms sau mỗi bước. Một evaluator đồng bộ không hợp tác vẫn có thể vượt deadline, nên đây là ngân sách mềm. Token hủy được kiểm tra trong search và sau evaluate. Giới hạn worker của game là một; Hard không mở pool riêng. Mặc định: 1800 ms, 64 MiB, depth tối đa 256, 100000 simulation tối đa; dừng theo giới hạn chạm trước.
+Deadline tính từ đầu `chooseMove`, gồm chờ mutex, chuẩn bị board, cấp phát và tìm kiếm; không cấp lại toàn bộ 1800 ms sau mỗi bước. Một evaluator đồng bộ không hợp tác vẫn có thể vượt deadline, nên đây là ngân sách mềm. Token hủy được kiểm tra trong search và sau evaluate. Có một tác vụ Qt điều phối mỗi lượt; Hard mặc định một search worker, còn launcher KataGo cấu hình nhiều worker MCTS bên trong (mặc định bốn). Mặc định: 1800 ms, 64 MiB, depth tối đa 256, 100000 simulation tối đa; dừng theo giới hạn chạm trước.
 
 Các số debug trong `snapshot.aiSearch`: `nodes` (simulations hoàn tất của lượt này), `completedDepth`, `elapsedMs`, `evaluations`, `cacheHits`, `rootVisits`, `reusedVisits`, `allocatedBytes`, `memoryLimited`. `reusedVisits` là visits đã có ở root đầu search, không phải một cam kết rằng mọi lượt đều tái sử dụng được.
 
-## Tích hợp KataGo sau này
+## Hợp đồng tích hợp KataGo
 
-Giữ session/model sống trong `HardAI::Evaluator`, tải trước lúc bắt đầu search; tuân thủ contract logits/value và cancellation. Model cần lịch sử phải mở rộng contract và cache identity tương ứng. API phân tích của KataGo cũng phân biệt moves/history với initialStones; không nên bịa lại lịch sử từ một snapshot: [KataGo Analysis Engine](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md). Hook hiện tại là điểm mở rộng C++, chưa phải triển khai inference KataGo và không tự tải trọng số từ mạng.
+Giữ session/model sống trong `HardAI::Evaluator`, tải trước lúc bắt đầu search; tuân thủ contract logits/value và cancellation. Model cần lịch sử phải mở rộng contract và cache identity tương ứng. API phân tích của KataGo cũng phân biệt moves/history với initialStones; không nên bịa lại lịch sử từ một snapshot: [KataGo Analysis Engine](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md). Hook là điểm mở rộng C++; inference native hiện có trong `KataGoEvaluator` theo [KATAGO_BACKEND.md](KATAGO_BACKEND.md). Hook không tự tải trọng số từ mạng.
 
 ### Kết quả kiểm tra ngày 19/10/2026
 
