@@ -121,7 +121,6 @@ Rectangle {
         }
 
         function onInvalidMovePlayed() {
-            console.log("type shit");
             errorSound.play();
         }
     }
