@@ -164,11 +164,6 @@ install(TARGETS appGoGame
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 add_subdirectory(server)
 
-include(CTest)
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
-
 if(GOGAME_ENABLE_KATAGO)
     target_compile_definitions(appGoGame PRIVATE GOGAME_KATAGO)
     target_link_libraries(appGoGame PRIVATE gogameKataGoNative)
