@@ -12,6 +12,7 @@ const QHash<QString, QString> AssetManager::paths = {
     {"Black2", "stones/black2.png"},
     {"White2", "stones/white2.png"},
     {"PlaceSound", "sounds/place.wav"},
+    {"ErrorSound", "sounds/error.mp3"},
     {"BackgroundSong1", "sounds/background1.mp3"},
     {"BackgroundSong2", "sounds/background2.opus"},
     {"BackgroundSong3", "sounds/background3.mp3"},

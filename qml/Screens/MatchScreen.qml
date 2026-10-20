@@ -76,7 +76,7 @@ Rectangle {
 
     SoundEffect {
         id: errorSound
-        source: AssetManager.url("PlaceSound")
+        source: AssetManager.url("ErrorSound")
         volume: AssetManager.sfxVolume
     }
 
@@ -118,12 +118,11 @@ Rectangle {
         }
         function onLastMoveCoordsChanged() {
             placeSound.play();
-            boardScreen.clearPreview();
         }
 
         function onInvalidMovePlayed() {
+            console.log("type shit");
             errorSound.play();
-            boardScreen.clearPreview();
         }
     }
 
