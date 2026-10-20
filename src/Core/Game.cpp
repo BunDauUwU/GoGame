@@ -397,13 +397,14 @@ void GameManager::notifyScore() {
           .arg(m_scoring.value("difference").toDouble()));
 }
 void GameManager::syncLocalPosition() {
-  m_snapshot = {{"mode", m_aiEnabled ? m_aiDifficulty : QStringLiteral("Sandbox")},
-                {"started", !m_finished},
-                {"moveCount", m_position.moveCount},
-                {"currentPlayerIndex", currentPlayer()},
-                {"board", m_position.state().toVariantList()},
-                {"komi", 6.5},
-                {"consecutivePasses", m_position.consecutivePasses}};
+  m_snapshot = {
+      {"mode", m_aiEnabled ? m_aiDifficulty : QStringLiteral("Sandbox")},
+      {"started", !m_finished},
+      {"moveCount", m_position.moveCount},
+      {"currentPlayerIndex", currentPlayer()},
+      {"board", m_position.state().toVariantList()},
+      {"komi", 6.5},
+      {"consecutivePasses", m_position.consecutivePasses}};
   syncLastMoveFromHistory();
   updateScoring();
   m_snapshot["scoring"] = m_scoring;
@@ -552,7 +553,8 @@ bool GameManager::loadGame(bool ai, int slot) {
   m_matchId.clear();
   m_aiEnabled = ai;
   m_aiDifficulty = data.difficulty;
-  m_opponentName = ai ? m_aiDifficulty + QStringLiteral(" AI") : QStringLiteral("White");
+  m_opponentName =
+      ai ? m_aiDifficulty + QStringLiteral(" AI") : QStringLiteral("White");
   m_hardAI.reset();
   m_sandbox = !ai;
   m_playerIndex = data.humanColor;
