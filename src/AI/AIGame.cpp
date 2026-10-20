@@ -2,6 +2,8 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "../Core/Game.h"
 
+bool GameManager::startEasyGame(int playerColor, int slot)
+{ return startAIGame(QStringLiteral("Easy"), playerColor, slot); }
 bool GameManager::startMediumGame(int playerColor, int slot)
 { return startAIGame(QStringLiteral("Medium"), playerColor, slot); }
 bool GameManager::startHardGame(int playerColor, int slot)
@@ -75,8 +77,10 @@ void GameManager::requestMove()
     emit interactionChanged();
     const auto generation = ++m_aiGeneration;
     const auto position = m_position;
-    const auto engine = m_ai;
+    const auto easyEngine = m_easyAI;
+    const auto mediumEngine = m_mediumAI;
     const auto hardEngine = m_hardAI;
+    const bool easy = m_aiDifficulty == QStringLiteral("Easy");
     const bool hard = m_aiDifficulty == QStringLiteral("Hard");
     auto cancel = std::make_shared<std::atomic_bool>(false);
     m_aiCancel = cancel;
@@ -133,7 +137,7 @@ void GameManager::requestMove()
             finishLocalGame(m_position.score() > 0 ? 0 : 1, tr("Two consecutive passes"));
     });
     // Capture independent data, never GameManager, in the background worker.
-    watcher->setFuture(QtConcurrent::run(&m_aiPool, [engine, hardEngine, hard, position, cancel] {
-        return hard ? hardEngine.chooseMove(position, cancel) : engine.chooseMove(position, cancel);
+    watcher->setFuture(QtConcurrent::run(&m_aiPool, [easyEngine ,mediumEngine, hardEngine, easy, hard, position, cancel] {
+        return hard ? hardEngine.chooseMove(position, cancel) : easy ? easyEngine.chooseMove(position, cancel) : mediumEngine.chooseMove(position, cancel);
     }));
 }

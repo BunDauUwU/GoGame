@@ -13,19 +13,18 @@ Rectangle {
     property int selectedAIDifficulty: 1
 
     function openAIMatch() {
-        AppState.difficultyLevel = gameManager.aiDifficulty === "Hard" ? 2 : 1;
+        AppState.difficultyLevel = selectedAIDifficulty;
         AppState.playingAgainstAI = true;
         stack.push("./MatchScreen.qml", {
             localPlayerName: authManager.username || qsTr("Player"),
-            opponentPlayerName: gameManager.aiDifficulty === "Hard" ? qsTr("Hard AI") : qsTr("Medium AI"),
+            opponentPlayerName: qsTr("%1 AI").arg(gameManager.aiDifficulty),
             localPlayerColor: gameManager.playerIndex
         });
     }
 
     function startSelectedAIMatch(slot) {
         mainMenuRoot.matchmakingError = "";
-        const started = selectedAIDifficulty === 2
-            ? gameManager.startHardGame(0, slot) : gameManager.startMediumGame(0, slot);
+        const started = selectedAIDifficulty === 0 ? gameManager.startEasyGame(0, slot) : selectedAIDifficulty === 1 ? gameManager.startMediumGame(0, slot) : gameManager.startHardGame(0, slot);
         if (started) {
             selectionMenu.close();
             openAIMatch();
@@ -348,7 +347,9 @@ Rectangle {
             onClicked: {
                 if (gameManager.loadSandbox())
                     stack.push("./MatchScreen.qml", {
-                        localPlayerName: "Black", opponentPlayerName: "White", localPlayerColor: 0
+                        localPlayerName: "Black",
+                        opponentPlayerName: "White",
+                        localPlayerColor: 0
                     });
             }
         }

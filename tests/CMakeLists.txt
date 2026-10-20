@@ -1,7 +1,7 @@
 find_package(Qt6 REQUIRED COMPONENTS Quick Sql Concurrent WebSockets)
 qt_add_executable(soloAITest
     SoloAI.cpp
-    ../src/AI/AIGame.cpp ../src/AI/MediumAI.cpp ../src/AI/HardAI.cpp
+    ../src/AI/AIGame.cpp ../src/AI/EasyAI.cpp ../src/AI/MediumAI.cpp ../src/AI/HardAI.cpp
     ../src/Core/Game.cpp ../src/Core/Game.h ../src/Core/Enumutils.cpp
     ../src/Managers/DataManager.cpp
     ../src/Managers/AuthManager.cpp ../src/Managers/AuthManager.h

@@ -1,4 +1,5 @@
 #pragma once
+#include "../AI/EasyAI.h"
 #include "../AI/MediumAI.h"
 #include "../AI/HardAI.h"
 #include "../Managers/DataManager.h"
@@ -43,6 +44,7 @@ public:
   explicit GameManager(QObject *parent = nullptr);
   ~GameManager() override;
   QVariantList lastMoveCoords() const { return m_lastMoveCoords; }
+  Q_INVOKABLE bool startEasyGame(int humanColor = 0, int slot = 0);
   Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
   Q_INVOKABLE bool startHardGame(int humanColor = 0, int slot = 0);
   Q_INVOKABLE bool startSandbox();
@@ -120,7 +122,8 @@ private:
   QVariantMap m_snapshot;
   QVariantMap m_scoring, m_serverScoring, m_scoringComparison;
   QThreadPool m_aiPool;
-  MediumAI m_ai;
+  EasyAI m_easyAI;
+  MediumAI m_mediumAI;
   HardAI m_hardAI;
   QString m_aiDifficulty = QStringLiteral("Medium");
   std::shared_ptr<std::atomic_bool> m_aiCancel;
