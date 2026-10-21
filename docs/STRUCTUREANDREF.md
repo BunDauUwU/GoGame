@@ -1,35 +1,35 @@
-# Cấu trúc dự án và tài liệu tham khảo
+# Project Structure and References
 
-Đối chiếu trực tiếp hệ thống file ngày **21/10/2026**, sau khi tách tài liệu. Các đường dẫn source và lệnh trong tài liệu tính từ gốc dự án; đường dẫn Markdown là tương đối với file đang đọc.
+Checked directly against the filesystem on **21 October 2026**, after documentation reorganization. Source paths and commands are relative to the project root; Markdown links are relative to the document being read.
 
-## Tài liệu nằm ở đâu?
+## Documentation Locations
 
-| File                                                         | Nội dung                                                                                    |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| [README.md](../README.md)                                    | Tổng quan và usage: build, client, server, AI, Sandbox, KataGo.                             |
-| [AI_Declaration.md](AI_Declaration.md) | Bản khai sử dụng AI theo mẫu nộp nhóm, attribution và xác nhận từng thành viên. |
-| [PROMPT.md](PROMPT.md)                                       | Bảng prompt đầy đủ, phản hồi còn khôi phục được, thay đổi và kiểm tra từng lượt.            |
-| [STRUCTUREANDREF.md](STRUCTUREANDREF.md)                     | Cây dự án và danh mục nguồn tham khảo.                                                      |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                           | Sơ đồ client/server, luồng WebSocket và schema snapshot.                                    |
-| [SERVER.md](SERVER.md)                                       | Giao thức, command, snapshot, đồng hồ và API JSON của server; chuyển từ `server/README.md`. |
-| [ROADMAP.md](ROADMAP.md)                                     | Kế hoạch và ghi chú cần làm sau (removed because no more implement).                        |
-| [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)                 | Build/chạy backend KataGo native, CPU/CUDA và giới hạn.                                     |
-| [references/HARD_AI_INPUT.md](references/HARD_AI_INPUT.md)   | Toàn bộ mã MCTS người dùng đính kèm cho yêu cầu HardAI.                                     |
-| [archive/README-2026-10-20.md](archive/README-2026-10-20.md) | README nguyên trạng trước khi tách; đường dẫn/trạng thái bên trong là lịch sử.              |
+| File | Contents |
+| --- | --- |
+| [README.md](../README.md) | Overview and usage: build, client, server, AI, Sandbox, and KataGo. |
+| [AI_Declaration.md](AI_Declaration.md) | Team AI usage declaration, attribution, and individual confirmations. |
+| [PROMPT.md](PROMPT.md) | Full prompts, recoverable responses, changes, and checks for each recorded request. |
+| [STRUCTUREANDREF.md](STRUCTUREANDREF.md) | Project tree and reference catalog. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Client/server diagrams, WebSocket flow, and snapshot schema. |
+| [SERVER.md](SERVER.md) | Server protocol, commands, snapshots, clocks, and JSON API; moved from `server/README.md`. |
+| [ROADMAP.md](ROADMAP.md) | Plans and future-work notes (removed because no further implementation was planned). |
+| [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md) | Native KataGo backend build/run instructions, CPU/CUDA, and limitations. |
+| [references/HARD_AI_INPUT.md](references/HARD_AI_INPUT.md) | Complete user-supplied MCTS code for the HardAI request. |
+| [archive/README-2026-10-20.md](archive/README-2026-10-20.md) | Unmodified README before reorganization; its paths/status are historical. |
 
-## Cây file hiện tại
+## Current File Tree
 
-Liệt kê mã nguồn, tài nguyên, tài liệu và các thư mục rỗng đang có. Các thư mục build, môi trường Python, cache, Git và cấu hình cục bộ được thu gọn; tài liệu/thư viện do dependency tạo trong đó không thuộc bộ Markdown của dự án. Dữ liệu runtime trong `server/data/` có thể bị Git ignore và thay đổi theo máy. Không giải nén gói KataGo `.zip` để liệt kê nội dung.
+Lists source, assets, documentation, and existing empty directories. Build directories, Python environments, caches, Git, and local configuration are collapsed; generated dependency documentation/libraries are outside the project's Markdown set. Runtime data in `server/data/` may be Git-ignored and vary by machine. The KataGo `.zip` package was not extracted to list its contents.
 
 ```text
 GoGame/
-├── .agents/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
-├── .aws/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
-├── .cache/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
-├── .codex/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
-├── .git/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
-├── .qtcreator/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
-├── .venv-ai/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
+├── .agents/  [collapsed: generated content or local configuration]
+├── .aws/  [collapsed: generated content or local configuration]
+├── .cache/  [collapsed: generated content or local configuration]
+├── .codex/  [collapsed: generated content or local configuration]
+├── .git/  [collapsed: generated content or local configuration]
+├── .qtcreator/  [collapsed: generated content or local configuration]
+├── .venv-ai/  [collapsed: generated content or local configuration]
 ├── assets/
 │   ├── background/
 │   │   ├── background1.png
@@ -69,7 +69,7 @@ GoGame/
 │       ├── black2.png
 │       ├── white1.png
 │       └── white2.png
-├── build/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
+├── build/  [collapsed: generated content or local configuration]
 ├── cmake/
 │   └── KataGoBackend.cmake
 ├── docs/
@@ -123,7 +123,7 @@ GoGame/
 │   └── Server.h
 ├── src/
 │   ├── AI/
-│   │   ├── __pycache__/  [thu gọn: nội dung sinh tự động hoặc cấu hình cục bộ]
+│   │   ├── __pycache__/  [collapsed: generated content or local configuration]
 │   │   ├── training/
 │   │   │   └── requirements.txt
 │   │   ├── AIGame.cpp
@@ -175,60 +175,60 @@ GoGame/
 └── users.sqlite
 ```
 
-## Vai trò các phần chính
+## Responsibilities of Major Components
 
-| Vị trí                                 | Vai trò                                                                                                                                      |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main.cpp`, `main.qml`, `qml/`         | Khởi động client, context QML, menu, màn hình đấu và components.                                                                             |
-| `src/Core/Game.*`, `src/AI/AIGame.cpp` | Trạng thái game, điều phối chế độ, worker AI và hủy kết quả cũ.                                                                              |
-| `src/Rules/GoMatch.*`                  | Luật dùng chung, bàn cờ, nhóm/khí, lịch sử và chấm điểm.                                                                                     |
-| `src/Managers/`                        | Auth local, matchmaking, tài nguyên và JSON save/load.                                                                                       |
-| `src/Network/`                         | Kết nối WebSocket và đóng gói giao thức client.                                                                                              |
-| `server/`                              | Console server, queue, match, đồng hồ và API đọc/ghi JSON. CMake build luật từ `src/Rules/`; các file `server/GoMatch.*` cũ vẫn có trên đĩa. |
-| `src/AI/`                              | EasyAI, MediumAI, HardAI, adapter KataGo và training SGF. Hard có board/groups riêng cho tìm kiếm.                                           |
-| `cmake/KataGoBackend.cmake`            | Tích hợp backend native và bản sao nguồn KataGo.                                                                                             |
-| `tools/run-katago-hard.sh`             | Build và chạy client với model KataGo.                                                                                                       |
-| `assets/`                              | Hình nền, avatar, font, quân cờ, nhạc và âm thanh.                                                                                           |
-| `docs/`                                | Toàn bộ Markdown do dự án quản lý, trừ README gốc.                                                                                           |
+| Location | Responsibility |
+| --- | --- |
+| `main.cpp`, `main.qml`, `qml/` | Client startup, QML context, menus, match screen, and components. |
+| `src/Core/Game.*`, `src/AI/AIGame.cpp` | Game state, mode coordination, AI workers, and stale-result cancellation. |
+| `src/Rules/GoMatch.*` | Shared rules, board, groups/liberties, history, and scoring. |
+| `src/Managers/` | Local authentication, matchmaking, assets, and JSON save/load. |
+| `src/Network/` | WebSocket connections and client protocol packaging. |
+| `server/` | Console server, queue, matches, clocks, and JSON read/write API. CMake builds rules from `src/Rules/`; old `server/GoMatch.*` files remain on disk. |
+| `src/AI/` | EasyAI, MediumAI, HardAI, KataGo adapters, and SGF training. Hard has independent search board/groups. |
+| `cmake/KataGoBackend.cmake` | Native backend integration and a copy of KataGo source. |
+| `tools/run-katago-hard.sh` | Builds and launches the client with a KataGo model. |
+| `assets/` | Backgrounds, avatars, fonts, stones, music, and sound effects. |
+| `docs/` | All project-managed Markdown except the root README. |
 
-Cây nguồn hiện không có `tests/` hoặc `scripts/server_stats.py`; các nhắc đến trong nhật ký/bản lưu là lịch sử. Không thay đổi file code hoặc dọn file dư trong lần tách tài liệu này.
+The source tree no longer contains `tests/` or `scripts/server_stats.py`; mentions in logs/archives are historical. No source files were changed or redundant files removed during the documentation reorganization.
 
-## Tài liệu tham khảo
+## References
 
-Danh mục được gom từ các tài liệu sẵn có, không phải kết quả đánh giá lại nội dung hoặc kiểm tra khả năng truy cập các trang. Cột nguồn cho biết nơi tài liệu đã được nhắc đến; URL được giữ nguyên. Báo cáo cờ Caro, Q-learning 5×5 và bài Go 9×9 phục vụ tham khảo, không chứng minh hiệu năng AI GoGame 19×19.
+This catalog was compiled from existing documents rather than a new content review or availability check. The source column identifies where each reference was mentioned; URLs are preserved. The Caro report, 5×5 Q-learning project, and 9×9 Go paper are references, not evidence of GoGame's 19×19 AI performance.
 
-| Tài liệu                                                                                                                                                                                                             | Nguồn đã ghi / ngữ cảnh                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [Báo cáo nhập môn trí tuệ nhân tạo — Studocu](https://www.studocu.vn/vn/document/dai-hoc-dien-luc/dien-luc-university/bao-cao-nhap-mon-tri-tue-nhan-tao/88382780?sid=a353be05-df77-4401-bae7-4597fba4fd601791775595) |                                                          |
-| [Báo cáo cờ Caro — tham khảo phương trình](https://www.scribd.com/document/434712509/BAO-CAO)                                                                                                                        |                                                          |
+| Reference | Recorded source / context |
+| --- | --- |
+| [Introduction to Artificial Intelligence Report — Studocu](https://www.studocu.vn/vn/document/dai-hoc-dien-luc/dien-luc-university/bao-cao-nhap-mon-tri-tue-nhan-tao/88382780?sid=a353be05-df77-4401-bae7-4597fba4fd601791775595) |                                                          |
+| [Caro Report — equation reference](https://www.scribd.com/document/434712509/BAO-CAO)                                                                                                                        |                                                          |
 | [Implementing Go — Modern Descartes](https://www.moderndescartes.com/essays/implementing_go/)                                                                                                                        |                                                          |
 | [Atari Go — CodinGame](https://www.codingame.com/ide/puzzle/atari-go)                                                                                                                                                |                                                          |
 | [Go Minimax — BaseGo/core](https://github.com/HosseinBakand/GO-Game-Min-Max-/tree/main/BaseGo/core)                                                                                                                  |                                                          |
 | [Go Monte Carlo — Java](https://github.com/GTnull/Go/blob/master/version_2.0/src/gogame/monteCarloMethod.java)                                                                                                       |                                                          |
-| [AI bot cho Go 5×5 — Q-learning](https://github.com/27rg5/AI-bot-for-GO-game)                                                                                                                                        |                                                          |
+| [5×5 Go AI Bot — Q-learning](https://github.com/27rg5/AI-bot-for-GO-game)                                                                                                                                        |                                                          |
 | [GoByGo — Monte-Carlo Based Computer Player for the Game of Go](https://durhamgo.club/GoByGo.pdf)                                                                                                                    |                                                          |
-| [AlphaGo — Nature paper (đường dẫn lưu cũ)](https://deepmind-media.storage.googleapis.com/alphago/AlphaGoNaturePaper.pdf)                                                                                            |                                                          |
-| [Nihon Ki-in — luật Nhật](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm)                                                                                                                                       | [SERVER.md](SERVER.md)                                   |
-| [KataGo — định nghĩa pass-alive territory](https://lightvector.github.io/KataGo/rules.html#additional-definitions)                                                                                                   | [SERVER.md](SERVER.md)                                   |
-| [KataGo — giao thức Analysis Engine](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md)                                                                                                      | [ai/HARD_AI.md](ai/HARD_AI.md)                           |
+| [AlphaGo — Nature paper (historically recorded URL)](https://deepmind-media.storage.googleapis.com/alphago/AlphaGoNaturePaper.pdf)                                                                                            |                                                          |
+| [Nihon Ki-in — Japanese rules](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm)                                                                                                                                       | [SERVER.md](SERVER.md)                                   |
+| [KataGo — pass-alive territory definitions](https://lightvector.github.io/KataGo/rules.html#additional-definitions)                                                                                                   | [SERVER.md](SERVER.md)                                   |
+| [KataGo — Analysis Engine protocol](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md)                                                                                                      | [ai/HARD_AI.md](ai/HARD_AI.md)                           |
 | [AlphaGo — Nature paper](https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf)                                                                                                               | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
 | [OpenSpiel — AlphaZero](https://github.com/google-deepmind/open_spiel/blob/master/docs/alpha_zero.md)                                                                                                                | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [PyTorch — cài đặt](https://pytorch.org/get-started/locally/)                                                                                                                                                        | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [SGF FF4 — đặc tả](https://www.red-bean.com/sgf/)                                                                                                                                                                    | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [SGF FF4 — danh mục thuộc tính](https://www.red-bean.com/sgf/proplist_t.html)                                                                                                                                        | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
+| [PyTorch — installation](https://pytorch.org/get-started/locally/)                                                                                                                                                        | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
+| [SGF FF4 — specification](https://www.red-bean.com/sgf/)                                                                                                                                                                    | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
+| [SGF FF4 — property index](https://www.red-bean.com/sgf/proplist_t.html)                                                                                                                                        | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
 | [PyTorch — scaled dot-product attention](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html)                                                                       | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [ONNX Runtime — external data cho model lớn](https://onnxruntime.ai/docs/tutorials/web/large-models.html#external-data)                                                                                              | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
+| [ONNX Runtime — external data for large models](https://onnxruntime.ai/docs/tutorials/web/large-models.html#external-data)                                                                                              | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
 | [ONNX Runtime — C++](https://onnxruntime.ai/docs/get-started/with-cpp)                                                                                                                                               | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [PyTorch — xuất ONNX](https://docs.pytorch.org/docs/stable/onnx.html)                                                                                                                                                | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [ONNX Runtime — cấu hình luồng](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)                                                                                                             | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
+| [PyTorch — ONNX export](https://docs.pytorch.org/docs/stable/onnx.html)                                                                                                                                                | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
+| [ONNX Runtime — threading configuration](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)                                                                                                             | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
 | [KataGo v1.18.1 — NNEvaluator](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nneval.h)                                                                                                            | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
-| [KataGo v1.18.1 — features và NNOutput](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nninputs.h)                                                                                                 | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
-| [KataGo v1.18.1 — BoardHistory và luật](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/game/boardhistory.h)                                                                                                  | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
+| [KataGo v1.18.1 — features and NNOutput](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nninputs.h)                                                                                                 | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
+| [KataGo v1.18.1 — BoardHistory and rules](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/game/boardhistory.h)                                                                                                  | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
 
-## Tệp tham khảo và phụ thuộc cục bộ
+## Reference Files and Local Dependencies
 
-- [Mã MCTS gốc người dùng gửi](references/HARD_AI_INPUT.md): nguồn đối chiếu cách đặt tên và PUCT/FPU (`cpuct = 1.5`, `fpuReduction = 0.2`, `19652`).
-- [Giấy phép KataGo](../src/AI/KATAGO_LICENSE.txt): giữ ở vị trí source hiện tại; giấy phép không phải Markdown.
-- [CMake backend](../cmake/KataGoBackend.cmake): nguồn tích hợp và phiên bản KataGo v1.18.1 cùng SHA-256. Build có thể tải upstream hoặc dùng bản nguồn cục bộ được chỉ định.
-- `../DatasetGogame/AI/`: thư mục ngoài repository được launcher dùng để tìm model/nguồn/thư viện; không thuộc cây dự án và không được sao chép vào `docs/`.
-- Ghi chú SplitMix64 đã được chèn vào bản nhật ký cũ được bảo toàn trong [bản README lưu](archive/README-2026-10-20.md) và [PROMPT.md](PROMPT.md). Bản ghi đó chưa kèm nguồn gốc để xác minh; phần sử dụng `mix64` thực tế xem [HardAI](ai/HARD_AI.md).
+- [Original user-supplied MCTS code](references/HARD_AI_INPUT.md): reference for naming and PUCT/FPU (`cpuct = 1.5`, `fpuReduction = 0.2`, `19652`).
+- [KataGo license](../src/AI/KATAGO_LICENSE.txt): retained at its current source location; the license is not Markdown.
+- [CMake backend](../cmake/KataGoBackend.cmake): integration source and KataGo v1.18.1 version/SHA-256. Builds can download upstream or use explicitly supplied local source.
+- `../DatasetGogame/AI/`: directory outside the repository used by the launcher to locate models/source/libraries; not part of the project tree and not copied into `docs/`.
+- SplitMix64 notes inserted into the old log are preserved in the [archived README](archive/README-2026-10-20.md) and [PROMPT.md](PROMPT.md). That record did not include a source for verification; see [HardAI](ai/HARD_AI.md) for actual `mix64` use.

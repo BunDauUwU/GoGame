@@ -1,6 +1,6 @@
-# GoGame WebSocket server
+# GoGame WebSocket Server
 
-Server C++/Qt 6 chạy console, độc lập với ứng dụng QML. Cần Qt Core, Network và WebSockets.
+The C++/Qt 6 server runs as a console application, independently of the QML client. Qt Core, Network, and WebSockets are required.
 
 ```bash
 cmake -S server -B build/server
@@ -8,175 +8,172 @@ cmake --build build/server --parallel 3
 ./build/server/appserver --port 14509 --data-file server/data/state.json
 ```
 
-Chạy các lệnh trên từ thư mục gốc dự án. Server nghe tại `ws://127.0.0.1:14509`. Nếu bỏ `--data-file`, mặc định là `data/state.json` tính từ thư mục đang chạy. File chưa có được tạo với nội dung `{}`. File đã có phải chứa JSON object hợp lệ; lỗi đọc hoặc JSON hỏng khiến server dừng và giữ nguyên file.
+Run these commands from the project root. The server listens at `ws://127.0.0.1:14509`. Without `--data-file`, the default is `data/state.json` relative to the working directory. A missing file is created with `{}`. An existing file must contain a valid JSON object; read errors or corrupt JSON stop the server without modifying the file.
 
-## Giao thức
+## Protocol
 
-Gửi text message chứa JSON object theo dạng `{ "type": "...", "payload": { ... } }`.
+Send text messages containing a JSON object in the form `{ "type": "...", "payload": { ... } }`.
 
-Đọc file:
+Read the file:
 
 ```json
 {"type":"ReadData","payload":{}}
 ```
 
-Phản hồi:
+Response:
 
 ```json
 {"type":"Data","payload":{"data":{}}}
 ```
 
-Ghi file:
+Write the file:
 
 ```json
 {"type":"WriteData","payload":{"data":{"board":[0,-1,1],"moveCount":3,"currentPlayer":1,"time":{"black":600,"white":590}}}}
 ```
 
-`payload.data` phải là JSON object. Mỗi yêu cầu ghi **thay toàn bộ nội dung file**; dữ liệu ví dụ trên chỉ minh họa giao thức, chưa phải trạng thái bàn cờ 19×19 đầy đủ. Ghi thành công trả về:
+`payload.data` must be a JSON object. Each write request **replaces the entire file**; the example above only illustrates the protocol and is not a complete 19×19 board state. A successful write returns:
 
 ```json
 {"type":"DataWritten","payload":{"ok":true}}
 ```
 
-Lỗi trả về dạng:
+Errors use this format:
 
 ```json
 {"type":"Error","payload":{"code":"InvalidPayload","message":"payload.data must be a JSON object"}}
 ```
 
-Các mã lỗi: `InvalidJson`, `InvalidPayload`, `UnknownType`, `ReadFailed`, `WriteFailed`, `UnsupportedMessage`. Binary message không được hỗ trợ. Giới hạn message nhận là 1 MiB.
+Error codes: `InvalidJson`, `InvalidPayload`, `UnknownType`, `ReadFailed`, `WriteFailed`, `UnsupportedMessage`. Binary messages are unsupported. Incoming messages are limited to 1 MiB.
 
-Server xử lý yêu cầu tuần tự và ghi qua `QSaveFile` để thay file nguyên tử. Các client cùng dùng một file; yêu cầu ghi sau cùng thành công quyết định nội dung. Chỉ chạy một server cho mỗi file dữ liệu. Server phục vụ local, có đăng nhập guest bằng nickname, ghép trận và luật cờ vây cơ bản. Chưa có TLS hoặc xác thực tài khoản bằng mật khẩu.
+The server processes requests sequentially and uses `QSaveFile` for atomic file replacement. Clients share one file; the last successful write determines its contents. Run only one server per data file. The server serves local clients and supports guest nickname authentication, matchmaking, and basic Go rules. TLS and password-based account authentication are not implemented.
 
-## Kết nối client hiện có
+## Existing Client Connection
 
-Client có biến môi trường `GOGAME_SERVER_URL`. Khi chạy client có thể đặt:
+The client supports the `GOGAME_SERVER_URL` environment variable. For example:
 
 ```bash
 GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/Desktop_Debug/appGoGame
 ```
 
-Client tự kết nối lúc khởi động, mặc định dùng `ws://127.0.0.1:14509`. Màn hình đăng nhập hiển thị trạng thái/lỗi và có nút kết nối lại. `ReadData`/`WriteData` phục vụ API file JSON riêng; trận online dùng command/snapshot. Server hỗ trợ AuthRequest dạng guest và MatchmakingStart/MatchmakingCancel. Đăng nhập bằng mật khẩu ở UI chưa được tích hợp với giao thức guest này.
+The client connects automatically at startup, defaulting to `ws://127.0.0.1:14509`. The login screen displays connection status/errors and provides a reconnect button. `ReadData`/`WriteData` is a separate JSON-file API; online matches use commands/snapshots. The server supports guest AuthRequest and MatchmakingStart/MatchmakingCancel. Password login in the UI is not integrated with this guest protocol.
 
-## Class Server
+## Server Class
 
-`Server.h` khai báo API, `Server.cpp` triển khai; `main.cpp` đọc CLI và gọi `start`. Class nhận đường dẫn file khi khởi tạo, sở hữu WebSocket listener và các kết nối client.
+`Server.h` declares the API, `Server.cpp` implements it, and `main.cpp` parses CLI arguments and calls `start`. The class receives the file path at construction and owns the WebSocket listener and client connections.
 
-- `start(port, error)`: chuẩn bị file JSON, mở listener localhost.
-- `read(client, text)`: nhận text, parse JSON rồi gọi `handler`.
-- `handler(client, message)`: phân loại `type`, xử lý yêu cầu.
-- `send(client, message)`: gửi JSON object; trả số byte được chấp nhận gửi hoặc `-1` nếu client không kết nối.
-- `jsonToString(json)`: chuyển object thành JSON string compact.
-- `stringToJson(text, json, error)`: trả `true` khi text chứa JSON object hợp lệ; trả `false` và thông báo lỗi nếu không hợp lệ.
-- `envelope(type, payload = {})`: trả object `{type, payload}`, payload mặc định là object rỗng.
-- `readData(data, error)` / `writeData(data, error)`: đọc/ghi file JSON của server.
+- `start(port, error)`: prepares the JSON file and opens the localhost listener.
+- `read(client, text)`: receives text, parses JSON, and calls `handler`.
+- `handler(client, message)`: dispatches requests by `type`.
+- `send(client, message)`: sends a JSON object; returns the number of bytes accepted for sending, or `-1` if the client is disconnected.
+- `jsonToString(json)`: converts an object to a compact JSON string.
+- `stringToJson(text, json, error)`: returns `true` for a valid JSON object, otherwise `false` with an error message.
+- `envelope(type, payload = {})`: returns `{type, payload}`, with an empty object as the default payload.
+- `readData(data, error)` / `writeData(data, error)`: reads/writes the server's JSON file.
 
-Ví dụ phản hồi trong handler:
+Example responses in a handler:
 
 ```cpp
 send(client, envelope("Data", {{"data", data}}));
 send(client, envelope("Ready")); // {"type":"Ready","payload":{}}
 ```
 
-Khi thêm loại message mới, bổ sung nhánh trong `Server::handler`. Auth guest, matchmaking và GameCommand được xử lý trong class Server.
+To add a message type, add a branch in `Server::handler`. Guest authentication, matchmaking, and GameCommand are handled by the Server class.
 
-## GameCommand cho cờ vây
+## GameCommand for Go
 
-Hai client gửi `AuthRequest` với `payload.nickname`, rồi `MatchmakingStart` cùng `payload.mode` để tạo trận. Server gửi `MatchFound` (đen = 0, trắng = 1) và `GameSnapshot`. Mỗi trận có bàn cờ và đồng hồ riêng: mặc định 10 phút chính mỗi bên, sau đó 3 lần Byo-yomi × 20 giây. Timer kiểm tra tại ranh giới thời gian chính/Byo-yomi và tối đa mỗi 30 giây.
+Both clients send `AuthRequest` with `payload.nickname`, then `MatchmakingStart` with the same `payload.mode` to create a match. The server sends `MatchFound` (Black = 0, White = 1) and `GameSnapshot`. Each match has its own board and clocks: by default, 10 minutes of main time per player followed by 3 × 20-second Byo-yomi periods. The timer checks main-time/Byo-yomi boundaries and at most every 30 seconds.
 
-Đặt quân:
+Place a stone:
 
 ```json
 {"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"Play","command":{"row":3,"col":3}}}
 ```
 
-Tọa độ nguyên 0–18 theo dữ liệu bàn cờ, độc lập với hướng xoay UI. Server kiểm tra thành viên trận, lượt đi, ô trống, bắt nhóm hết khí, cấm tự sát và simple ko. Lệnh bị từ chối không đổi bàn/lượt; thời gian đã suy nghĩ vẫn bị trừ.
+Coordinates are integers from 0 to 18 in board-data coordinates, independent of UI rotation. The server validates match membership, turn, empty intersections, capture of groups without liberties, the suicide prohibition, and simple ko. Rejected commands do not change the board/turn; thinking time is still deducted.
 
-Bỏ lượt (tên `EndRound` được giữ để tương thích enum hiện có):
+Pass (`EndRound` is retained for compatibility with the existing enum):
 
 ```json
 {"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"EndRound","command":{}}}
 ```
 
-Đầu hàng (được phép ngoài lượt):
+Resign, including outside the player's turn:
 
 ```json
 {"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"Concede","command":{}}}
 ```
 
-Server phát `GameEvent` với `StonePlayed`, `Passed` hoặc `GameEnded`, và `GameSnapshot` gồm `board` (361 ô, -1/0/1), `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, `komi`. Hai lần bỏ lượt liên tiếp kết thúc trận, tính đất trống chỉ tiếp giáp một màu + quân đã bắt; trắng cộng komi 6.5 theo công thức điểm Nhật. Quân còn trên bàn không cộng điểm. Điểm đang là tạm tính trên bàn hiện tại vì chưa xác nhận quân chết/seki. Bản này chưa có thỏa thuận loại quân chết trước tính điểm hoặc positional/situational superko. Ngắt kết nối trong trận tính là thua. Trận đang chạy chỉ lưu trong bộ nhớ; file JSON ReadData/WriteData vẫn độc lập.
+The server emits `GameEvent` with `StonePlayed`, `Passed`, or `GameEnded`, and `GameSnapshot` containing `board` (361 cells, -1/0/1), `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, and `komi`. Two consecutive passes end the game. Scoring counts empty territory bordered by only one color plus captured stones; White receives 6.5 komi under the Japanese scoring formula. Stones remaining on the board do not add points. Scores are provisional because dead stones/seki have not been confirmed. This version has no dead-stone agreement before scoring or positional/situational superko. Disconnecting during a match counts as a loss. Active matches exist only in memory; the ReadData/WriteData JSON file remains independent.
 
-`GoMatch.h/.cpp` chứa luật, `Server::gameCommand` chứa kiểm tra/giao thức/đồng hồ. Các lệnh thẻ bài trong JS được thay bằng ba lệnh cờ vây trên. MatchScreen phía client gửi GameCommand trong trận online và cập nhật bàn/lượt từ GameSnapshot của server. Preview chỉ được chọn khi đến lượt; nhấn xác nhận gửi lệnh và khóa thao tác trong lúc chờ phản hồi.
+`GoMatch.h/.cpp` contains the rules; `Server::gameCommand` handles validation, protocol, and clocks. The JavaScript card-game commands were replaced with the three Go commands above. Client MatchScreen sends GameCommand during online matches and updates board/turn from the server's GameSnapshot. Preview can only be selected on the player's turn; confirmation sends a command and locks input while waiting for a response.
 
+## Recipient-Specific Snapshots
 
-## Snapshot theo từng người nhận
+`sendSnapshot(socket, match)` sends to an individual member socket; `sendSnapshot(match)` calls it for both players. It retains `board`, `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, and `komi`, and adds:
 
-`sendSnapshot(socket, match)` gửi riêng cho mỗi socket thành viên; `sendSnapshot(match)` gọi cho cả hai. Giữ `board`, `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, `komi` và bổ sung:
-
-- `stage`: `Action` hoặc `GameEnd`; `boardSize: 19`, `consecutivePasses`.
+- `stage`: `Action` or `GameEnd`; `boardSize: 19`, `consecutivePasses`.
 - `players`: `playerId`, `nickname`, `playerIndex`, `color`, `remainingTimeMs`.
-- `self.playerIndex`: góc nhìn người nhận, 0 đen/1 trắng.
-- `serverTimeEpochMs`, `actionDeadlineEpochMs`: mốc đồng bộ hiển thị; deadline là ranh giới thời gian chính/period hiện tại của người đang đi, không phải hạn 30 giây mỗi nước.
-- `winnerIndex`, `endReason`: -1/chuỗi rỗng khi chơi, kết quả khi kết thúc. Clock cuối đóng băng, deadline cuối bằng 0.
+- `self.playerIndex`: recipient perspective, 0 for Black / 1 for White.
+- `serverTimeEpochMs`, `actionDeadlineEpochMs`: display synchronization timestamps; the deadline is the active player's current main-time/period boundary, not a 30-second per-move limit.
+- `winnerIndex`, `endReason`: -1/empty string during play, results after completion. Final clocks freeze and the final deadline is 0.
 
-Server dùng monotonic time để thực thi clock, epoch chỉ để UI hiển thị. Không gửi snapshot mỗi giây; client tự cập nhật countdown giữa các snapshot. Không có trường round/weather/character/card vì game là cờ vây. Xem [kiến trúc và schema](ARCHITECTURE.md) để biết sơ đồ tương tác và [kế hoạch](ROADMAP.md) cho các việc còn lại.
+The server enforces clocks using monotonic time; epoch timestamps are only for UI display. Snapshots are not sent every second; the client updates countdowns between snapshots. There are no round/weather/character/card fields because this is Go. See [architecture and schemas](ARCHITECTURE.md) for interaction diagrams and [roadmap](ROADMAP.md) for remaining work.
 
-## Chơi hai người trên máy local
+## Two Players on One Local Machine
 
-Chạy server rồi mở hai instance client:
+Start the server, then open two client instances:
 
 ```bash
 ./build/server/appserver --data-file server/data/state.json
 ```
 
-Trong hai terminal khác nhau:
+In two other terminals:
 
 ```bash
 ./build/Desktop_Debug/appGoGame
 ```
 
-Đăng nhập hai tài khoản, chọn Find Match cùng mode Go. Mỗi client sẽ nhận màu riêng, tên đối thủ, cùng bàn cờ và đồng hồ. Xác nhận preview gửi nước đi lên server; client chờ snapshot để hiển thị quân thật. Pass gửi EndRound, Concede gửi lệnh đầu hàng (có xác nhận). Khi hai bên bỏ lượt liên tiếp, đầu hàng, hết giờ hoặc một bên mất kết nối, UI hiển thị kết thúc và cho quay về menu tìm ván mới.
+Log in with two accounts and select Find Match using the same Go mode. Each client receives its color, opponent's name, shared board, and clocks. Confirming a preview sends the move to the server; the client waits for a snapshot to display the actual stone. Pass sends EndRound; Concede sends resignation after confirmation. Two consecutive passes, resignation, timeout, or disconnection ends the game, and the UI offers a return to the menu to find another match.
 
-Server hiện nghe 127.0.0.1, nên các client trong hướng dẫn này chạy cùng máy. Chưa có khôi phục trận sau reconnect.
+The server currently listens on 127.0.0.1, so these clients run on the same machine. Match restoration after reconnect is not implemented.
 
-## Đồng hồ Byo-yomi
+## Byo-yomi Clocks
 
-Đồng hồ nằm cạnh panel tên của từng người, phía trên ảnh nền. Bên đang đi được viền vàng; UI hiển thị `mm:ss` khi còn thời gian chính, và số giây cùng số lần còn lại khi vào Byo-yomi. Preview chưa xác nhận vẫn tiêu tốn thời gian.
+Each clock appears next to its player's name panel, above the background. The active player has a gold border. The UI shows `mm:ss` during main time and seconds plus remaining periods during Byo-yomi. Unconfirmed preview time still counts against the clock.
 
-Mặc định: **10 phút chính + 3 lần × 20 giây**. Để dùng 15 phút chính:
+Default: **10 minutes of main time + 3 × 20 seconds**. To use 15 minutes of main time:
 
 ```bash
 ./build/server/appserver --main-minutes 15 --data-file server/data/state.json
 ```
 
-Hết thời gian chính chuyển sang Byo-yomi, không xử thua. Mỗi lần đếm hết 20 giây mất một lần, rồi tiếp tục lần kế tiếp ngay trong lượt đó. Đặt quân hoặc bỏ lượt hợp lệ dừng đồng hồ và hồi thời gian của lần hiện tại lên 20 giây cho lượt sau; số lần đã mất không hồi lại. Lệnh sai không hồi giờ. Hết lần cuối xử thua ngay trên server. Khi timer chạy trễ, server vẫn trừ đủ thời gian thực đã trôi qua bằng đồng hồ monotonic.
+Exhausting main time starts Byo-yomi rather than an immediate loss. Every exhausted 20-second period consumes one period, then the next starts immediately within the same turn. A legal move or pass stops the clock and restores the current period to 20 seconds for the next turn; consumed periods are not restored. Invalid commands do not reset time. Exhausting the final period immediately loses on the server. If a timer runs late, the server still deducts all actual elapsed time using a monotonic clock.
 
-Snapshot bổ sung `clocks[0/1]`: `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, `phase` (`Main`/`ByoYomi`). `remainingMs` giữ tương thích, biểu thị thời gian tới ranh giới hiện tại. Client chỉ nội suy hiển thị; server quyết định kết quả. Snapshot cập nhật riêng đồng hồ không xóa preview hoặc thay đổi nước đi.
+Snapshots add `clocks[0/1]`: `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, and `phase` (`Main`/`ByoYomi`). `remainingMs` is retained for compatibility and represents time to the current boundary. The client only interpolates the display; the server decides the result. Clock-only snapshot updates do not clear preview or change moves.
 
+## Cleanup and Source Statistics (13 October 2026)
 
+These are historical measurements. `scripts/server_stats.py` and the tests mentioned here are no longer in the source tree; do not treat the recount command below as current instructions.
 
-## Cleanup và thống kê source (13/10/2026)
+Removed the unused `Server::stop`/`address` APIs and old selection timeout; the destructor still closes sockets/timers. Removed server QML and an old test version; retained GoMatch, ByoYomiClock, snapshots, and all four tests running at that time. The client matchmaking protocol sends only mode, without deckId. The Play helper takes matchId/row/col.
 
-Đây là số liệu lịch sử. Hiện `scripts/server_stats.py` và các test được nhắc đến không còn trong cây nguồn; không chạy lệnh tái đếm bên dưới như hướng dẫn hiện hành.
+Measurements on 13 October 2026: server runtime **841 lines / 28,126 characters**; including four tests and CMake, **1,277 lines / 51,924 characters**. These are source totals at that time, including comments/whitespace, not separate human/AI authorship counts. The recount command was `python3 scripts/server_stats.py`; that script is now absent. Cleanup details, measurement methodology, and per-file counts were recorded in the [technical log](CHANGELOG.md).
 
-Bỏ API `Server::stop`/`address` không có caller và selection timeout cũ; destructor tiếp tục quản lý việc đóng socket/timer. Bỏ QML server và bản test cũ; giữ GoMatch, ByoYomiClock, snapshot và đủ bốn test đang chạy. Protocol matchmaking của client chỉ gửi mode; không còn trường deckId. Helper Play nhận matchId/row/col.
+## DSU and Match Notifications
 
-Số đo ngày 13/10/2026: runtime server **841 dòng / 28.126 ký tự**; gồm bốn test và CMake là **1.277 dòng / 51.924 ký tự**. Đây là tổng source tại thời điểm đo (gồm comment/khoảng trắng), không xác định riêng phần người/AI gõ. Lệnh tái đếm khi đó là `python3 scripts/server_stats.py`; script hiện không còn. Chi tiết cleanup, phương pháp và từng file tại [nhật ký kỹ thuật](CHANGELOG.md).
+GoMatch uses DSU stone groups, liberty bitsets, an immutable position cache, and empty-region DSU for territory scoring. Snapshots add `position` (board, previousBoard, simple ko, captures, turn/move count) and `scoring` (rules, blackTerritory, whiteTerritory, blackPrisoners, whitePrisoners, blackPoints, whitePoints, komi, provisional, difference). StonePlayed GameEvent adds `captured`, `koPoint`, and `koThreat`; GameEnded after two passes adds `scoring`. The client displays capture, ko, and provisional Japanese score notifications. `koThreat` identifies a response after ko that puts an opposing group into atari; it is not a complete analysis of every ko threat.
 
-## DSU và thông báo trận
+Sandbox and AI save/undo/redo run on the client; online matches do not allow undo/redo. See the [AI documentation](ai/IMPLEMENTATION_GUIDE.md).
 
-GoMatch sử dụng DSU nhóm quân, bitset khí, cache position bất biến và DSU vùng trống để tính đất. Snapshot thêm `position` (board, previousBoard, simple ko, captures, lượt/số nước) và `scoring` (rules, blackTerritory, whiteTerritory, blackPrisoners, whitePrisoners, blackPoints, whitePoints, komi, provisional, difference). GameEvent StonePlayed bổ sung `captured`, `koPoint`, `koThreat`; GameEnded sau hai pass bổ sung `scoring`. Client hiển thị thông báo ăn quân, ko và kết quả điểm Nhật tạm tính. `koThreat` nhận diện phản ứng sau ko khiến một nhóm đối thủ vừa vào atari; chưa phải phân tích đầy đủ mọi đe dọa ko.
+## Server/Client Build Boundary
 
-Sandbox và lưu/undo/redo ván AI nằm ở client, không cho phép undo/redo trận online. Xem [tài liệu AI](ai/IMPLEMENTATION_GUIDE.md).
+Shared rules live in `src/Rules/GoMatch.*`; the server compiles the rules source directly and links only Qt Core/Network/WebSockets. The standalone server does not build AI, DataManager, or Qt Concurrent. Root CMake compiles AI, DataManager, and rules directly into the client; only the server has a separate CMake file. Test files are absent, but root CMake still references `tests/` when `BUILD_TESTING` is enabled; use `-DBUILD_TESTING=OFF` for the current client build. `DataManager` belongs to the client and handles JSON Save/Load; see the [AI guide](ai/IMPLEMENTATION_GUIDE.md) for SGF training and algorithms.
 
-## Ranh giới build server/client
+PlayerPanel displays Current points from scoring for each player's color. Territory, captured-stone, and komi calculations follow the [Nihon Ki-in Japanese rules](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm). Current scores are provisional; there is no mutual dead-stone/seki confirmation step.
 
-Luật chung đặt tại `src/Rules/GoMatch.*`; server biên dịch source luật trực tiếp và chỉ link Qt Core/Network/WebSockets. Standalone server không build AI, DataManager hoặc Qt Concurrent. CMake gốc biên dịch AI, DataManager và luật trực tiếp vào client; chỉ server có CMake riêng. Các file test hiện không còn, nhưng CMake gốc vẫn tham chiếu `tests/` khi bật `BUILD_TESTING`; dùng `-DBUILD_TESTING=OFF` cho build client hiện tại. `DataManager` thuộc client và giữ Save/Load JSON; huấn luyện SGF và thuật toán xem [hướng dẫn AI](ai/IMPLEMENTATION_GUIDE.md).
+Current points count only secured territory identified by Benson elimination, using chains with two vital eye regions, plus captured stones; White receives komi. Open regions, groups not proven alive, and false eyes do not count as territory. scoreBasis is SecuredTerritory; unsettledPoints records uncounted empty intersections. This is a conservative estimate, not a replacement for dead-stone/seki confirmation. See [pass-alive territory in KataGo](https://lightvector.github.io/KataGo/rules.html#additional-definitions).
 
-PlayerPanel hiển thị Current points từ scoring theo đúng màu của từng người. Công thức đất + quân bắt và komi dựa trên [quy tắc Nhật của Nihon Ki-in](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm). Điểm hiện tại tạm tính, chưa có bước hai bên xác nhận quân chết/seki.
+GameManager independently calculates scoring from m_position (board plus captures) using GoMatch::scoreDetails. QML uses gameManager.scoring for Current points; gameManager.serverScoring retains scoring received from GameSnapshot. gameManager.scoringComparison includes status local/unavailable/matched/mismatch, moveCount, matches, and per-field differences (client/server/delta or missing). Comparison happens only after applying the position from the same snapshot; a game-ending GameEvent must not be compared with the previous turn's board. scoringChanged updates the UI; scoringMismatchDetected fires on a new mismatch. The panel includes a Server score line alongside the client score. Comparing calculations on the same state does not prove that the server state itself is correct.
 
-Điểm Current points chỉ cộng đất an toàn xác định bằng loại trừ Benson (chuỗi có hai vùng mắt vital) + quân đã bắt; trắng cộng komi. Vùng mở, vùng chưa chứng minh sống và mắt giả không cộng vào đất. scoreBasis là SecuredTerritory; unsettledPoints ghi số ô trống chưa được tính. Đây là ước lượng bảo thủ, không thay bước xác nhận quân chết/seki. Tham khảo [pass-alive territory trong KataGo](https://lightvector.github.io/KataGo/rules.html#additional-definitions).
-
-GameManager tính scoring độc lập từ m_position (bàn cờ + captures) bằng GoMatch::scoreDetails. QML dùng gameManager.scoring cho Current points; gameManager.serverScoring giữ nguyên scoring nhận từ GameSnapshot. gameManager.scoringComparison có status local/unavailable/matched/mismatch, moveCount, matches và differences theo từng trường (client/server/delta hoặc missing). Chỉ đối chiếu sau khi áp position của cùng snapshot; GameEvent kết thúc không được so với bàn của lượt cũ. scoringChanged cập nhật UI; scoringMismatchDetected phát khi có chênh lệch mới. Panel có dòng điểm Server để xem cùng điểm client. Đây là đối chiếu phép tính trên cùng trạng thái, không tự chứng minh trạng thái server đúng.
-
-ScoringPhase::Current dùng đất an toàn khi ván đang chạy; ScoringPhase::Final cộng tất cả vùng trống được bao chỉ bởi một màu, cộng quân bắt và komi trắng. Vùng chung hai màu không cộng điểm. score() dùng Final để chọn người thắng sau hai pass. Snapshot kết thúc và GameManager dùng Final, nên đối chiếu cùng phase. Bảng tổng kết hiển thị riêng đất, quân bắt, komi và tổng; quân chết/seki vẫn cần xác nhận để có kết quả Nhật đầy đủ.
+ScoringPhase::Current uses secured territory during play; ScoringPhase::Final counts all empty regions enclosed by only one color, captured stones, and White's komi. Regions bordered by both colors do not score. score() uses Final to choose the winner after two passes. Final snapshots and GameManager use Final, so comparison uses the same phase. The result panel separates territory, captures, komi, and total; dead stones/seki still require confirmation for complete Japanese adjudication.

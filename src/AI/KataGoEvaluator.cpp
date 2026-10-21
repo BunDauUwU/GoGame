@@ -42,7 +42,7 @@ void KataGoEvaluator::prepare()
                                                           m_options.fp16,
                                                           m_options.duty);
 #else
-            throw std::runtime_error("Build with -DGOGAME_ENABLE_KATAGO=ON to load KataGo models");
+                throw std::runtime_error("Build with -DGOGAME_ENABLE_KATAGO=ON to load KataGo models");
 #endif
     });
 }

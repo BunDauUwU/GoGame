@@ -3,16 +3,16 @@
 
 const std::array<std::array<int, 4>, GoMatch::Count> &GoMatch::neighbors()
 {
-    static const auto table = [] {
-        std::array<std::array<int, 4>, Count> result;
+    static const auto ans = [] {
+        std::array<std::array<int, 4>, Count> res;
         for (int i = 0; i < Count; ++i)
-            result[i] = {i / Size > 0 ? i - Size : -1,
-                         i / Size < Size - 1 ? i + Size : -1,
-                         i % Size > 0 ? i - 1 : -1,
-                         i % Size < Size - 1 ? i + 1 : -1};
-        return result;
+            res[i] = {i / Size > 0 ? i - Size : -1,
+                      i / Size < Size - 1 ? i + Size : -1,
+                      i % Size > 0 ? i - 1 : -1,
+                      i % Size < Size - 1 ? i + 1 : -1};
+        return res;
     }();
-    return table;
+    return ans;
 }
 GoMatch::GoMatch()
 {
@@ -35,7 +35,6 @@ std::shared_ptr<const GoMatch::Groups> GoMatch::buildGroups(const std::array<int
     };
     for (int i = 0; i < Count; ++i)
         if (board[i] >= 0) {
-            // Each edge is joined once. Union by size keeps trees shallow.
             for (int next : neighbors()[i])
                 if (next > i && board[next] == board[i]) {
                     int a = root(i), b = root(next);
@@ -69,16 +68,25 @@ bool GoMatch::validMove(int row, int col) const
     QString error;
     return copy.play(row, col, error);
 }
-GoMatch::Replay GoMatch::replay() const {
-    if (m_replay) return *m_replay;
-    Replay r; r.initialCells = board; r.initialPlayer = currentPlayer;
-    r.initialKo = koPoint; r.initialPasses = consecutivePasses;
-    r.initialMoveCount = moveCount; r.initialCaptured = capturedStones;
+GoMatch::Replay GoMatch::replay() const
+{
+    if (m_replay)
+        return *m_replay;
+    Replay r;
+    r.initialCells = board;
+    r.initialPlayer = currentPlayer;
+    r.initialKo = koPoint;
+    r.initialPasses = consecutivePasses;
+    r.initialMoveCount = moveCount;
+    r.initialCaptured = capturedStones;
     return r;
 }
-void GoMatch::recordMove(int player, int point) {
-    if (!m_replay) m_replay = std::make_shared<Replay>(replay());
-    else if (!m_replay.unique()) m_replay = std::make_shared<Replay>(*m_replay);
+void GoMatch::recordMove(int player, int point)
+{
+    if (!m_replay)
+        m_replay = std::make_shared<Replay>(replay());
+    else if (!m_replay.unique())
+        m_replay = std::make_shared<Replay>(*m_replay);
     m_replay->moves.push_back({player, point});
 }
 bool GoMatch::play(int row, int col, QString &error)
@@ -89,7 +97,10 @@ bool GoMatch::play(int row, int col, QString &error)
         return false;
     }
     int pos = row * Size + col;
-    if (pos == koPoint) { error = "Ko"; return false; }
+    if (pos == koPoint) {
+        error = "Ko";
+        return false;
+    }
     if (board[pos] != -1) {
         error = "Occupied";
         return false;
@@ -216,7 +227,7 @@ QJsonObject GoMatch::scoreDetails(ScoringPhase phase) const
                     unsettledPoints += size[pos];
             }
     } else {
-        const auto &chains = groups();
+        auto &chains = groups();
         std::array<std::bitset<Count>, Count> regionCells, boundaryChains, vitalChains;
         std::bitset<Count> aliveChains, activeRegions;
         for (int pos = 0; pos < Count; ++pos) {
@@ -299,13 +310,19 @@ QJsonObject GoMatch::toJson() const
         previous.append(color);
     const auto r = replay();
     QJsonArray initial, moves;
-    for (int c : r.initialCells) initial.append(c);
-    for (const auto& m : r.moves) moves.append(QJsonArray{m.player, m.point});
-    QJsonObject history{{"initialCells", initial}, {"initialPlayer", r.initialPlayer},
-        {"initialKo", r.initialKo}, {"initialPasses", r.initialPasses},
-        {"initialMoveCount", r.initialMoveCount},
-        {"initialCaptured", QJsonArray{r.initialCaptured[0], r.initialCaptured[1]}}, {"moves", moves}};
-    return {{"history", history}, {"board", state()},
+    for (int c : r.initialCells)
+        initial.append(c);
+    for (const auto &m : r.moves)
+        moves.append(QJsonArray{m.player, m.point});
+    QJsonObject history{{"initialCells", initial},
+                        {"initialPlayer", r.initialPlayer},
+                        {"initialKo", r.initialKo},
+                        {"initialPasses", r.initialPasses},
+                        {"initialMoveCount", r.initialMoveCount},
+                        {"initialCaptured", QJsonArray{r.initialCaptured[0], r.initialCaptured[1]}},
+                        {"moves", moves}};
+    return {{"history", history},
+            {"board", state()},
             {"previousBoard", previous},
             {"hasPrevious", hasPrevious},
             {"currentPlayerIndex", currentPlayer},
@@ -370,34 +387,49 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         const auto initial = h.value("initialCells").toArray();
         QJsonObject setup = json;
         setup.remove("history");
-        setup["board"] = initial; setup["previousBoard"] = initial; setup["hasPrevious"] = false;
-        setup["currentPlayerIndex"] = h.value("initialPlayer"); setup["moveCount"] = h.value("initialMoveCount");
-        setup["consecutivePasses"] = h.value("initialPasses"); setup["capturedStones"] = h.value("initialCaptured");
-        setup["capturedLastMove"] = 0; setup["koPoint"] = h.value("initialKo");
+        setup["board"] = initial;
+        setup["previousBoard"] = initial;
+        setup["hasPrevious"] = false;
+        setup["currentPlayerIndex"] = h.value("initialPlayer");
+        setup["moveCount"] = h.value("initialMoveCount");
+        setup["consecutivePasses"] = h.value("initialPasses");
+        setup["capturedStones"] = h.value("initialCaptured");
+        setup["capturedLastMove"] = 0;
+        setup["koPoint"] = h.value("initialKo");
         GoMatch rebuilt;
         if (!fromJson(setup, rebuilt, error) || !h.value("moves").isArray()) {
-            error = "Invalid Go history setup"; return false;
+            error = "Invalid Go history setup";
+            return false;
         }
         const auto moves = h.value("moves").toArray();
-        if (moves.size() > 100000) { error = "Go history too long"; return false; }
-        for (const auto& item : moves) {
+        if (moves.size() > 100000) {
+            error = "Go history too long";
+            return false;
+        }
+        for (const auto &item : moves) {
             const auto move = item.toArray();
             if (move.size() != 2 || !move[0].isDouble() || !move[1].isDouble()
                 || move[0].toDouble() != rebuilt.currentPlayer
-                || move[1].toDouble() != std::floor(move[1].toDouble())
-                || move[1].toInt(-1) < 0 || move[1].toInt() > Count) {
-                error = "Invalid Go history move"; return false;
+                || move[1].toDouble() != std::floor(move[1].toDouble()) || move[1].toInt(-1) < 0
+                || move[1].toInt() > Count) {
+                error = "Invalid Go history move";
+                return false;
             }
             const int point = move[1].toInt();
-            if (point == Count) rebuilt.pass();
-            else if (!rebuilt.play(point / Size, point % Size, error)) return false;
+            if (point == Count)
+                rebuilt.pass();
+            else if (!rebuilt.play(point / Size, point % Size, error))
+                return false;
         }
         if (rebuilt.board != parsed.board || rebuilt.currentPlayer != parsed.currentPlayer
             || rebuilt.moveCount != parsed.moveCount || rebuilt.koPoint != parsed.koPoint
             || rebuilt.capturedStones != parsed.capturedStones
             || rebuilt.consecutivePasses != parsed.consecutivePasses
-            || (!moves.empty() && (rebuilt.previousBoard != parsed.previousBoard || rebuilt.hasPrevious != parsed.hasPrevious))) {
-            error = "Go history does not match position"; return false;
+            || (!moves.empty()
+                && (rebuilt.previousBoard != parsed.previousBoard
+                    || rebuilt.hasPrevious != parsed.hasPrevious))) {
+            error = "Go history does not match position";
+            return false;
         }
         parsed.m_replay = rebuilt.m_replay;
     }

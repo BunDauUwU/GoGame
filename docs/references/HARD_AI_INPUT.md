@@ -1,8 +1,8 @@
-# Mã MCTS người dùng đính kèm
+# User-Supplied MCTS Code
 
-Đầu vào của yêu cầu HardAI ngày 19/10/2026, từ file `Pasted text.txt`. Đây là bản mã tham khảo người dùng gửi, không phải implementation hiện tại. Giữ nguyên nội dung bên trong code block; xem bản thực thi ở `src/AI/HardAI.h/.cpp` tính từ gốc dự án.
+Input for the HardAI request on 19 October 2026, from `Pasted text.txt`. This is the reference code supplied by the user, not the current implementation. The code block is preserved verbatim as part of the original prompt attachment; see `src/AI/HardAI.h/.cpp` relative to the project root for the running implementation.
 
-Nguồn tệp gốc: `/home/lumie/.codex/attachments/c37ac408-66fe-435f-8f62-7aea3666a011/Pasted text.txt`.
+Original attachment: `/home/lumie/.codex/attachments/c37ac408-66fe-435f-8f62-7aea3666a011/Pasted text.txt`.
 
 ````cpp
 #ifndef GOMCTS_IMPLEMENTATION_INCLUDED

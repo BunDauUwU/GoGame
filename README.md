@@ -73,7 +73,7 @@ This game currently uses Japanese rules, however there may be some inaccuracies,
 
 # Project Documentation
 
-All of these files were written by Vietnamese people to support debugging for developers and assist AI. The translation will not be implemented.
+Project documentation is maintained in English to support developers and AI-assisted debugging. Original Vietnamese prompts are preserved in Vietnamese.
 
 - [AI Usage Declaration](docs/AI_Declaration.md)
 - [Project Structure and References](docs/STRUCTUREANDREF.md)

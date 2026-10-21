@@ -1,13 +1,13 @@
-# Kiến trúc và giao thức GoGame
+# GoGame Architecture and Protocol
 
-Các sơ đồ/schema dưới đây chuyển từ README trước khi tách. AI hiện có Easy, Medium và Hard; Hard có backend KataGo tùy chọn. Sơ đồ online mô tả luồng WebSocket, không mô tả toàn bộ engine AI. Hướng dẫn chạy ở [README](../README.md); giao thức chi tiết tại [SERVER.md](SERVER.md); cấu trúc file tại [STRUCTUREANDREF.md](STRUCTUREANDREF.md).
+The diagrams and schemas below were moved from the README when the documentation was reorganized. AI currently includes Easy, Medium, and Hard; Hard has an optional KataGo backend. The online diagrams describe the WebSocket flow rather than the complete AI engine. See [README](../README.md) for startup instructions, [SERVER.md](SERVER.md) for protocol details, and [STRUCTUREANDREF.md](STRUCTUREANDREF.md) for the file structure.
 
-## Kiến trúc và tương tác
+## Architecture and Interactions
 
 ```mermaid
 flowchart LR
     UI[QML Screens / Components] --> Game[GameManager]
-    UI --> Auth[AuthManager / SQLite local]
+    UI --> Auth[AuthManager / local SQLite]
     UI --> Queue[MatchmakingManager]
     Game --> AI[EasyAI / MediumAI / HardAI: worker]
     AI --> Rules
@@ -15,8 +15,8 @@ flowchart LR
     Auth --> Protocol
     Queue --> Protocol
     Protocol <-->|WebSocket JSON| Server[Server]
-    Server --> Rules[GoMatch: luật / bàn cờ]
-    Server --> Clock[QTimer / thời gian monotonic]
+    Server --> Rules[GoMatch: rules / board]
+    Server --> Clock[QTimer / monotonic time]
     Server <-->|ReadData / WriteData| File[state.json]
     Server -->|snapshot / event / error| Protocol
     Protocol -->|messageReceived| Game
@@ -24,7 +24,7 @@ flowchart LR
     Protocol -->|messageReceived| Queue
 ```
 
-Luồng dưới đây đã được nối qua NetworkClient, GameManager và MatchScreen. Preview giữ ở client; chỉ lần xác nhận mới gửi Play. Khi chờ phản hồi, client khóa thao tác để tránh gửi nước trùng.
+The following flow is connected through NetworkClient, GameManager, and MatchScreen. Preview stays on the client; only confirmation sends Play. While waiting for a response, the client locks input to prevent duplicate moves.
 
 ```mermaid
 sequenceDiagram
@@ -43,67 +43,66 @@ sequenceDiagram
     S-->>B: MatchFound(playerIndex=1, opponentName)
     S-->>A: GameSnapshot(self.playerIndex=0)
     S-->>B: GameSnapshot(self.playerIndex=1)
-    A->>A: Preview local, chưa gửi lệnh
-    A->>S: GameCommand(Play, row, col) khi xác nhận
-    S->>S: Kiểm tra thành viên, lượt, đồng hồ, luật
-    alt Nước hợp lệ
+    A->>A: Local preview; no command sent
+    A->>S: GameCommand(Play, row, col) on confirmation
+    S->>S: Validate membership, turn, clock, and rules
+    alt Legal move
         S-->>A: GameEvent(StonePlayed)
         S-->>B: GameEvent(StonePlayed)
-        S-->>A: GameSnapshot mới
-        S-->>B: GameSnapshot mới
-    else Sai lượt / sai vị trí / sai luật
+        S-->>A: Updated GameSnapshot
+        S-->>B: Updated GameSnapshot
+    else Wrong turn / invalid position / illegal move
         S-->>A: Error(code, message)
     end
     B->>S: GameCommand(EndRound / Concede)
-    Note over A,B: EndRound = pass trong cờ vây
-    S->>S: Hai pass / đầu hàng / hết giờ / ngắt kết nối
+    Note over A,B: EndRound = pass in Go
+    S->>S: Two passes / resignation / timeout / disconnection
     S-->>A: GameEvent(GameEnded)
-    S-->>B: GameEvent(GameEnded) nếu còn kết nối
+    S-->>B: GameEvent(GameEnded), if connected
     S-->>A: GameSnapshot(stage=GameEnd, deadline=0)
-    S-->>B: GameSnapshot cuối nếu còn kết nối
+    S-->>B: Final GameSnapshot, if connected
 ```
 
-Server là nguồn quyết định bàn cờ online, lượt và thời gian. Preview chỉ là UI; client cần chờ snapshot sau khi gửi lệnh xác nhận. Luồng `ReadData`/`WriteData` độc lập với trận đấu; hiện không dùng để đồng bộ hoặc tự lưu các match.
+The server is authoritative for the online board, turns, and time. Preview is a UI feature; the client waits for a snapshot after sending a confirmed command. `ReadData`/`WriteData` is independent of gameplay and does not currently synchronize or automatically save matches.
 
-## Giao thức JSON và sendSnapshot
+## JSON Protocol and sendSnapshot
 
-Mọi text message dùng envelope `{"type":"...","payload":{...}}`. Binary không được hỗ trợ; giới hạn message nhận 1 MiB.
+Every text message uses the envelope `{"type":"...","payload":{...}}`. Binary messages are unsupported; incoming messages are limited to 1 MiB.
 
-| Client → server     | Payload                             | Server → client                                                                    |
-| ------------------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
-| `AuthRequest`       | `nickname` (1–17 ký tự sau trim)    | `AuthResult` với `success`, `playerId`, `nickname`; nickname sai hiện trả `Error`. |
-| `MatchmakingStart`  | `mode` (1–64 ký tự sau trim)        | `MatchmakingStatus`, sau đó `MatchFound` và snapshot khi đủ 2 người cùng mode.     |
-| `MatchmakingCancel` | `{}`                                | `MatchmakingStatus`.                                                               |
-| `GameCommand`       | `matchId`, `commandType`, `command` | `GameEvent` + snapshot, hoặc `Error`.                                              |
-| `ReadData`          | `{}`                                | `Data` chứa `data`.                                                                |
-| `WriteData`         | `data` là JSON object               | `DataWritten` với `ok: true`, hoặc `Error`. Thay toàn bộ file.                     |
+| Client → server | Payload | Server → client |
+| --- | --- | --- |
+| `AuthRequest` | `nickname` (1–17 characters after trimming) | `AuthResult` with `success`, `playerId`, and `nickname`; an invalid nickname currently returns `Error`. |
+| `MatchmakingStart` | `mode` (1–64 characters after trimming) | `MatchmakingStatus`, then `MatchFound` and a snapshot when two players select the same mode. |
+| `MatchmakingCancel` | `{}` | `MatchmakingStatus`. |
+| `GameCommand` | `matchId`, `commandType`, `command` | `GameEvent` and a snapshot, or `Error`. |
+| `ReadData` | `{}` | `Data` containing `data`. |
+| `WriteData` | `data` as a JSON object | `DataWritten` with `ok: true`, or `Error`. Replaces the entire file. |
 
-Ví dụ đặt quân tại hàng 0, cột 0:
+Example: place a stone at row 0, column 0:
 
 ```json
 {
     "type": "GameCommand",
-    "payload": { "matchId": "<id từ MatchFound>", "commandType": "Play", "command": { "row": 0, "col": 0 } }
+    "payload": { "matchId": "<id from MatchFound>", "commandType": "Play", "command": { "row": 0, "col": 0 } }
 }
 ```
 
-`Play` yêu cầu tọa độ nguyên 0–18; `EndRound` là pass và `Concede` là đầu hàng, cả hai dùng `command: {}`. Đầu hàng được phép ngoài lượt; đặt quân/pass chỉ được thực hiện đúng lượt. Các lệnh nhân vật, card, skill trong template không được server Go hỗ trợ.
+`Play` requires integer coordinates from 0 to 18. `EndRound` means pass and `Concede` means resignation; both use `command: {}`. Resignation is allowed outside the player's turn; placing a stone or passing requires the correct turn. The Go server does not support character, card, or skill commands from the template.
 
-`Server::sendSnapshot(socket, match)` tạo payload riêng cho mỗi người; overload `sendSnapshot(match)` gửi tới cả hai socket. Bàn cờ và thời gian công khai giống nhau, `self.playerIndex` theo người nhận.
+`Server::sendSnapshot(socket, match)` creates a recipient-specific payload; the `sendSnapshot(match)` overload sends to both sockets. Public board and clock data are identical, while `self.playerIndex` identifies the recipient.
 
-| Trường snapshot                  | Ý nghĩa                                                                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `matchId`, `stage`, `started`    | ID trận, `Action` khi chơi hoặc `GameEnd` khi kết thúc.                                                                  |
-| `boardSize`, `board`             | 19 và mảng 361 ô theo `row * 19 + col`; `-1` trống, `0` đen, `1` trắng.                                                  |
-| `moveCount`, `consecutivePasses` | Số lượt đã qua (kể cả pass), số pass liên tiếp.                                                                          |
-| `currentPlayerIndex`, `komi`     | Người đến lượt; komi trắng 6,5.                                                                                          |
-| `remainingMs`                    | Mảng thời gian đen/trắng tới ranh giới thời gian hiện tại (main hoặc một period Byo-yomi).                               |
-| `clocks`                         | Mỗi người có `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, `phase` (`Main`/`ByoYomi`). |
-| `players`                        | Mỗi người có `playerId`, `nickname`, `playerIndex`, `color`, `remainingTimeMs`.                                          |
-| `self.playerIndex`               | 0 hoặc 1; không có dữ liệu card/hand riêng.                                                                              |
-| `serverTimeEpochMs`              | Thời điểm server tạo snapshot để client ước lượng lệch đồng hồ.                                                          |
-| `actionDeadlineEpochMs`          | Epoch của ranh giới main/period hiện tại của người đang đi; bằng 0 khi trận kết thúc.                                    |
-| `winnerIndex`, `endReason`       | `-1`/chuỗi rỗng khi đang chơi; người thắng và lý do khi kết thúc.                                                        |
+| Snapshot field | Meaning |
+| --- | --- |
+| `matchId`, `stage`, `started` | Match ID; `Action` during play or `GameEnd` after completion. |
+| `boardSize`, `board` | 19 and an array of 361 cells indexed by `row * 19 + col`; `-1` empty, `0` Black, `1` White. |
+| `moveCount`, `consecutivePasses` | Number of turns, including passes, and consecutive passes. |
+| `currentPlayerIndex`, `komi` | Player to move; White receives 6.5 komi. |
+| `remainingMs` | Black/White time until the current boundary: main time or one Byo-yomi period. |
+| `clocks` | Each player's `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, and `phase` (`Main`/`ByoYomi`). |
+| `players` | Each player's `playerId`, `nickname`, `playerIndex`, `color`, and `remainingTimeMs`. |
+| `self.playerIndex` | 0 or 1; no private card/hand data. |
+| `serverTimeEpochMs` | Snapshot creation time, used by the client to estimate clock offset. |
+| `actionDeadlineEpochMs` | Epoch of the active player's current main-time/period boundary; 0 after the match ends. |
+| `winnerIndex`, `endReason` | `-1`/empty string during play; winner and reason after completion. |
 
-Mỗi bên có **10 hoặc 15 phút chính + 3 lần Byo-yomi × 20 giây**. Hết main time chuyển sang Byo-yomi; hết một period mất một lần. Nước đi/pass hợp lệ hồi period hiện tại về 20 giây, không hồi số lần đã mất; lệnh sai không hồi giờ. Hết lần cuối xử thua. Server dùng monotonic time và QTimer kiểm tra tại ranh giới hoặc tối đa mỗi 30 giây; 30 giây không phải giới hạn mỗi nước. Snapshot gửi khi ghép trận, sau nước hợp lệ, timer và lúc kết thúc. GameClock nội suy clock của mình và đối thủ giữa các snapshot. Trường stage vẫn là chuỗi trong payload; không cần enum stage/card-game ở client.
-
+Each player receives **10 or 15 minutes of main time plus 3 × 20-second Byo-yomi periods**. Exhausting main time starts Byo-yomi; exhausting a period consumes one period. A legal move or pass resets the current period to 20 seconds without restoring consumed periods; invalid commands do not reset time. Exhausting the final period loses the game. The server uses monotonic time and QTimer checks at a boundary or at most every 30 seconds; 30 seconds is not a per-move limit. Snapshots are sent on matching, legal moves, timer updates, and game completion. GameClock interpolates both players' clocks between snapshots. The payload stage remains a string; no card-game/stage enum is required on the client.
