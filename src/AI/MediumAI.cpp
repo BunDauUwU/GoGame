@@ -1,3 +1,4 @@
+// AI-assisted: see AI12 in docs/AI_Declaration.md (historical root-result and cancellation fixes).
 #include "MediumAI.h"
 #include <QElapsedTimer>
 #include <algorithm>

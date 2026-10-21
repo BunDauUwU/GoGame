@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 
+// AI-assisted: see AI13 in docs/AI_Declaration.md (PUCT/FPU search options).
 struct HardSearchOptions
 {
     int timeBudgetMs = 1800;
@@ -17,6 +18,7 @@ struct HardSearchOptions
     float fpuReduction = 0.2f;
 };
 
+// AI-assisted: see AI13 in docs/AI_Declaration.md (HardAI API and evaluator hook).
 class HardAI
 {
 public:

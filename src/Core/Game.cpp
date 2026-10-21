@@ -138,6 +138,7 @@ void GameManager::update_pieces(int row, int col) {
   notifyMove();
   requestMove();
 }
+// AI-assisted: see AI04 in docs/AI_Declaration.md (historical pass-turn implementation).
 void GameManager::pass_turn() {
   if (!canAct())
     return;

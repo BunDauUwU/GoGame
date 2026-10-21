@@ -12,6 +12,7 @@ Rectangle {
     property string matchmakingError: ""
     property int selectedAIDifficulty: 1
 
+    // AI-assisted: see AI12 in docs/AI_Declaration.md (offline AI match navigation).
     function openAIMatch() {
         AppState.difficultyLevel = selectedAIDifficulty;
         AppState.playingAgainstAI = true;
@@ -22,6 +23,7 @@ Rectangle {
         });
     }
 
+    // AI-assisted: see AI12 and AI13 in docs/AI_Declaration.md (Medium/Hard selection).
     function startSelectedAIMatch(slot) {
         mainMenuRoot.matchmakingError = "";
         const started = selectedAIDifficulty === 0 ? gameManager.startEasyGame(0, slot) : selectedAIDifficulty === 1 ? gameManager.startMediumGame(0, slot) : gameManager.startHardGame(0, slot);

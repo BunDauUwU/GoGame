@@ -6,14 +6,17 @@ bool GameManager::startEasyGame(int playerColor, int slot)
 {
     return startAIGame(QStringLiteral("Easy"), playerColor, slot);
 }
+// AI-assisted: see AI12 in docs/AI_Declaration.md (offline Medium startup).
 bool GameManager::startMediumGame(int playerColor, int slot)
 {
     return startAIGame(QStringLiteral("Medium"), playerColor, slot);
 }
+// AI-assisted: see AI13 in docs/AI_Declaration.md (Hard mode integration).
 bool GameManager::startHardGame(int playerColor, int slot)
 {
     return startAIGame(QStringLiteral("Hard"), playerColor, slot);
 }
+// AI-assisted: see AI12 and AI13 in docs/AI_Declaration.md (AI game startup integration).
 bool GameManager::startAIGame(const QString &difficulty, int playerColor, int slot)
 {
     if (online() && !m_finished) {
@@ -75,6 +78,7 @@ void GameManager::stopAI()
     emit interactionChanged();
 }
 
+// AI-assisted: see AI12 and AI13 in docs/AI_Declaration.md (worker dispatch and cancellation).
 void GameManager::requestMove()
 {
     if (!m_aiEnabled || m_finished || m_pending || currentPlayer() == m_playerIndex)

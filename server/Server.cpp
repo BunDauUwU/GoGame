@@ -393,12 +393,14 @@ void Server::broadcast(const Match &match, const QString &type, const QJsonObjec
     for (auto socket : match.sockets)
         send(socket, envelope(type, payload));
 }
+// AI-assisted: see AI07 in docs/AI_Declaration.md (snapshot broadcast).
 void Server::sendSnapshot(const Match &match)
 {
     for (auto socket : match.sockets)
         sendSnapshot(socket, match);
 }
 
+// AI-assisted: see AI07 in docs/AI_Declaration.md (recipient-specific Go snapshot).
 void Server::sendSnapshot(QWebSocket *socket, const Match &match)
 {
     const int localIndex = match.sockets.indexOf(socket);

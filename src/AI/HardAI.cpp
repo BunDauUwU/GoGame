@@ -1,3 +1,4 @@
+// AI-assisted: see AI13 in docs/AI_Declaration.md (MCTS/PUCT/FPU, cache, arena and subtree reuse).
 #include "HardAI.h"
 #include <algorithm>
 #include <chrono>

@@ -1,12 +1,13 @@
 # Cấu trúc dự án và tài liệu tham khảo
 
-Đối chiếu trực tiếp hệ thống file ngày **20/10/2026**, sau khi tách tài liệu. Các đường dẫn source và lệnh trong tài liệu tính từ gốc dự án; đường dẫn Markdown là tương đối với file đang đọc.
+Đối chiếu trực tiếp hệ thống file ngày **21/10/2026**, sau khi tách tài liệu. Các đường dẫn source và lệnh trong tài liệu tính từ gốc dự án; đường dẫn Markdown là tương đối với file đang đọc.
 
 ## Tài liệu nằm ở đâu?
 
 | File                                                         | Nội dung                                                                                    |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | [README.md](../README.md)                                    | Tổng quan và usage: build, client, server, AI, Sandbox, KataGo.                             |
+| [AI_Declaration.md](AI_Declaration.md) | Bản khai sử dụng AI theo mẫu nộp nhóm, attribution và xác nhận từng thành viên. |
 | [PROMPT.md](PROMPT.md)                                       | Bảng prompt đầy đủ, phản hồi còn khôi phục được, thay đổi và kiểm tra từng lượt.            |
 | [STRUCTUREANDREF.md](STRUCTUREANDREF.md)                     | Cây dự án và danh mục nguồn tham khảo.                                                      |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                           | Sơ đồ client/server, luồng WebSocket và schema snapshot.                                    |
@@ -80,6 +81,7 @@ GoGame/
 │   │   └── README-2026-10-20.md
 │   ├── references/
 │   │   └── HARD_AI_INPUT.md
+│   ├── AI_Declaration.md
 │   ├── ARCHITECTURE.md
 │   ├── CHANGELOG.md
 │   ├── PROMPT.md
