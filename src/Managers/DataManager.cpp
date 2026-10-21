@@ -21,6 +21,7 @@ namespace {
 QString existingSavePath(bool ai, int slot)
 {
     const auto path = DataManager::savePath(ai, slot);
+
     if (!ai && slot == 1 && !QFile::exists(path))
         return DataManager::savePath(false, 0);
     return path;
@@ -55,6 +56,7 @@ QVariantList DataManager::savedGames(bool ai)
         result.append(QVariantMap{{"slot", slot}, {"saved", saved}, {"mode", mode},
                                   {"savedAt", savedAt}, {"label", label}});
     }
+
     return result;
 }
 int DataManager::firstFreeSlot(bool ai)

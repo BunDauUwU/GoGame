@@ -32,12 +32,13 @@ void AuthManager::setNetworkClient(NetworkClient *client)
 
 void AuthManager::initDatabase()
 {
+    // Cần fix không nhỉ?
     const QString appDataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir dir(appDataDir);
     if (!dir.exists()) {
         dir.mkpath(appDataDir);
     }
-
+    qDebug() << dir << '\n';
     const QString dbPath = dir.filePath(QStringLiteral("users.sqlite"));
     QSqlDatabase db;
 

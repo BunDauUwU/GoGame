@@ -48,6 +48,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    // I dont know why above code work
+
     NetworkClient networkClient;
 
     MatchmakingManager matchmakingManager;

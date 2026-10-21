@@ -580,8 +580,8 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: qsTr("Back to menu")
                 onClicked: {
-                    if (gameManager.online || gameManager.exitLocalGame())
-                        stack.pop();
+                    gameManager.exitLocalGame();
+                    stack.pop();
                 }
             }
         }

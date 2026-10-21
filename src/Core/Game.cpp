@@ -46,14 +46,13 @@ void GameManager::clearLastMove() {
   emit lastMoveChanged();
 }
 
-// for undo/redo/load: last applied move is m_moves[m_cursor - 1]
 void GameManager::syncLastMoveFromHistory() {
   if (m_cursor <= 0 || m_cursor > (int)m_moves.size()) {
     clearLastMove();
     return;
   }
   const QJsonObject &mv = m_moves[m_cursor - 1];
-  // adjust keys to whatever recordMove() stores
+
   if (mv.contains("row") && mv.contains("col"))
     setLastMove(mv["row"].toInt(), mv["col"].toInt());
   else

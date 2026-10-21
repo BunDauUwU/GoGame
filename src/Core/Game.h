@@ -42,36 +42,36 @@ class GameManager : public QObject {
   Q_PROPERTY(int currentSaveSlot READ currentSaveSlot NOTIFY savesChanged)
   Q_PROPERTY(QString notification READ notification NOTIFY notificationChanged)
 public:
-  static constexpr int AIHistoryLimit = 1000; // Undo Redo Limit
-  static constexpr int AISaveSlots = DataManager::AISaveSlots;
-  explicit GameManager(QObject *parent = nullptr);
-  ~GameManager() override;
-  QVariantList lastMoveCoords() const { return m_lastMoveCoords; }
-  Q_INVOKABLE bool startEasyGame(int humanColor = 0, int slot = 0);
-  Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
-  Q_INVOKABLE bool startHardGame(int humanColor = 0, int slot = 0);
-  Q_INVOKABLE bool startSandbox();
-  Q_INVOKABLE void stopAI();
-  Q_INVOKABLE bool exitLocalGame();
-  Q_INVOKABLE void resetGame();
-  Q_INVOKABLE void undo();
-  Q_INVOKABLE void redo();
-  Q_INVOKABLE bool saveGame(int slot = 0);
-  Q_INVOKABLE bool loadSandbox(int slot = 1);
-  Q_INVOKABLE bool loadAIGame(int slot);
-  Q_INVOKABLE void refreshSaves() { emit savesChanged(); }
-  bool aiEnabled() const { return m_aiEnabled; }
-  bool sandbox() const { return m_sandbox; }
-  QString aiDifficulty() const { return m_aiDifficulty; }
-  bool hasSandboxSave() const { return DataManager::hasSandboxSave(); }
-  // Model backends are configured before dispatch; the worker gets a safe copy.
-  void configureHard(HardSearchOptions options,
-                     std::shared_ptr<HardAI::Evaluator> evaluator) {
-    cancelSearch();
-    m_hardAI = HardAI(options);
-    m_hardAI.setEvaluator(std::move(evaluator));
-    requestMove();
-  }
+    static constexpr int AIHistoryLimit = 1000000000; // Undo Redo Limit
+    static constexpr int AISaveSlots = DataManager::AISaveSlots;
+    explicit GameManager(QObject *parent = nullptr);
+    ~GameManager() override;
+    QVariantList lastMoveCoords() const { return m_lastMoveCoords; }
+    Q_INVOKABLE bool startEasyGame(int humanColor = 0, int slot = 0);
+    Q_INVOKABLE bool startMediumGame(int humanColor = 0, int slot = 0);
+    Q_INVOKABLE bool startHardGame(int humanColor = 0, int slot = 0);
+    Q_INVOKABLE bool startSandbox();
+    Q_INVOKABLE void stopAI();
+    Q_INVOKABLE bool exitLocalGame();
+    Q_INVOKABLE void resetGame();
+    Q_INVOKABLE void undo();
+    Q_INVOKABLE void redo();
+    Q_INVOKABLE bool saveGame(int slot = 0);
+    Q_INVOKABLE bool loadSandbox(int slot = 1);
+    Q_INVOKABLE bool loadAIGame(int slot);
+    Q_INVOKABLE void refreshSaves() { emit savesChanged(); }
+    bool aiEnabled() const { return m_aiEnabled; }
+    bool sandbox() const { return m_sandbox; }
+    QString aiDifficulty() const { return m_aiDifficulty; }
+    bool hasSandboxSave() const { return DataManager::hasSandboxSave(); }
+    // Model backends are configured before dispatch; the worker gets a safe copy.
+    void configureHard(HardSearchOptions options, std::shared_ptr<HardAI::Evaluator> evaluator)
+    {
+        cancelSearch();
+        m_hardAI = HardAI(options);
+        m_hardAI.setEvaluator(std::move(evaluator));
+        requestMove();
+    }
   void setHardEvaluator(std::shared_ptr<HardAI::Evaluator> evaluator) {
     cancelSearch();
     m_hardAI.setEvaluator(std::move(evaluator));
@@ -124,6 +124,7 @@ signals:
   void aiStateChanged();
   void historyChanged();
   void savesChanged();
+  void invalidMovePlayed();
   void notificationChanged();
   void gameError(const QString &message);
 
