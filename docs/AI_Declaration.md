@@ -64,6 +64,6 @@ Names are taken from the current project README. Hoang Minh Vu supplied his name
 | Full name             | Student ID               | Personal confirmation / signature    | Date |
 | --------------------- | ------------------------ | ------------------------------------ | ---- |
 | Hoang Minh Vu         | 26125090                 | Pending — to be completed personally | —    |
-| Nguyen Cao Long Khanh | To be provided by member | Pending — to be completed personally | —    |
+| Nguyen Cao Long Khanh | 26125035                 | Pending — to be completed personally | —    |
 
 Before submission, the team must complete the missing student ID and both personal confirmations, resolve the Unknown members and unconfirmed output-adoption statuses where possible, record the model/version if it can be verified, and add any AI usage outside this chat. Keep unresolved facts explicit; do not invent names, versions, dates or signatures.
