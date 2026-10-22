@@ -87,3 +87,5 @@ CMakeLists.txt.user*
 /server/data/
 /data/
 /ai-reference/
+
+/report

@@ -56,7 +56,7 @@ public:
     int koPoint = -1;
     bool koThreatLastMove = false;
     std::array<int, 2> capturedStones{};
-    static const std::array<std::array<int, 4>, Count> &neighbors();
+    static const std::array<std::array<int, 4>, Count> &adj();
 
 private:
     std::shared_ptr<Replay> m_replay;

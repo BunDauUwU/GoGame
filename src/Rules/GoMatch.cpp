@@ -1,7 +1,7 @@
 #include "GoMatch.h"
 #include <cmath>
 
-const std::array<std::array<int, 4>, GoMatch::Count> &GoMatch::neighbors()
+const std::array<std::array<int, 4>, GoMatch::Count> &GoMatch::adj()
 {
     static const auto ans = [] {
         std::array<std::array<int, 4>, Count> res;
@@ -26,6 +26,7 @@ std::shared_ptr<const GoMatch::Groups> GoMatch::buildGroups(const std::array<int
         groups->parent[i] = i;
         groups->size[i] = board[i] >= 0 ? 1 : 0;
     }
+
     auto root = [&](int pos) {
         while (groups->parent[pos] != pos) {
             groups->parent[pos] = groups->parent[groups->parent[pos]];
@@ -33,9 +34,10 @@ std::shared_ptr<const GoMatch::Groups> GoMatch::buildGroups(const std::array<int
         }
         return pos;
     };
-    for (int i = 0; i < Count; ++i)
+
+    for (int i = 0; i < Count; ++i) {
         if (board[i] >= 0) {
-            for (int next : neighbors()[i])
+            for (int next : adj()[i])
                 if (next > i && board[next] == board[i]) {
                     int a = root(i), b = root(next);
                     if (a == b)
@@ -46,11 +48,13 @@ std::shared_ptr<const GoMatch::Groups> GoMatch::buildGroups(const std::array<int
                     groups->size[a] += groups->size[b];
                 }
         }
+    }
+
     for (int i = 0; i < Count; ++i)
         if (board[i] >= 0) {
             int r = root(i);
             groups->parent[i] = r;
-            for (int next : neighbors()[i])
+            for (int next : adj()[i])
                 if (next >= 0 && board[next] == -1)
                     groups->liberties[r].set(next);
         }
@@ -105,28 +109,35 @@ bool GoMatch::play(int row, int col, QString &error)
         error = "Occupied";
         return false;
     }
-    const auto &index = groups();
+    const auto &tmp = groups();
     std::array<bool, Count> captured{};
-    for (int next : neighbors()[pos])
+    for (int next : adj()[pos])
         if (next >= 0 && board[next] == 1 - currentPlayer) {
-            int r = index.root(next);
-            if (index.liberties[r].count() == 1 && index.liberties[r].test(pos))
+            int r = tmp.root(next);
+            if (tmp.liberties[r].count() == 1 && tmp.liberties[r].test(pos))
                 captured[r] = true;
         }
     auto candidate = board;
     candidate[pos] = currentPlayer;
     int count = 0, last = -1;
     bool anyCapture = false;
-    for (int next : neighbors()[pos])
-        if (next >= 0 && captured[index.root(next)])
+    
+    for (int next : adj()[pos]) {
+        if (next >= 0 && captured[tmp.root(next)]){
             anyCapture = true;
-    if (anyCapture)
-        for (int i = 0; i < Count; ++i)
-            if (board[i] >= 0 && captured[index.root(i)]) {
+            break;
+        }
+    }
+    
+    if (anyCapture) {
+        for (int i = 0; i < Count; ++i) {
+            if (board[i] >= 0 && captured[tmp.root(i)]) {
                 candidate[i] = -1;
                 ++count;
                 last = i;
             }
+        }
+    }
     auto newGroups = buildGroups(candidate);
     int ownRoot = newGroups->root(pos);
     if (newGroups->liberties[ownRoot].none()) {
@@ -139,10 +150,10 @@ bool GoMatch::play(int row, int col, QString &error)
     }
     bool threat = false;
     if (koPoint >= 0)
-        for (int next : neighbors()[pos])
+        for (int next : adj()[pos])
             if (next >= 0 && board[next] == 1 - currentPlayer && candidate[next] >= 0) {
-                int oldRoot = index.root(next), newRoot = newGroups->root(next);
-                if (index.liberties[oldRoot].count() > 1
+                int oldRoot = tmp.root(next), newRoot = newGroups->root(next);
+                if (tmp.liberties[oldRoot].count() > 1
                     && newGroups->liberties[newRoot].count() == 1)
                     threat = true;
             }
@@ -200,7 +211,7 @@ QJsonObject GoMatch::scoreDetails(ScoringPhase phase) const
     };
     for (int pos = 0; pos < Count; ++pos)
         if (board[pos] == -1)
-            for (int next : neighbors()[pos])
+            for (int next : adj()[pos])
                 if (next > pos && board[next] == -1) {
                     int a = root(pos), b = root(next);
                     if (a == b)
@@ -214,7 +225,7 @@ QJsonObject GoMatch::scoreDetails(ScoringPhase phase) const
     if (phase == ScoringPhase::Final) {
         for (int pos = 0; pos < Count; ++pos)
             if (board[pos] == -1)
-                for (int next : neighbors()[pos])
+                for (int next : adj()[pos])
                     if (next >= 0 && board[next] >= 0)
                         borders[root(pos)] |= 1 << board[next];
         for (int pos = 0; pos < Count; ++pos)
@@ -237,7 +248,7 @@ QJsonObject GoMatch::scoreDetails(ScoringPhase phase) const
             }
             const int region = root(pos);
             regionCells[region].set(pos);
-            for (int next : neighbors()[pos])
+            for (int next : adj()[pos])
                 if (next >= 0 && board[next] >= 0) {
                     borders[region] |= 1 << board[next];
                     boundaryChains[region].set(chains.root(next));
@@ -325,7 +336,7 @@ QJsonObject GoMatch::toJson() const
             {"board", state()},
             {"previousBoard", previous},
             {"hasPrevious", hasPrevious},
-            {"currentPlayerIndex", currentPlayer},
+            {"currentPlayertmp", currentPlayer},
             {"moveCount", moveCount},
             {"consecutivePasses", consecutivePasses},
             {"capturedLastMove", capturedLastMove},
@@ -358,7 +369,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
     };
     if (!array("board", parsed.board) || !array("previousBoard", parsed.previousBoard)
         || !json.value("hasPrevious").isBool()
-        || !integer("currentPlayerIndex", parsed.currentPlayer, 0, 1)
+        || !integer("currentPlayertmp", parsed.currentPlayer, 0, 1)
         || !integer("moveCount", parsed.moveCount, 0, 1000000)
         || !integer("consecutivePasses", parsed.consecutivePasses, 0, 2)
         || !integer("capturedLastMove", parsed.capturedLastMove, 0, Count)
@@ -390,7 +401,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         setup["board"] = initial;
         setup["previousBoard"] = initial;
         setup["hasPrevious"] = false;
-        setup["currentPlayerIndex"] = h.value("initialPlayer");
+        setup["currentPlayertmp"] = h.value("initialPlayer");
         setup["moveCount"] = h.value("initialMoveCount");
         setup["consecutivePasses"] = h.value("initialPasses");
         setup["capturedStones"] = h.value("initialCaptured");
