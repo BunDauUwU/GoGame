@@ -1,7 +1,7 @@
 // src/Managers/AssetManager.cpp
 #include "AssetManager.h"
 
-AssetManager::AssetManager(QObject *parent) : QObject(parent) {}
+AssetManager::AssetManager(QObject* parent) : QObject(parent) {}
 
 const QHash<QString, QString> AssetManager::paths = {
     {"Background1", "background/background1.png"},
@@ -16,63 +16,63 @@ const QHash<QString, QString> AssetManager::paths = {
     {"BackgroundSong1", "sounds/background1.mp3"},
     {"BackgroundSong2", "sounds/background2.opus"},
     {"BackgroundSong3", "sounds/background3.mp3"},
+    {"BoardTexture1", "board/variant1.jpg"},
+    {"BoardTexture2", "board/variant2.jpg"},
+    {"BoardTexture3", "board/variant3.jpg"},
+    {"BoardTexture4", "board/variant4.jpg"},
+    {"BoardTexture5", "board/variant5.jpg"},
+    {"BoardTexture6", "board/variant6.jpg"},
+    {"BoardTexture7", "board/variant7.jpg"},
+    {"BoardTexture8", "board/variant8.jpg"},
 };
 
 int AssetManager::currentBackground() const { return m_currentBackground; }
 
 void AssetManager::setCurrentBackground(int index) {
-  if (m_currentBackground == index)
-    return;
+    if (m_currentBackground == index) return;
 
-  m_currentBackground = index;
-  emit currentBackgroundChanged();
+    m_currentBackground = index;
+    emit currentBackgroundChanged();
 }
 
 int AssetManager::currentStoneSkin() const { return m_currentStoneSkin; }
 
 void AssetManager::setCurrentStoneSkin(int index) {
-  if (m_currentStoneSkin == index)
-    return;
+    if (m_currentStoneSkin == index) return;
 
-  m_currentStoneSkin = index;
-  emit currentStoneSkinChanged();
+    m_currentStoneSkin = index;
+    emit currentStoneSkinChanged();
 }
 
-int AssetManager::currentBackgroundSong() const {
-  return m_currentBackgroundSong;
-}
+int AssetManager::currentBackgroundSong() const { return m_currentBackgroundSong; }
 
 void AssetManager::setCurrentBackgroundSong(int index) {
-  if (m_currentBackgroundSong == index)
-    return;
+    if (m_currentBackgroundSong == index) return;
 
-  m_currentBackgroundSong = index;
-  emit currentBackgroundSongChanged();
+    m_currentBackgroundSong = index;
+    emit currentBackgroundSongChanged();
 }
 
 double AssetManager::bgmVolume() const { return m_bgmVolume; }
 
 void AssetManager::setBgmVolume(double volume) {
-  if (qFuzzyCompare(m_bgmVolume, volume))
-    return;
+    if (qFuzzyCompare(m_bgmVolume, volume)) return;
 
-  m_bgmVolume = volume;
-  emit bgmVolumeChanged();
+    m_bgmVolume = volume;
+    emit bgmVolumeChanged();
 }
 
 double AssetManager::sfxVolume() const { return m_sfxVolume; }
 
 void AssetManager::setSfxVolume(double volume) {
-  if (qFuzzyCompare(m_sfxVolume, volume))
-    return;
+    if (qFuzzyCompare(m_sfxVolume, volume)) return;
 
-  m_sfxVolume = volume;
-  emit sfxVolumeChanged();
+    m_sfxVolume = volume;
+    emit sfxVolumeChanged();
 }
 
-QUrl AssetManager::url(const QString &name) const {
-  if (!paths.contains(name))
-    return {};
+QUrl AssetManager::url(const QString& name) const {
+    if (!paths.contains(name)) return {};
 
-  return QUrl("qrc:/GoGame/assets/" + paths.value(name));
+    return QUrl("qrc:/GoGame/assets/" + paths.value(name));
 }
