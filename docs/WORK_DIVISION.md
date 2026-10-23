@@ -10,7 +10,7 @@ This document responsibilities describe development and integration work; it doe
 | Member | Student ID | Record status |
 | --- | --- | --- |
 | Hoang Minh Vu | 26125090 | Name and ID supplied by the member. |
-| Nguyen Cao Long Khanh | 261250 | ID retained from the original work-division notes; the member should confirm the complete ID before submission. |
+| Nguyen Cao Long Khanh | 26125035 | Name and ID supplied by the member. |
 
 ## Hoang Minh Vu
 
@@ -63,7 +63,34 @@ Recorded responsibilities include the login screen, server logic, reusable QML c
 
 ## Nguyen Cao Long Khanh
 
-The supplied notes list Khanh as a team member but do not specify his individual tasks or files. This section remains to be completed with his confirmed contributions. Unlisted work and functions excluded from Vu's claim are not automatically attributed to Khanh.
+Recorded responsibilities cover asset collection and integration, the settings interface and asset preference state, main-menu match-option selection for local/AI play, and Easy AI integration.
+
+### Asset collection and integration
+
+| Files | Recorded contribution and attribution |
+| --- | --- |
+| `assets/background/*`, `assets/board/*`, `assets/sounds/*`, `assets/stones/*` | Collected royalty-free game assets from Internet sources, including in-match background ambient images, playing-board textures, stone appearances, background songs, and in-game sound effects like stone placing, wrong move error. |
+| `src/Managers/AssetManager.cpp`, `src/Managers/AssetManager.h` | Integrated the collected assets into the game and implemented state management for user preferences, so selected background, board, stone, song, and volume settings are applied consistently. |
+
+### Settings interface
+
+| Files | Recorded contribution and attribution |
+| --- | --- |
+| `qml/Screens/SettingsScreen.qml` | Implemented the settings layout and connected its controls to asset preference state managed through `src/Managers/AssetManager.cpp`. The screen allows the user to customize the in-match background ambient image, playing-board texture, stone appearance, background song, background-song volume, and in-match sound-effect volume. |
+| `qml/Screens/MainMenu.qml`, `qml/Screens/MatchScreen.qml` | Added two-way access to `SettingsScreen.qml` from these screens, allowing customization before and after a match without disrupting the existing screen flow. |
+
+### Main menu match options selection for local play
+
+| Files | Recorded contribution and attribution |
+| --- | --- |
+| `qml/Screens/MainMenu.qml` | Handled the selection logic for AI difficulties and the user's playing color in the local AI game interface. |
+
+### Easy AI integration
+
+| Files | Recorded contribution and attribution |
+| --- | --- |
+| `src/AI/EasyAI.h`, `src/AI/EasyAI.cpp` | Adapted the Medium AI implementation into an Easy AI variant, adjusted its decision behavior for easier play, and integrated it into the AI game flow. The logic is derived from `src/AI/MediumAI.h` and `src/AI/MediumAI.cpp` |
 
 ## Collaboration Tools Used:
-- Github.
+- GitHub: For codebase management and version control.
+- Messenger: For facilitating communication between team members.
