@@ -121,7 +121,9 @@ Rectangle {
         }
 
         function onInvalidMovePlayed() {
-            errorSound.play();
+            if (!errorSound.playing) {
+                errorSound.play();
+            }
         }
     }
 
