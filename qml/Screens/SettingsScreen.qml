@@ -68,7 +68,7 @@ Rectangle {
             id: settingsButtonsColumn
 
             width: settingsScroll.availableWidth
-            spacing: 15
+            spacing: 12
 
             Item {
                 width: parent.width
@@ -177,6 +177,61 @@ Rectangle {
                         cache: true
                     }
                 }
+            }
+
+            Item {
+                width: parent.width
+                height: 60
+
+                Row {
+                    id: boardTextureButtonsRow
+
+                    anchors.centerIn: parent
+                    spacing: 15
+
+                    Repeater {
+                        model: 6
+
+                        delegate: GameButton {
+                            required property int index
+
+                            width: 200
+                            height: 50
+
+                            text: qsTr("Board Texture %1").arg(index + 1)
+
+                            opacity: AssetManager.currentBoardTexture === index + 1 ? 1.0 : 0.45
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 180
+                                    easing.type: Easing.InOutQuad
+                                }
+                            }
+
+                            onClicked: {
+                                AssetManager.currentBoardTexture = index + 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Image {
+                id: boardTexturePreview
+
+                width: 128
+                height: 128
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                source: AssetManager.url("BoardTexture" + AssetManager.currentBoardTexture)
+
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                smooth: true
+                mipmap: true
+                cache: true
+                clip: true
             }
 
             Item {

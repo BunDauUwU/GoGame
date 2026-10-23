@@ -22,8 +22,6 @@ const QHash<QString, QString> AssetManager::paths = {
     {"BoardTexture4", "board/variant4.jpg"},
     {"BoardTexture5", "board/variant5.jpg"},
     {"BoardTexture6", "board/variant6.jpg"},
-    {"BoardTexture7", "board/variant7.jpg"},
-    {"BoardTexture8", "board/variant8.jpg"},
 };
 
 int AssetManager::currentBackground() const { return m_currentBackground; }
@@ -42,6 +40,15 @@ void AssetManager::setCurrentStoneSkin(int index) {
 
     m_currentStoneSkin = index;
     emit currentStoneSkinChanged();
+}
+
+int AssetManager::currentBoardTexture() const { return m_currentBoardTexture; }
+
+void AssetManager::setCurrentBoardTexture(int index) {
+    if (m_currentBoardTexture == index) return;
+
+    m_currentBoardTexture = index;
+    emit currentBoardTextureChanged();
 }
 
 int AssetManager::currentBackgroundSong() const { return m_currentBackgroundSong; }
