@@ -11,6 +11,7 @@ Rectangle {
     implicitHeight: 720
     property string matchmakingError: ""
     property int selectedAIDifficulty: 1
+    property int playerColor: 0
 
     // AI-assisted: see AI12 in docs/AI_Declaration.md (offline AI match navigation).
     function openAIMatch() {
@@ -26,7 +27,7 @@ Rectangle {
     // AI-assisted: see AI12 and AI13 in docs/AI_Declaration.md (Medium/Hard selection).
     function startSelectedAIMatch(slot) {
         mainMenuRoot.matchmakingError = "";
-        const started = selectedAIDifficulty === 0 ? gameManager.startEasyGame(0, slot) : selectedAIDifficulty === 1 ? gameManager.startMediumGame(0, slot) : gameManager.startHardGame(0, slot);
+        const started = selectedAIDifficulty === 0 ? gameManager.startEasyGame(playerColor, slot) : selectedAIDifficulty === 1 ? gameManager.startMediumGame(playerColor, slot) : gameManager.startHardGame(playerColor, slot);
         if (started) {
             selectionMenu.close();
             openAIMatch();
@@ -100,7 +101,7 @@ Rectangle {
 
         modal: true
         focus: true
-        width: 280
+        width: 480
         padding: 12
         background: Rectangle {
             color: "transparent"
@@ -148,7 +149,7 @@ Rectangle {
 
         contentItem: GamePanel {
             Layout.fillWidth: true
-            implicitHeight: 240
+            implicitHeight: 480
             radius: Radius.xl
 
             ColumnLayout {
@@ -156,27 +157,64 @@ Rectangle {
                 anchors.margins: Spacing.xl
                 spacing: Spacing.md
 
-                Repeater {
-                    model: ["Easy", "Medium", "Hard"]
+                RowLayout {
+                    anchors.margins: Spacing.xl
+                    spacing: Spacing.md
 
-                    delegate: GameButton {
-                        required property string modelData
-                        required property int index
+                    Repeater {
+                        model: ["Easy", "Medium", "Hard"]
 
-                        text: modelData
-                        Layout.fillWidth: true
-                        objectName: "aiDifficulty" + modelData
+                        delegate: GameButton {
+                            required property string modelData
+                            required property int index
 
-                        onClicked: {
-                            mainMenuRoot.selectedAIDifficulty = index;
-                            gameManager.refreshSaves();
-                            if (gameManager.savedSlots.length >= 20) {
-                                selectionMenu.close();
-                                newAIDialog.open();
-                                return;
+                            text: modelData
+                            Layout.fillWidth: true
+                            objectName: "aiDifficulty" + modelData
+                            opacity: mainMenuRoot.selectedAIDifficulty === index ? 1.0 : 0.6
+
+                            onClicked: {
+                                mainMenuRoot.selectedAIDifficulty = index;
                             }
-                            mainMenuRoot.startSelectedAIMatch(0);
                         }
+                    }
+                }
+
+                RowLayout {
+                    anchors.margins: Spacing.xl
+                    spacing: Spacing.md
+
+                    Repeater {
+                        model: ["I will play as Black", "I will play as White"]
+
+                        delegate: GameButton {
+                            required property string modelData
+                            required property int index
+
+                            text: modelData
+                            Layout.fillWidth: true
+                            objectName: "aiDifficulty" + modelData
+                            opacity: mainMenuRoot.playerColor === index ? 1.0 : 0.6
+
+                            onClicked: {
+                                mainMenuRoot.playerColor = index;
+                            }
+                        }
+                    }
+                }
+
+                GameButton {
+                    text: "Confirm"
+                    Layout.fillWidth: true
+
+                    onClicked: {
+                        gameManager.refreshSaves();
+                        if (gameManager.savedSlots.length >= 20) {
+                            selectionMenu.close();
+                            newAIDialog.open();
+                            return;
+                        }
+                        mainMenuRoot.startSelectedAIMatch(0);
                     }
                 }
             }

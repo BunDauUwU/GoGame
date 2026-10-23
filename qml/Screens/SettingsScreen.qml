@@ -56,12 +56,6 @@ Rectangle {
         }
     }
 
-    /*Rectangle {
-                anchors.fill: parent
-                color: "black"
-                opacity: background.visible ? 0.35 : 0
-            }*/
-
     // MAIN SETTINGS
     ScrollView {
         id: settingsScroll
@@ -74,7 +68,7 @@ Rectangle {
             id: settingsButtonsColumn
 
             width: settingsScroll.availableWidth
-            spacing: 15
+            spacing: 12
 
             Item {
                 width: parent.width
@@ -95,7 +89,7 @@ Rectangle {
                             opacity: AssetManager.currentBackground === index + 1 ? 1.0 : 0.6
 
                             width: 200
-                            height: 60
+                            height: 50
 
                             text: qsTr("Background %1").arg(index + 1)
 
@@ -124,7 +118,7 @@ Rectangle {
                             required property int index
 
                             width: 200
-                            height: 60
+                            height: 50
 
                             text: qsTr("Stone Skin %1").arg(index + 1)
 
@@ -149,56 +143,95 @@ Rectangle {
                 id: stoneSkinPreview
 
                 width: parent.width
-                height: 200
+                height: 96
 
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 12
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 16
 
-                    Text {
-                        width: 340
+                    Image {
+                        width: 96
+                        height: 96
 
-                        text: qsTr("Stone Skin %1").arg(AssetManager.currentStoneSkin)
+                        source: AssetManager.url("Black" + AssetManager.currentStoneSkin)
 
-                        color: "black"
-                        font.pixelSize: 22
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
+                        fillMode: Image.PreserveAspectFit
+                        sourceSize: Qt.size(512, 512)
+                        asynchronous: true
+                        smooth: true
+                        mipmap: true
+                        cache: true
                     }
 
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 50
+                    Image {
+                        width: 96
+                        height: 96
 
-                        Image {
-                            width: 140
-                            height: 140
+                        source: AssetManager.url("White" + AssetManager.currentStoneSkin)
 
-                            source: AssetManager.url("Black" + AssetManager.currentStoneSkin)
+                        fillMode: Image.PreserveAspectFit
+                        sourceSize: Qt.size(512, 512)
+                        asynchronous: true
+                        smooth: true
+                        mipmap: true
+                        cache: true
+                    }
+                }
+            }
 
-                            fillMode: Image.PreserveAspectFit
-                            sourceSize: Qt.size(512, 512)
-                            asynchronous: true
-                            smooth: true
-                            mipmap: true
-                            cache: true
-                        }
+            Item {
+                width: parent.width
+                height: 60
 
-                        Image {
-                            width: 140
-                            height: 140
+                Row {
+                    id: boardTextureButtonsRow
 
-                            source: AssetManager.url("White" + AssetManager.currentStoneSkin)
+                    anchors.centerIn: parent
+                    spacing: 15
 
-                            fillMode: Image.PreserveAspectFit
-                            sourceSize: Qt.size(512, 512)
-                            asynchronous: true
-                            smooth: true
-                            mipmap: true
-                            cache: true
+                    Repeater {
+                        model: 6
+
+                        delegate: GameButton {
+                            required property int index
+
+                            width: 200
+                            height: 50
+
+                            text: qsTr("Board Texture %1").arg(index + 1)
+
+                            opacity: AssetManager.currentBoardTexture === index + 1 ? 1.0 : 0.45
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 180
+                                    easing.type: Easing.InOutQuad
+                                }
+                            }
+
+                            onClicked: {
+                                AssetManager.currentBoardTexture = index + 1;
+                            }
                         }
                     }
                 }
+            }
+
+            Image {
+                id: boardTexturePreview
+
+                width: 128
+                height: 128
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                source: AssetManager.url("BoardTexture" + AssetManager.currentBoardTexture)
+
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                smooth: true
+                mipmap: true
+                cache: true
+                clip: true
             }
 
             Item {
@@ -236,7 +269,7 @@ Rectangle {
                 id: bgmVolumeSettings
 
                 width: parent.width
-                height: 100
+                height: 50
 
                 Column {
                     anchors.centerIn: parent
@@ -264,7 +297,7 @@ Rectangle {
                 id: sfxVolumeSettings
 
                 width: parent.width
-                height: 100
+                height: 50
 
                 Column {
                     anchors.centerIn: parent

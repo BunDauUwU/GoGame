@@ -121,7 +121,9 @@ Rectangle {
         }
 
         function onInvalidMovePlayed() {
-            errorSound.play();
+            if (!errorSound.playing) {
+                errorSound.play();
+            }
         }
     }
 
@@ -214,6 +216,37 @@ Rectangle {
         property int boardSize: 19
         property real margin: 20
         property var boardState: gameManager.boardState
+
+        // Clip the oversized, rotated texture to the board's edges.
+        clip: true
+
+        Item {
+            id: rotatedTexture
+
+            anchors.centerIn: parent
+
+            width: board.width * 2
+            height: board.height * 2
+
+            rotation: 10
+
+            Image {
+                id: boardTexture
+                anchors.fill: parent
+
+                source: AssetManager.url("BoardTexture" + AssetManager.currentBoardTexture)
+
+                fillMode: Image.Tile
+                sourceSize: Qt.size(512, 512)
+
+                horizontalAlignment: Image.AlignHCenter
+                verticalAlignment: Image.AlignVCenter
+
+                smooth: true
+                mipmap: true
+                asynchronous: true
+            }
+        }
 
         Canvas {
             id: gridCanvas
