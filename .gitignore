@@ -92,3 +92,7 @@ CMakeLists.txt.user*
 /weeklyreport
 /file.txt 
 *.zip
+details.*
+diff-details.*
+results.*
+diff.*
