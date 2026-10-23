@@ -22,7 +22,7 @@ T calc(T &val, T Min, T Max)
 bool ownEye(const GoMatch &game, int pos, int color)
 {
     const auto &board = game.cells();
-    for (int next : GoMatch::neighbors()[pos])
+    for (int next : GoMatch::adj()[pos])
         if (next >= 0 && board[next] != color)
             return false;
     int own = 0, off = 0;
@@ -65,7 +65,7 @@ double MediumAI::evaluate(const GoMatch &game) const
         if (board[pos] == -1) {
             for (int color : {0, 1})
                 if (ownEye(game, pos, color)) {
-                    for (int next : GoMatch::neighbors()[pos])
+                    for (int next : GoMatch::adj()[pos])
                         if (next >= 0) {
                             ++eyes[groups.root(next)];
                             break;
@@ -168,7 +168,7 @@ public:
                 continue;
             double priorty = nxt[pos] ? 0 : -4;
             bitset<GoMatch::Count> visited;
-            for (int next : GoMatch::neighbors()[pos]) {
+            for (int next : GoMatch::adj()[pos]) {
                 if (next < 0)
                     continue;
                 if (board[next] == -1) {
