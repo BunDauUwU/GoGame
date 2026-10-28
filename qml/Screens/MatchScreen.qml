@@ -371,7 +371,32 @@ Rectangle {
 
                 property int stateValue: board.boardState && board.boardState[cellIndex] !== undefined ? board.boardState[cellIndex] : -1
 
-                visible: stateValue !== -1
+                property int renderState: -1
+
+                opacity: stateValue === -1 ? 0 : 1
+                visible: opacity > 0
+
+                Behavior on opacity {
+                    SpringAnimation {
+                        spring: 1.0
+                        damping: 0.3
+                    }
+                }
+
+                Component.onCompleted: {
+                    if (stateValue !== -1)
+                        renderState = stateValue;
+                }
+
+                onStateValueChanged: {
+                    if (stateValue !== -1)
+                        renderState = stateValue;
+                }
+
+                onOpacityChanged: {
+                    if (opacity === 0 && stateValue === -1)
+                        renderState = -1;
+                }
 
                 width: {
                     let usableWidth = board.width - (2 * board.margin);
@@ -396,7 +421,7 @@ Rectangle {
                 Image {
                     anchors.fill: parent
 
-                    source: AssetManager.url((stoneDelegate.stateValue === 0 ? "Black" : "White") + AssetManager.currentStoneSkin)
+                    source: AssetManager.url((stoneDelegate.renderState === 0 ? "Black" : "White") + AssetManager.currentStoneSkin)
 
                     fillMode: Image.PreserveAspectFit
                     sourceSize: Qt.size(128, 128)
