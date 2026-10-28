@@ -80,6 +80,18 @@ Rectangle {
         volume: AssetManager.sfxVolume
     }
 
+    SoundEffect {
+        id: captureSound
+        source: AssetManager.url("CaptureSound")
+        volume: AssetManager.sfxVolume
+    }
+
+    SoundEffect {
+        id: koSound
+        source: AssetManager.url("KoSound")
+        volume: AssetManager.sfxVolume
+    }
+
     MediaPlayer {
         id: backgroundMusic
 
@@ -118,6 +130,16 @@ Rectangle {
         }
         function onLastMoveCoordsChanged() {
             placeSound.play();
+        }
+
+        function onCaptureOccurred() {
+            captureSound.play();
+            effectText.popup(qsTr("Capture!"), "#ffd54f");
+        }
+
+        function onKoOccurred() {
+            koSound.play();
+            effectText.popup(qsTr("Ko!"), "#ff5252");
         }
 
         function onInvalidMovePlayed() {
@@ -442,6 +464,80 @@ Rectangle {
                     antialiasing: true
 
                     visible: stoneDelegate.lastMove && stoneDelegate.lastMove.length >= 2 && Number(stoneDelegate.lastMove[0]) === Math.floor(stoneDelegate.cellIndex / board.boardSize) && Number(stoneDelegate.lastMove[1]) === stoneDelegate.cellIndex % board.boardSize
+                }
+            }
+        }
+
+        FontLoader {
+            id: announcementFont
+            source: AssetManager.url("AnnouncementFont")
+        }
+    }
+
+    Text {
+        id: effectText
+        anchors.centerIn: board
+        z: 99
+        visible: false
+
+        font.family: announcementFont.status === FontLoader.Ready ? announcementFont.name : "Sans Serif"
+        font.pixelSize: 46
+        font.bold: true
+        font.italic: true
+        font.letterSpacing: 1.2
+        style: Text.Outline
+        styleColor: "#141414"
+        horizontalAlignment: Text.AlignHCenter
+
+        transform: Translate {
+            id: effectFloat
+            y: 0
+        }
+
+        function popup(msg, col) {
+            text = msg;
+            color = col;
+            effectFloat.y = 0;
+            opacity = 1.0;
+            scale = 0.4;
+            visible = true;
+            effectAnim.restart();
+        }
+
+        SequentialAnimation {
+            id: effectAnim
+
+            SpringAnimation {
+                target: effectText
+                property: "scale"
+                to: 1.3
+                spring: 5.0
+                damping: 1.0
+                mass: 1.0
+                epsilon: 0.01
+            }
+
+            PauseAnimation {
+                duration: 450
+            }
+
+            ParallelAnimation {
+                SpringAnimation {
+                    target: effectText
+                    property: "opacity"
+                    to: 0
+                    spring: 3.0
+                    damping: 1.0
+                    epsilon: 0.1
+                }
+
+                SpringAnimation {
+                    target: effectFloat
+                    property: "y"
+                    to: -160
+                    spring: 1.0
+                    damping: 1.0
+                    epsilon: 0.1
                 }
             }
         }
