@@ -25,8 +25,10 @@ CMake ≥ 3.16, a C++17 compiler, and Qt 6 (CMake requires ≥ 6.2) with Core, G
 ## Build and Launch the Client
 
 ```bash
-./tools/run-katago-hard.sh --ai-time-ms 1800 --ai-threads 4 --katago-duty 0.30
+./tools/run-katago-hard.sh /path/to/model.bin.gz --ai-time-ms 1800 --ai-threads 4
 ```
+
+The launcher uses the KataGo ZIP in `src/AI` for Hard mode. See [KataGo setup](docs/ai/KATAGO_BACKEND.md) for its model and CUDA runtime requirements.
 
 You can also open `CMakeLists.txt` in Qt Creator. The default build does not require a KataGo model; Hard uses a heuristic evaluator instead.
 

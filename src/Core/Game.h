@@ -66,10 +66,13 @@ public:
   bool hasSandboxSave() const { return DataManager::hasSandboxSave(); }
   // Model backends are configured before dispatch; the worker gets a safe copy.
   void configureHard(HardSearchOptions options,
-                     std::shared_ptr<HardAI::Evaluator> evaluator) {
+                     std::shared_ptr<HardAI::Evaluator> evaluator,
+                     std::shared_ptr<HardAI::Engine> engine = {}) {
     cancelSearch();
     m_hardAI = HardAI(options);
     m_hardAI.setEvaluator(std::move(evaluator));
+    if (engine)
+      m_hardAI.setEngine(std::move(engine));
     requestMove();
   }
   void setHardEvaluator(std::shared_ptr<HardAI::Evaluator> evaluator) {
