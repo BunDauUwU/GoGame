@@ -94,11 +94,13 @@ void GameManager::notify(const QString &text) {
 }
 void GameManager::notifyMove() {
   QStringList parts;
-  if (m_position.capturedLastMove > 0)
+  if (m_position.capturedLastMove > 0) {
     parts << QStringLiteral("Captured %1 stone(s)")
                  .arg(m_position.capturedLastMove);
-  if (m_position.koPoint >= 0)
-    parts << QStringLiteral("Ko at (%1, %2): immediate recapture is forbidden")
+    emit captureOccurred();
+  }
+  if (m_position.koPoint >= 0) {
+    parts << QStringLiteral("Ko at (%1, %2): Immediate recapture is forbidden")
                  .arg(m_position.koPoint / 19 + 1)
                  .arg(m_position.koPoint % 19 + 1);
   if (m_position.koThreat)
@@ -138,7 +140,8 @@ void GameManager::update_pieces(int row, int col) {
   notifyMove();
   requestMove();
 }
-// AI-assisted: see AI04 in docs/AI_Declaration.md (historical pass-turn implementation).
+// AI-assisted: see AI04 in docs/AI_Declaration.md (historical pass-turn
+// implementation).
 void GameManager::pass_turn() {
   if (!canAct())
     return;
@@ -527,8 +530,8 @@ bool GameManager::saveGame(int slot) {
   if (slot == 0)
     slot = DataManager::firstFreeSlot(m_aiEnabled);
   if (slot == 0) {
-      emit gameError(tr("Overwrite on slot "));
-      return false;
+    emit gameError(tr("Overwrite on slot "));
+    return false;
   }
   LocalGameData data;
   data.ai = m_aiEnabled;

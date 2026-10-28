@@ -4,6 +4,7 @@
 AssetManager::AssetManager(QObject* parent) : QObject(parent) {}
 
 const QHash<QString, QString> AssetManager::paths = {
+    {"AnnouncementFont", "fonts/street-fighter.otf"},
     {"Background1", "background/background1.png"},
     {"Background2", "background/background2.png"},
     {"Background3", "background/background3.png"},
@@ -22,6 +23,8 @@ const QHash<QString, QString> AssetManager::paths = {
     {"BoardTexture4", "board/variant4.jpg"},
     {"BoardTexture5", "board/variant5.jpg"},
     {"BoardTexture6", "board/variant6.jpg"},
+    {"CaptureSound", "sounds/capture1.mp3"},
+    {"KoSound", "sounds/ko1.mp3"},
 };
 
 int AssetManager::currentBackground() const { return m_currentBackground; }
