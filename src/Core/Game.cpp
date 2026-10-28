@@ -92,21 +92,22 @@ void GameManager::notify(const QString &text) {
   m_notification = text;
   emit notificationChanged();
 }
-void GameManager::notifyMove() {
-  QStringList parts;
-  if (m_position.capturedLastMove > 0) {
-    parts << QStringLiteral("Captured %1 stone(s)")
-                 .arg(m_position.capturedLastMove);
-    emit captureOccurred();
-  }
-  if (m_position.koPoint >= 0) {
-    parts << QStringLiteral("Ko at (%1, %2): Immediate recapture is forbidden")
-                 .arg(m_position.koPoint / 19 + 1)
-                 .arg(m_position.koPoint % 19 + 1);
-  if (m_position.koThreat)
-      parts << "Ko threat: opposing group is in atari";
-  if (!parts.isEmpty())
-    notify(parts.join(" · "));
+void GameManager::notifyMove()
+{
+    QStringList parts;
+    if (m_position.capturedLastMove > 0) {
+        parts << QStringLiteral("Captured %1 stone(s)").arg(m_position.capturedLastMove);
+        emit captureOccurred();
+    }
+    if (m_position.koPoint >= 0) {
+        parts << QStringLiteral("Ko at (%1, %2): Immediate recapture is forbidden")
+                     .arg(m_position.koPoint / 19 + 1)
+                     .arg(m_position.koPoint % 19 + 1);
+        if (m_position.koThreat)
+            parts << "Ko threat: opposing group is in atari";
+        if (!parts.isEmpty())
+            notify(parts.join(" · "));
+    }
 }
 bool GameManager::is_valid_move(int row, int col) {
   if (!canAct()) {

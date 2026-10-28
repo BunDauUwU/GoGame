@@ -6,7 +6,8 @@
 
 NetworkClient::NetworkClient(QObject *parent)
     : QObject(parent)
-    , m_serverUrl(qEnvironmentVariable("GOGAME_SERVER_URL", QStringLiteral("ws://127.0.0.1:14509"))
+    , m_serverUrl(qEnvironmentVariable("GOGAME_SERVER_URL",
+                                       QStringLiteral("wss://gogameserver-1.onrender.com"))
                       .trimmed())
 {
     connect(&m_socket, &QWebSocket::connected, this, &NetworkClient::handleConnected);
