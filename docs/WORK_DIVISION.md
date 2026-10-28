@@ -69,7 +69,7 @@ Recorded responsibilities cover asset collection and integration, the settings i
 
 | Files | Recorded contribution and attribution |
 | --- | --- |
-| `assets/background/*`, `assets/board/*`, `assets/sounds/*`, `assets/stones/*` | Collected royalty-free game assets from Internet sources, including in-match background ambient images, playing-board textures, stone appearances, background songs, and in-game sound effects like stone placing, wrong move error. |
+| `assets/background/*`, `assets/board/*`, `assets/sounds/*`, `assets/stones/*` | Collected royalty-free game assets from Internet sources, including in-match background ambient images, playing-board textures, stone appearances, background songs, and in-game sound effects like stone placing, wrong move warning, announcement voices. |
 | `src/Managers/AssetManager.cpp`, `src/Managers/AssetManager.h` | Integrated the collected assets into the game and implemented state management for user preferences, so selected background, board, stone, song, and volume settings are applied consistently. |
 
 ### Settings interface
@@ -90,6 +90,15 @@ Recorded responsibilities cover asset collection and integration, the settings i
 | Files | Recorded contribution and attribution |
 | --- | --- |
 | `src/AI/EasyAI.h`, `src/AI/EasyAI.cpp` | Adapted the Medium AI implementation into an Easy AI variant, adjusted its decision behavior for easier play, and integrated it into the AI game flow. The logic is derived from `src/AI/MediumAI.h` and `src/AI/MediumAI.cpp` |
+
+### In-match visual feedback
+
+| Files | Recorded contribution and attribution |
+| --- | --- |
+| `src/Core/Game.cpp`, `src/Core/Game.h` | Implemented interop with QML for events that need visual announcement like Ko, captures. |
+| `qml/Screens/MathScreen.qml` | Implemented the animations, layout management, and signal handling needed for the visual announcements mentioned above |
+
+
 
 ## Collaboration Tools Used:
 - GitHub: For codebase management and version control.
