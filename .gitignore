@@ -87,6 +87,8 @@ CMakeLists.txt.user*
 /server/data/
 /data/
 /ai-reference/
+/tools/*.bin.gz
+/tools/*.bin.gz.part
 
 /weeklyreport
 /file.txt 

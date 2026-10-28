@@ -1004,7 +1004,6 @@ struct HardAI::Impl
     } adapter;
     std::mutex mutex;
     std::unique_ptr<HardMCTS::Engine> engine;
-    std::shared_ptr<HardAI::Engine> external;
 };
 
 HardAI::HardAI(HardSearchOptions options)
@@ -1025,20 +1024,10 @@ void HardAI::setEvaluator(std::shared_ptr<Evaluator> evaluator)
 }
 void HardAI::reset()
 {
-    if (m_impl->external)
-        return;
     setEvaluator(m_impl->adapter.model);
-}
-void HardAI::setEngine(std::shared_ptr<Engine> engine)
-{
-    auto next = std::make_shared<Impl>();
-    next->external = std::move(engine);
-    m_impl = std::move(next);
 }
 QString HardAI::backendName() const
 {
-    if (m_impl->external)
-        return m_impl->external->name();
     return m_impl->adapter.model ? m_impl->adapter.model->name() : QStringLiteral("PUCT heuristic");
 }
 std::array<float, 5 * GoMatch::Count> HardAI::inputPlanes(const Position &p, const LegalMask &legal)
@@ -1075,8 +1064,6 @@ SearchResult HardAI::chooseMove(const GoMatch &current,
         return finish();
     }
     auto state = m_impl; // Keep this backend/cache alive if the UI configures a new one.
-    if (state->external)
-        return state->external->chooseMove(current, token);
     std::unique_lock<std::mutex> lock(state->mutex, std::defer_lock);
     while (!lock.try_lock()) {
         if (cancelled()) {

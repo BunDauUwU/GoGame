@@ -1,14 +1,6 @@
 # GoGame WebSocket Server
 
-The C++/Qt 6 server runs as a console application, independently of the QML client. Qt Core, Network, and WebSockets are required.
-
-```bash
-cmake -S server -B build/server
-cmake --build build/server --parallel 3
-./build/server/appserver --port 14509 --data-file server/data/state.json
-```
-
-Run these commands from the project root. The server listens at `ws://127.0.0.1:14509`. Without `--data-file`, the default is `data/state.json` relative to the working directory. A missing file is created with `{}`. An existing file must contain a valid JSON object; read errors or corrupt JSON stop the server without modifying the file.
+This online game now.
 
 ## Protocol
 
@@ -17,31 +9,36 @@ Send text messages containing a JSON object in the form `{ "type": "...", "paylo
 Read the file:
 
 ```json
-{"type":"ReadData","payload":{}}
+{ "type": "ReadData", "payload": {} }
 ```
 
 Response:
 
 ```json
-{"type":"Data","payload":{"data":{}}}
+{ "type": "Data", "payload": { "data": {} } }
 ```
 
 Write the file:
 
 ```json
-{"type":"WriteData","payload":{"data":{"board":[0,-1,1],"moveCount":3,"currentPlayer":1,"time":{"black":600,"white":590}}}}
+{
+    "type": "WriteData",
+    "payload": {
+        "data": { "board": [0, -1, 1], "moveCount": 3, "currentPlayer": 1, "time": { "black": 600, "white": 590 } }
+    }
+}
 ```
 
 `payload.data` must be a JSON object. Each write request **replaces the entire file**; the example above only illustrates the protocol and is not a complete 19×19 board state. A successful write returns:
 
 ```json
-{"type":"DataWritten","payload":{"ok":true}}
+{ "type": "DataWritten", "payload": { "ok": true } }
 ```
 
 Errors use this format:
 
 ```json
-{"type":"Error","payload":{"code":"InvalidPayload","message":"payload.data must be a JSON object"}}
+{ "type": "Error", "payload": { "code": "InvalidPayload", "message": "payload.data must be a JSON object" } }
 ```
 
 Error codes: `InvalidJson`, `InvalidPayload`, `UnknownType`, `ReadFailed`, `WriteFailed`, `UnsupportedMessage`. Binary messages are unsupported. Incoming messages are limited to 1 MiB.
@@ -87,7 +84,10 @@ Both clients send `AuthRequest` with `payload.nickname`, then `MatchmakingStart`
 Place a stone:
 
 ```json
-{"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"Play","command":{"row":3,"col":3}}}
+{
+    "type": "GameCommand",
+    "payload": { "matchId": "ID_FROM_MATCH_FOUND", "commandType": "Play", "command": { "row": 3, "col": 3 } }
+}
 ```
 
 Coordinates are integers from 0 to 18 in board-data coordinates, independent of UI rotation. The server validates match membership, turn, empty intersections, capture of groups without liberties, the suicide prohibition, and simple ko. Rejected commands do not change the board/turn; thinking time is still deducted.
@@ -95,13 +95,13 @@ Coordinates are integers from 0 to 18 in board-data coordinates, independent of 
 Pass (`EndRound` is retained for compatibility with the existing enum):
 
 ```json
-{"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"EndRound","command":{}}}
+{ "type": "GameCommand", "payload": { "matchId": "ID_FROM_MATCH_FOUND", "commandType": "EndRound", "command": {} } }
 ```
 
 Resign, including outside the player's turn:
 
 ```json
-{"type":"GameCommand","payload":{"matchId":"ID_FROM_MATCH_FOUND","commandType":"Concede","command":{}}}
+{ "type": "GameCommand", "payload": { "matchId": "ID_FROM_MATCH_FOUND", "commandType": "Concede", "command": {} } }
 ```
 
 The server emits `GameEvent` with `StonePlayed`, `Passed`, or `GameEnded`, and `GameSnapshot` containing `board` (361 cells, -1/0/1), `moveCount`, `currentPlayerIndex`, `remainingMs`, `started`, and `komi`. Two consecutive passes end the game. Scoring counts empty territory bordered by only one color plus captured stones; White receives 6.5 komi under the Japanese scoring formula. Stones remaining on the board do not add points. Scores are provisional because dead stones/seki have not been confirmed. This version has no dead-stone agreement before scoring or positional/situational superko. Disconnecting during a match counts as a loss. Active matches exist only in memory; the ReadData/WriteData JSON file remains independent.
@@ -119,24 +119,6 @@ The server emits `GameEvent` with `StonePlayed`, `Passed`, or `GameEnded`, and `
 - `winnerIndex`, `endReason`: -1/empty string during play, results after completion. Final clocks freeze and the final deadline is 0.
 
 The server enforces clocks using monotonic time; epoch timestamps are only for UI display. Snapshots are not sent every second; the client updates countdowns between snapshots. There are no round/weather/character/card fields because this is Go. See [architecture and schemas](ARCHITECTURE.md) for interaction diagrams and [roadmap](ROADMAP.md) for remaining work.
-
-## Two Players on One Local Machine
-
-Start the server, then open two client instances:
-
-```bash
-./build/server/appserver --data-file server/data/state.json
-```
-
-In two other terminals:
-
-```bash
-./build/Desktop_Debug/appGoGame
-```
-
-Log in with two accounts and select Find Match using the same Go mode. Each client receives its color, opponent's name, shared board, and clocks. Confirming a preview sends the move to the server; the client waits for a snapshot to display the actual stone. Pass sends EndRound; Concede sends resignation after confirmation. Two consecutive passes, resignation, timeout, or disconnection ends the game, and the UI offers a return to the menu to find another match.
-
-The server currently listens on 127.0.0.1, so these clients run on the same machine. Match restoration after reconnect is not implemented.
 
 ## Byo-yomi Clocks
 

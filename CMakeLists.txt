@@ -101,8 +101,6 @@ qt_add_qml_module(appGoGame
         src/AI/HardAI.h
         src/AI/KataGoEvaluator.cpp
         src/AI/KataGoEvaluator.h
-        src/AI/KataGoEngine.cpp
-        src/AI/KataGoEngine.h
 
         # Shared Go rules
         src/Rules/GoMatch.cpp

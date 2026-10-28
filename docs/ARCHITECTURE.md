@@ -69,14 +69,14 @@ The server is authoritative for the online board, turns, and time. Preview is a 
 
 Every text message uses the envelope `{"type":"...","payload":{...}}`. Binary messages are unsupported; incoming messages are limited to 1 MiB.
 
-| Client → server | Payload | Server → client |
-| --- | --- | --- |
-| `AuthRequest` | `nickname` (1–17 characters after trimming) | `AuthResult` with `success`, `playerId`, and `nickname`; an invalid nickname currently returns `Error`. |
-| `MatchmakingStart` | `mode` (1–64 characters after trimming) | `MatchmakingStatus`, then `MatchFound` and a snapshot when two players select the same mode. |
-| `MatchmakingCancel` | `{}` | `MatchmakingStatus`. |
-| `GameCommand` | `matchId`, `commandType`, `command` | `GameEvent` and a snapshot, or `Error`. |
-| `ReadData` | `{}` | `Data` containing `data`. |
-| `WriteData` | `data` as a JSON object | `DataWritten` with `ok: true`, or `Error`. Replaces the entire file. |
+| Client → server     | Payload                                     | Server → client                                                                                         |
+| ------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `AuthRequest`       | `nickname` (1–17 characters after trimming) | `AuthResult` with `success`, `playerId`, and `nickname`; an invalid nickname currently returns `Error`. |
+| `MatchmakingStart`  | `mode` (1–64 characters after trimming)     | `MatchmakingStatus`, then `MatchFound` and a snapshot when two players select the same mode.            |
+| `MatchmakingCancel` | `{}`                                        | `MatchmakingStatus`.                                                                                    |
+| `GameCommand`       | `matchId`, `commandType`, `command`         | `GameEvent` and a snapshot, or `Error`.                                                                 |
+| `ReadData`          | `{}`                                        | `Data` containing `data`.                                                                               |
+| `WriteData`         | `data` as a JSON object                     | `DataWritten` with `ok: true`, or `Error`. Replaces the entire file.                                    |
 
 Example: place a stone at row 0, column 0:
 
@@ -91,18 +91,18 @@ Example: place a stone at row 0, column 0:
 
 `Server::sendSnapshot(socket, match)` creates a recipient-specific payload; the `sendSnapshot(match)` overload sends to both sockets. Public board and clock data are identical, while `self.playerIndex` identifies the recipient.
 
-| Snapshot field | Meaning |
-| --- | --- |
-| `matchId`, `stage`, `started` | Match ID; `Action` during play or `GameEnd` after completion. |
-| `boardSize`, `board` | 19 and an array of 361 cells indexed by `row * 19 + col`; `-1` empty, `0` Black, `1` White. |
-| `moveCount`, `consecutivePasses` | Number of turns, including passes, and consecutive passes. |
-| `currentPlayerIndex`, `komi` | Player to move; White receives 6.5 komi. |
-| `remainingMs` | Black/White time until the current boundary: main time or one Byo-yomi period. |
-| `clocks` | Each player's `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, and `phase` (`Main`/`ByoYomi`). |
-| `players` | Each player's `playerId`, `nickname`, `playerIndex`, `color`, and `remainingTimeMs`. |
-| `self.playerIndex` | 0 or 1; no private card/hand data. |
-| `serverTimeEpochMs` | Snapshot creation time, used by the client to estimate clock offset. |
-| `actionDeadlineEpochMs` | Epoch of the active player's current main-time/period boundary; 0 after the match ends. |
-| `winnerIndex`, `endReason` | `-1`/empty string during play; winner and reason after completion. |
+| Snapshot field                   | Meaning                                                                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `matchId`, `stage`, `started`    | Match ID; `Action` during play or `GameEnd` after completion.                                                                 |
+| `boardSize`, `board`             | 19 and an array of 361 cells indexed by `row * 19 + col`; `-1` empty, `0` Black, `1` White.                                   |
+| `moveCount`, `consecutivePasses` | Number of turns, including passes, and consecutive passes.                                                                    |
+| `currentPlayerIndex`, `komi`     | Player to move; White receives 6.5 komi.                                                                                      |
+| `remainingMs`                    | Black/White time until the current boundary: main time or one Byo-yomi period.                                                |
+| `clocks`                         | Each player's `mainRemainingMs`, `periodRemainingMs`, `periodDurationMs`, `periodsRemaining`, and `phase` (`Main`/`ByoYomi`). |
+| `players`                        | Each player's `playerId`, `nickname`, `playerIndex`, `color`, and `remainingTimeMs`.                                          |
+| `self.playerIndex`               | 0 or 1; no private card/hand data.                                                                                            |
+| `serverTimeEpochMs`              | Snapshot creation time, used by the client to estimate clock offset.                                                          |
+| `actionDeadlineEpochMs`          | Epoch of the active player's current main-time/period boundary; 0 after the match ends.                                       |
+| `winnerIndex`, `endReason`       | `-1`/empty string during play; winner and reason after completion.                                                            |
 
 Each player receives **10 or 15 minutes of main time plus 3 × 20-second Byo-yomi periods**. Exhausting main time starts Byo-yomi; exhausting a period consumes one period. A legal move or pass resets the current period to 20 seconds without restoring consumed periods; invalid commands do not reset time. Exhausting the final period loses the game. The server uses monotonic time and QTimer checks at a boundary or at most every 30 seconds; 30 seconds is not a per-move limit. Snapshots are sent on matching, legal moves, timer updates, and game completion. GameClock interpolates both players' clocks between snapshots. The payload stage remains a string; no card-game/stage enum is required on the client.

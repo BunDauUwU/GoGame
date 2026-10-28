@@ -59,15 +59,6 @@ public:
         virtual QString name() const { return QStringLiteral("Custom policy/value"); }
     };
 
-    class Engine
-    {
-    public:
-        virtual ~Engine() = default;
-        virtual SearchResult chooseMove(const GoMatch &position,
-                                        const std::shared_ptr<std::atomic_bool> &cancel) = 0;
-        virtual QString name() const = 0;
-    };
-
     explicit HardAI(HardSearchOptions options = {});
     const HardSearchOptions &options() const { return m_options; }
     SearchResult chooseMove(const GoMatch &position,
@@ -75,7 +66,6 @@ public:
     // Install/load the model once in this backend. Copies already executing keep
     // their old backend; changes don't block the GUI waiting for that search.
     void setEvaluator(std::shared_ptr<Evaluator> evaluator);
-    void setEngine(std::shared_ptr<Engine> engine);
     void reset();
     QString backendName() const;
     static std::array<float, 5 * GoMatch::Count> inputPlanes(const Position &, const LegalMask &);

@@ -5,7 +5,6 @@
 #include <QDebug>
 #include <stdexcept>
 #include "src/AI/KataGoEvaluator.h"
-#include "src/AI/KataGoEngine.h"
 
 #include "src/Core/Game.h"
 #include "src/Managers/AuthManager.h"
@@ -20,8 +19,6 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addOptions({
         {"katago-model", "KataGo .bin.gz model for Hard mode", "path"},
-        {"katago-engine", "Use an external KataGo executable for Hard", "path"},
-        {"katago-config", "Optional external KataGo analysis config", "path"},
         {"katago-fp32", "Disable FP16 for older convolution models"},
         {"ai-threads", "MCTS workers (1-16)", "number", "4"},
         {"ai-time-ms", "Move search budget in milliseconds", "ms", "1800"},
@@ -29,12 +26,7 @@ int main(int argc, char *argv[])
     });
     parser.process(app);
     std::shared_ptr<KataGoEvaluator> kataGo;
-    std::shared_ptr<KataGoEngine> kataGoEngine;
     HardSearchOptions hardOptions;
-    if ((parser.isSet("katago-engine") || parser.isSet("katago-config")) && !parser.isSet("katago-model")) {
-        qCritical() << "--katago-engine/--katago-config requires --katago-model";
-        return 2;
-    }
     if (parser.isSet("katago-model")) {
         try {
             bool threadsOK = false, timeOK = false, dutyOK = false;
@@ -48,25 +40,9 @@ int main(int argc, char *argv[])
             if (!threadsOK || !timeOK || !dutyOK || hardOptions.timeBudgetMs < 1
                 || hardOptions.timeBudgetMs > 60000 || hardOptions.searchThreads < 1
                 || hardOptions.searchThreads > 16) throw std::runtime_error("Invalid AI command line options");
+            kataGo = std::make_shared<KataGoEvaluator>(options);
             qInfo() << "Loading and warming KataGo model...";
-            if (parser.isSet("katago-engine")) {
-                if (parser.isSet("katago-duty"))
-                    throw std::runtime_error("--katago-duty applies only to the native backend");
-                KataGoEngine::Options engineOptions;
-                engineOptions.executablePath = parser.value("katago-engine");
-                engineOptions.modelPath = options.modelPath;
-                engineOptions.configPath = parser.value("katago-config");
-                engineOptions.timeBudgetMs = hardOptions.timeBudgetMs;
-                engineOptions.searchThreads = hardOptions.searchThreads;
-                engineOptions.fp16 = options.fp16;
-                kataGoEngine = std::make_shared<KataGoEngine>(engineOptions);
-                kataGoEngine->prepare();
-            } else {
-                if (parser.isSet("katago-config"))
-                    throw std::runtime_error("--katago-config requires --katago-engine");
-                kataGo = std::make_shared<KataGoEvaluator>(options);
-                kataGo->prepare();
-            }
+            kataGo->prepare();
         } catch (const std::exception& e) {
             qCritical() << "Cannot start KataGo HardAI:" << e.what(); return 2;
         }
@@ -84,7 +60,7 @@ int main(int argc, char *argv[])
 
     GameManager gameManager;
     gameManager.setNetworkClient(&networkClient);
-    if (kataGo || kataGoEngine) gameManager.configureHard(hardOptions, kataGo, kataGoEngine);
+    if (kataGo) gameManager.configureHard(hardOptions, kataGo);
 
     QObject::connect(&networkClient,
                      &NetworkClient::messageReceived,
