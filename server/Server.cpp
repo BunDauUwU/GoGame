@@ -30,7 +30,6 @@ Server::Server(const QString &dataFile, QObject *parent, ByoYomiClock timeContro
 
 Server::~Server()
 {
-    // Member maps are destroyed before the listener; disconnect callbacks first.
     m_server.disconnect(this);
     for (auto socket : m_server.findChildren<QWebSocket *>())
         socket->disconnect(this);
@@ -436,10 +435,11 @@ void Server::sendSnapshot(QWebSocket *socket, const Match &match)
                    {"boardSize", 19},
                    {"board", match.game.state()},
                    {"position", match.game.toJson()},
-                   {"scoring", match.game.scoreDetails(match.started ? GoMatch::ScoringPhase::Current
-                                                                   : GoMatch::ScoringPhase::Final)},
-                   {"moveCount", match.game.moveCount},
-                   {"consecutivePasses", match.game.consecutivePasses},
+                   {"scoring",
+                    match.game.scoreDetails(match.started ? GoMatch::ScoringPhase::Current
+                                                          : GoMatch::ScoringPhase::Final)},
+                   {"moveCount", match.game.moves},
+                   {"m_passes", match.game.m_passes},
                    {"currentPlayerIndex", match.game.currentPlayer},
                    {"remainingMs", time},
                    {"clocks", clocks},
@@ -470,7 +470,7 @@ void Server::endWithWinner(Match &match, int winner, const QString &reason)
         if (m_clients.contains(socket))
             m_clients[socket]["matchId"] = "";
     QJO event{{"eventType", "GameEnded"}, {"winnerIndex", winner}, {"reason", reason}};
-    if (match.game.consecutivePasses >= 2)
+    if (match.game.m_passes >= 2)
         event["scoring"] = match.game.scoreDetails(GoMatch::ScoringPhase::Final);
     broadcast(match, "GameEvent", {{"matchId", match.id}, {"events", QJsonArray{event}}});
     sendSnapshot(match);
@@ -558,7 +558,7 @@ void Server::gameCommand(QWebSocket *socket, QJsonObject payload)
         event["eventType"] = "StonePlayed";
         event["captured"] = match->game.capturedLastMove;
         event["koPoint"] = match->game.koPoint;
-        event["koThreat"] = match->game.koThreatLastMove;
+        event["koThreat"] = match->game.koThreat;
         event["row"] = row;
         event["col"] = col;
     } else {
@@ -569,7 +569,7 @@ void Server::gameCommand(QWebSocket *socket, QJsonObject payload)
     match->clocks[playerIndex].completeMove();
     match->turnStartedMs = monotonicMs();
     broadcast(*match, "GameEvent", {{"matchId", id}, {"events", QJsonArray{event}}});
-    if (match->game.consecutivePasses == 2) {
+    if (match->game.m_passes == 2) {
         const auto score = match->game.score();
         endWithWinner(*match, score > 0 ? 0 : 1, QString("Two passes \n Different: %1").arg(score));
         return;

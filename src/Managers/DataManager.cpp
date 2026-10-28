@@ -74,7 +74,8 @@ bool DataManager::save(const LocalGameData &game, int slot, QString &error) {
                    (game.difficulty != "Easy" && game.difficulty != "Medium" &&
                     game.difficulty != "Hard"))) ||
       (!game.ai && (slot < 1 || slot > SandboxSaveSlots)) ||
-      game.moves.size() > MaxMoves) {
+      game.moves.size() > MaxMoves || game.cursor < 0 ||
+      game.cursor > static_cast<int>(game.moves.size())) {
     error = "Invalid slot or save exceeds move limit";
     return false;
   }
@@ -156,32 +157,34 @@ bool DataManager::load(bool ai, int slot, int historyLimit, LocalGameData &game,
   std::vector<QJsonObject> moves;
   QString replayError;
   for (const auto &value : data["moves"].toArray()) {
-    if (!value.isObject() || history.back().consecutivePasses >= 2)
-      return fail();
-    auto move = value.toObject();
-    auto next = history.back();
-    if (move["pass"].isBool() && move["pass"].toBool())
-      next.pass();
-    else {
-      auto row = move["row"], col = move["col"];
-      if (!row.isDouble() || !col.isDouble() ||
-          row.toDouble() != std::floor(row.toDouble()) ||
-          col.toDouble() != std::floor(col.toDouble()) || row.toDouble() < 0 ||
-          row.toDouble() > 18 || col.toDouble() < 0 || col.toDouble() > 18 ||
-          !next.play(row.toInt(), col.toInt(), replayError))
-        return fail();
-    }
+      if (!value.isObject() || history.back().m_passes >= 2)
+          return fail();
+      auto move = value.toObject();
+      auto next = history.back();
+      if (move["pass"].isBool() && move["pass"].toBool())
+          next.pass();
+      else {
+          auto row = move["row"], col = move["col"];
+          if (!row.isDouble() || !col.isDouble() || row.toDouble() != std::floor(row.toDouble())
+              || col.toDouble() != std::floor(col.toDouble()) || row.toDouble() < 0
+              || row.toDouble() > 18 || col.toDouble() < 0 || col.toDouble() > 18
+              || !next.play(row.toInt(), col.toInt(), replayError))
+              return fail();
+      }
     history.push_back(next);
     moves.push_back(move);
   }
   const int cursor = data["cursor"].toInt();
   GoMatch position;
-  if (!GoMatch::fromJson(data["position"].toObject(), position, replayError) ||
-      position.toJson() != history[cursor].toJson())
+  if (!GoMatch::fromJson(data["position"].toObject(), position, replayError)) {
+    error = "Invalid saved game: " + replayError + "; current game was preserved";
+    return false;
+  }
+  if (position.toJson() != history[cursor].toJson())
     return fail();
-  if ((position.consecutivePasses >= 2 && !data["finished"].toBool()) ||
-      (data["finished"].toBool() && data["winnerIndex"].toInt() < 0))
-    return fail();
+  if ((position.m_passes >= 2 && !data["finished"].toBool())
+      || (data["finished"].toBool() && data["winnerIndex"].toInt() < 0))
+      return fail();
 
   LocalGameData loaded;
   loaded.ai = ai;

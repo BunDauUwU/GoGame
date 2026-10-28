@@ -88,7 +88,6 @@ CMakeLists.txt.user*
 /data/
 /ai-reference/
 
-/report
 /weeklyreport
 /file.txt 
 *.zip

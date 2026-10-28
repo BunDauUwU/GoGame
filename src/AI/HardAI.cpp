@@ -1059,7 +1059,7 @@ SearchResult HardAI::chooseMove(const GoMatch &current,
         out.cancelled = true;
         return finish();
     }
-    if (current.consecutivePasses >= 2) {
+    if (current.m_passes >= 2) {
         out.stopReason = QStringLiteral("Game ended");
         return finish();
     }
@@ -1084,8 +1084,8 @@ SearchResult HardAI::chooseMove(const GoMatch &current,
                 board.setStone(m / GoMatch::Size, m % GoMatch::Size, current.cells()[m] + 1);
         board.turn = current.currentPlayer + 1;
         board.ko = current.koPoint < 0 ? -1 : HardMCTS::padded(current.koPoint);
-        board.passes = current.consecutivePasses;
-        board.moveCount = current.moveCount;
+        board.passes = current.m_passes;
+        board.moveCount = current.moves;
         board.capturedStones = current.capturedStones;
         if (state->adapter.model) {
             auto setup = std::make_shared<GoMatch::Replay>(current.replay());

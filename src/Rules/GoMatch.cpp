@@ -335,7 +335,7 @@ QJsonObject GoMatch::toJson() const
             {"previousBoard", previous},
             {"hasPrevious", hasPrevious},
             {"currentPlayertmp", currentPlayer},
-            {"moves", moves},
+            {"moves", this->moves},
             {"m_passes", m_passes},
             {"capturedLastMove", capturedLastMove},
             {"capturedStones", QJsonArray{capturedStones[0], capturedStones[1]}},
@@ -344,9 +344,25 @@ QJsonObject GoMatch::toJson() const
 }
 bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
 {
+    QJsonObject position = json;
+    if (!position.contains("currentPlayertmp"))
+        position["currentPlayertmp"] = position.value("currentPlayerIndex");
+    if (!position.contains("moves"))
+        position["moves"] = position.value("moveCount");
+    else if (position["moves"].isArray() && position["history"].isObject()) {
+        const auto h = position["history"].toObject();
+        const auto initial = h.contains("initialmoves") ? h.value("initialmoves")
+                                                        : h.value("initialMoveCount");
+        if (initial.isDouble() && h["moves"].isArray() && position["moves"] == h["moves"])
+            position["moves"] = initial.toDouble() + h["moves"].toArray().size();
+    }
+    if (!position.contains("m_passes"))
+        position["m_passes"] = position.value("consecutivePasses");
+    if (!position.contains("koThreat"))
+        position["koThreat"] = position.value("koThreatLastMove");
     GoMatch res;
     auto array = [&](const QString &key, std::array<int, Count> &target) {
-        auto data = json.value(key).toArray();
+        auto data = position.value(key).toArray();
         if (data.size() != Count)
             return false;
         for (int i = 0; i < Count; ++i) {
@@ -358,7 +374,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         return true;
     };
     auto isInt = [&](const QString &key, int &target, int min, int max) {
-        const auto value = json.value(key);
+        const auto value = position.value(key);
         double v = value.toDouble(-1e12);
         if (!value.isDouble() || v != std::floor(v) || v < min || v > max)
             return false;
@@ -366,7 +382,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         return true;
     };
     if (!array("board", res.board) || !array("previousBoard", res.previousBoard)
-        || !json.value("hasPrevious").isBool()
+        || !position.value("hasPrevious").isBool()
         || !isInt("currentPlayertmp", res.currentPlayer, 0, 1)
         || !isInt("moves", res.moves, 0, 1000000) || !isInt("m_passes", res.m_passes, 0, 2)
         || !isInt("capturedLastMove", res.capturedLastMove, 0, Count)
@@ -374,7 +390,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         error = "Invalid Go position";
         return false;
     }
-    auto captured = json.value("capturedStones").toArray();
+    auto captured = position.value("capturedStones").toArray();
     if (captured.size() != 2) {
         error = "Invalid capture counts";
         return false;
@@ -387,19 +403,24 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         }
         res.capturedStones[i] = int(v);
     }
-    res.koThreat = json.value("koThreat").toBool();
-    res.hasPrevious = json.value("hasPrevious").toBool();
+    res.koThreat = position.value("koThreat").toBool();
+    res.hasPrevious = position.value("hasPrevious").toBool();
     res.m_groups = buildGroups(res.board);
-    if (json.contains("history")) {
-        const auto h = json.value("history").toObject();
+    if (position.contains("history")) {
+        if (!position["history"].isObject()) {
+            error = "Invalid Go history setup";
+            return false;
+        }
+        const auto h = position.value("history").toObject();
         const auto initial = h.value("initialCells").toArray();
-        QJsonObject setup = json;
+        QJsonObject setup = position;
         setup.remove("history");
         setup["board"] = initial;
         setup["previousBoard"] = initial;
         setup["hasPrevious"] = false;
         setup["currentPlayertmp"] = h.value("initialPlayer");
-        setup["moves"] = h.value("initialmoves");
+        setup["moves"] = h.contains("initialmoves") ? h.value("initialmoves")
+                                                   : h.value("initialMoveCount");
         setup["m_passes"] = h.value("initialPasses");
         setup["capturedStones"] = h.value("initialCaptured");
         setup["capturedLastMove"] = 0;

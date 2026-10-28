@@ -159,14 +159,14 @@ Rectangle {
             text: gameManager.finished ? qsTr("Game ended") : gameManager.pending ? (qsTr("Waiting for opponent…")) : gameManager.online ? (gameManager.canAct ? qsTr("Your turn") : qsTr("Opponent's turn")) : gameManager.currentPlayer === 0 ? qsTr("Black turn") : qsTr("White turn")
             font.pixelSize: 20
         }
-        Text {
-            objectName: "scoringComparisonStatus"
-            visible: gameManager.online
-            text: boardScreen.scoringComparison.status === "matched" ? qsTr("Client/server scores match") : boardScreen.scoringComparison.status === "mismatch" ? qsTr("Client/server scores differ") : qsTr("Server score unavailable")
-            color: boardScreen.scoringComparison.status === "mismatch" ? "#b55f27" : "#394451"
-            font.pixelSize: 13
-            Layout.alignment: Qt.AlignHCenter
-        }
+        // Text {
+        // objectName: "scoringComparisonStatus"
+        // visible: gameManager.online
+        // text: boardScreen.scoringComparison.status === "matched" ? qsTr("Client/server scores match") : boardScreen.scoringComparison.status === "mismatch" ? qsTr("Client/server scores differ") : qsTr("Server score unavailable")
+        // color: boardScreen.scoringComparison.status === "mismatch" ? "#b55f27" : "#394451"
+        //     font.pixelSize: 13
+        //     Layout.alignment: Qt.AlignHCenter
+        // }
     }
 
     Rectangle {

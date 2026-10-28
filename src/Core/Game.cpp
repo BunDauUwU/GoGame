@@ -101,8 +101,8 @@ void GameManager::notifyMove() {
     parts << QStringLiteral("Ko at (%1, %2): immediate recapture is forbidden")
                  .arg(m_position.koPoint / 19 + 1)
                  .arg(m_position.koPoint % 19 + 1);
-  if (m_position.koThreatLastMove)
-    parts << "Ko threat: opposing group is in atari";
+  if (m_position.koThreat)
+      parts << "Ko threat: opposing group is in atari";
   if (!parts.isEmpty())
     notify(parts.join(" · "));
 }
@@ -148,9 +148,8 @@ void GameManager::pass_turn() {
   }
   m_position.pass();
   recordMove({{"pass", true}});
-  if (m_position.consecutivePasses >= 2)
-    finishLocalGame(m_position.score() > 0 ? 0 : 1,
-                    QStringLiteral("Two consecutive passes"));
+  if (m_position.m_passes >= 2)
+      finishLocalGame(m_position.score() > 0 ? 0 : 1, QStringLiteral("Two consecutive passes"));
   requestMove();
 }
 void GameManager::setMatchInfo(const QString &id, int player,
@@ -182,7 +181,7 @@ void GameManager::setMatchInfo(const QString &id, int player,
 }
 void GameManager::handleServerMessage(const QJsonObject &message) {
   const auto type = Protocol::readMessageType(message);
-  const auto payload = Protocol::readPayload(message);
+  auto payload = Protocol::readPayload(message);
   if (type == "MatchFound") {
     setMatchInfo(payload["matchId"].toString(),
                  payload["playerIndex"].toInt(-1),
@@ -200,22 +199,33 @@ void GameManager::handleServerMessage(const QJsonObject &message) {
   if (!online() || payload["matchId"].toString() != m_matchId)
     return;
   if (type == "GameSnapshot") {
-    int newMoves = payload["moveCount"].toInt(-1),
-        oldMoves = m_snapshot.value("moveCount", -1).toInt();
-    if (newMoves < oldMoves)
-      return;
-    GoMatch position;
-    QString error;
-    auto json = payload["position"].toObject();
-    if (json.isEmpty()) {
-      json = m_position.toJson();
-      json["board"] = payload["board"];
-      json["previousBoard"] = m_position.state();
-      json["hasPrevious"] = m_ready && newMoves == oldMoves + 1;
-      json["currentPlayerIndex"] = payload["currentPlayerIndex"];
-      json["moveCount"] = newMoves;
-      json["consecutivePasses"] = payload["consecutivePasses"].toInt();
-    }
+      if (!payload.contains("moves"))
+          payload["moves"] = payload.value("moveCount");
+      if (!payload.contains("m_passes"))
+          payload["m_passes"] = payload.value("consecutivePasses");
+      int newMoves = payload["moves"].toInt(-1), oldMoves = m_snapshot.value("moves", -1).toInt();
+      if (newMoves < 0 || newMoves < oldMoves)
+          return;
+      GoMatch position;
+      QString error;
+      auto json = payload["position"].toObject();
+      if (json.isEmpty()) {
+          json = m_position.toJson();
+          json.remove("history");
+          json["board"] = payload["board"];
+          json["previousBoard"] = m_position.state();
+          json["hasPrevious"] = m_ready && newMoves == oldMoves + 1;
+          json["currentPlayertmp"] = payload["currentPlayerIndex"];
+          json["moves"] = newMoves;
+          json["m_passes"] = payload["m_passes"].toInt();
+          json["capturedLastMove"] = 0;
+          json["koPoint"] = payload.value("koPoint").toInt(-1);
+          if (payload["scoring"].isObject()) {
+              const auto scoring = payload["scoring"].toObject();
+              if (scoring["blackPrisoners"].isDouble() && scoring["whitePrisoners"].isDouble())
+                  json["capturedStones"] = QJsonArray{scoring["blackPrisoners"], scoring["whitePrisoners"]};
+          }
+      }
     if (!GoMatch::fromJson(json, position, error)) {
       emit gameError(error);
       return;
@@ -237,9 +247,8 @@ void GameManager::handleServerMessage(const QJsonObject &message) {
     if (turnChanged)
       emit currentPlayerChanged();
     emit snapshotChanged();
-    if (m_finished && m_position.consecutivePasses >= 2 &&
-        (newMoves != oldMoves || !oldFinished))
-      notifyScore();
+    if (m_finished && m_position.m_passes >= 2 && (newMoves != oldMoves || !oldFinished))
+        notifyScore();
     if (oldAct != canAct() || oldFinished != m_finished)
       emit interactionChanged();
   } else if (type == "GameEvent") {
@@ -364,10 +373,9 @@ void GameManager::updateScoring(const QVariantMap &serverScoring) {
         detail["delta"] = actual.toDouble() - it.value().toDouble();
       differences[it.key()] = detail;
     }
-    if (m_snapshot.value("moveCount", -1).toInt() != m_position.moveCount)
-      differences["moveCount"] =
-          QVariantMap{{"client", m_position.moveCount},
-                      {"server", m_snapshot.value("moveCount")}};
+    if (m_snapshot.value("moves", -1).toInt() != m_position.moves)
+        differences["moves"] = QVariantMap{{"client", m_position.moves},
+                                           {"server", m_snapshot.value("moves")}};
   }
   const QString status = !online()               ? "local"
                          : server.isEmpty()      ? "unavailable"
@@ -375,7 +383,7 @@ void GameManager::updateScoring(const QVariantMap &serverScoring) {
                                                  : "mismatch";
   const QVariantMap comparison{{"status", status},
                                {"matches", status == "matched"},
-                               {"moveCount", m_position.moveCount},
+                               {"moves", m_position.moves},
                                {"differences", differences}};
   const bool changed = client != m_scoring || server != m_serverScoring ||
                        comparison != m_scoringComparison;
@@ -398,22 +406,21 @@ void GameManager::notifyScore() {
           .arg(m_scoring.value("difference").toDouble()));
 }
 void GameManager::syncLocalPosition() {
-  m_snapshot = {
-      {"mode", m_aiEnabled ? m_aiDifficulty : QStringLiteral("Sandbox")},
-      {"started", !m_finished},
-      {"moveCount", m_position.moveCount},
-      {"currentPlayerIndex", currentPlayer()},
-      {"board", m_position.state().toVariantList()},
-      {"komi", 6.5},
-      {"consecutivePasses", m_position.consecutivePasses}};
-  syncLastMoveFromHistory();
-  updateScoring();
-  m_snapshot["scoring"] = m_scoring;
-  emit boardStateChanged();
-  emit currentPlayerChanged();
-  emit snapshotChanged();
-  emit interactionChanged();
-  emit historyChanged();
+    m_snapshot = {{"mode", m_aiEnabled ? m_aiDifficulty : QStringLiteral("Sandbox")},
+                  {"started", !m_finished},
+                  {"moves", m_position.moves},
+                  {"currentPlayerIndex", currentPlayer()},
+                  {"board", m_position.state().toVariantList()},
+                  {"komi", 6.5},
+                  {"m_passes", m_position.m_passes}};
+    syncLastMoveFromHistory();
+    updateScoring();
+    m_snapshot["scoring"] = m_scoring;
+    emit boardStateChanged();
+    emit currentPlayerChanged();
+    emit snapshotChanged();
+    emit interactionChanged();
+    emit historyChanged();
 }
 void GameManager::recordMove(const QJsonObject &move) {
   m_history.resize(m_cursor + 1);
@@ -422,8 +429,8 @@ void GameManager::recordMove(const QJsonObject &move) {
   m_history.push_back(m_position);
   ++m_cursor;
   syncLocalPosition();
-  if (m_aiEnabled && m_position.consecutivePasses < 2)
-    saveGame();
+  if (m_aiEnabled && m_position.m_passes < 2)
+      saveGame();
 }
 void GameManager::finishLocalGame(int winner, const QString &reason) {
   cancelSearch();
@@ -434,8 +441,8 @@ void GameManager::finishLocalGame(int winner, const QString &reason) {
   m_snapshot["endReason"] = reason;
   updateScoring();
   m_snapshot["scoring"] = m_scoring;
-  if (m_position.consecutivePasses >= 2)
-    notifyScore();
+  if (m_position.m_passes >= 2)
+      notifyScore();
   emit snapshotChanged();
   emit interactionChanged();
   emit historyChanged();
@@ -501,8 +508,8 @@ void GameManager::redo() {
   m_resultMessage.clear();
   syncLocalPosition();
   notify("Redo");
-  if (m_position.consecutivePasses >= 2)
-    finishLocalGame(m_position.score() > 0 ? 0 : 1, "Two consecutive passes");
+  if (m_position.m_passes >= 2)
+      finishLocalGame(m_position.score() > 0 ? 0 : 1, "Two consecutive passes");
   else {
     if (m_aiEnabled)
       saveGame();
@@ -577,7 +584,7 @@ bool GameManager::loadGame(bool ai, int slot) {
   emit matchInfoChanged();
   emit aiStateChanged();
   syncLocalPosition();
-  m_snapshot["winnerIndex"] = m_finished && m_position.consecutivePasses >= 2
+  m_snapshot["winnerIndex"] = m_finished && m_position.m_passes >= 2
                                   ? (m_position.score() > 0 ? 0 : 1)
                                   : data.winnerIndex;
   m_snapshot["endReason"] = m_resultMessage;

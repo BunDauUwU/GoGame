@@ -146,9 +146,8 @@ void GameManager::requestMove() {
              QVariant::fromValue<qulonglong>(result.allocatedBytes)},
             {"memoryLimited", result.memoryLimited}};
         emit snapshotChanged();
-        if (m_position.consecutivePasses >= 2)
-          finishLocalGame(m_position.score() > 0 ? 0 : 1,
-                          tr("Two consecutive passes"));
+        if (m_position.m_passes >= 2)
+            finishLocalGame(m_position.score() > 0 ? 0 : 1, tr("Two consecutive passes"));
       });
 
   watcher->setFuture(

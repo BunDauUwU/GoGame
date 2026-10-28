@@ -54,7 +54,7 @@ EasyAI::EasyAI(SearchOptions options)
 double EasyAI::evaluate(const GoMatch &game) const
 {
     double val = game.score();
-    if (game.consecutivePasses >= 2)
+    if (game.m_passes >= 2)
         return val;
     const auto &board = game.cells();
     const auto &groups = game.groups();
@@ -187,7 +187,7 @@ public:
             if (ownEye(game, pos, color))
                 priorty -= 2;
             int edge = min({pos / 19, pos % 19, 18 - pos / 19, 18 - pos % 19});
-            if (game.moveCount < 30)
+            if (game.moves < 30)
                 priorty += edge == 3 ? 0.3 : edge == 2 ? 0.15 : edge == 0 ? -0.3 : 0;
             ranked.push_back({pos, priorty});
         }
@@ -222,7 +222,7 @@ public:
         ++nodes;
         if (stopped())
             return 0;
-        if (depth == 0 || game.consecutivePasses >= 2)
+        if (depth == 0 || game.m_passes >= 2)
             return m_engine.evaluate(game);
         const bool maximize = game.currentPlayer == 0;
         double best = maximize ? -numeric_limits<double>::infinity()
@@ -232,7 +232,7 @@ public:
             if (stopped())
                 return 0;
             double score;
-            if (depth == 1 || move.next.consecutivePasses >= 2) {
+            if (depth == 1 || move.next.m_passes >= 2) {
                 ++nodes;
                 score = move.value;
             } else
@@ -260,7 +260,7 @@ SearchResult EasyAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bool
         res.stopReason = QStringLiteral("cancelled");
         return res;
     }
-    if (cur.consecutivePasses >= 2) {
+    if (cur.m_passes >= 2) {
         res.stopReason = QStringLiteral("terminal");
         return res;
     }
