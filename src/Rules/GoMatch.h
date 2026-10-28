@@ -50,11 +50,11 @@ public:
     const std::array<int, Count> &cells() const { return board; }
     const Groups &groups() const;
     int currentPlayer = 0;
-    int moveCount = 0;
-    int consecutivePasses = 0;
+    int moves = 0;
+    int m_passes = 0;
     int capturedLastMove = 0;
     int koPoint = -1;
-    bool koThreatLastMove = false;
+    bool koThreat = false;
     std::array<int, 2> capturedStones{};
     static const std::array<std::array<int, 4>, Count> &adj();
 

@@ -33,7 +33,7 @@ struct SearchResult
     QString error;
     std::uint64_t evaluations = 0, cacheHits = 0;
     std::uint32_t rootVisits = 0, reusedVisits = 0;
-    std::size_t allocatedBytes = 0; // Reserved arena/cache; excludes models and journals.
+    std::size_t allocatedBytes = 0;
     bool memoryLimited = false;
 };
 

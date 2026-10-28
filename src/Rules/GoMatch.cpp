@@ -68,9 +68,9 @@ const GoMatch::Groups &GoMatch::groups() const
 }
 bool GoMatch::validMove(int row, int col) const
 {
-    auto copy = *this;
+    auto tmp = *this;
     QString error;
-    return copy.play(row, col, error);
+    return tmp.play(row, col, error);
 }
 GoMatch::Replay GoMatch::replay() const
 {
@@ -80,8 +80,8 @@ GoMatch::Replay GoMatch::replay() const
     r.initialCells = board;
     r.initialPlayer = currentPlayer;
     r.initialKo = koPoint;
-    r.initialPasses = consecutivePasses;
-    r.initialMoveCount = moveCount;
+    r.initialPasses = m_passes;
+    r.initialMoveCount = moves;
     r.initialCaptured = capturedStones;
     return r;
 }
@@ -119,28 +119,28 @@ bool GoMatch::play(int row, int col, QString &error)
         }
     auto candidate = board;
     candidate[pos] = currentPlayer;
-    int count = 0, last = -1;
-    bool anyCapture = false;
-    
+    int cnt = 0, last = -1;
+    bool ck = false; // check captured
+
     for (int next : adj()[pos]) {
         if (next >= 0 && captured[tmp.root(next)]){
-            anyCapture = true;
+            ck = true;
             break;
         }
     }
-    
-    if (anyCapture) {
+
+    if (ck) {
         for (int i = 0; i < Count; ++i) {
             if (board[i] >= 0 && captured[tmp.root(i)]) {
                 candidate[i] = -1;
-                ++count;
+                ++cnt;
                 last = i;
             }
         }
     }
     auto newGroups = buildGroups(candidate);
-    int ownRoot = newGroups->root(pos);
-    if (newGroups->liberties[ownRoot].none()) {
+    int root = newGroups->root(pos);
+    if (newGroups->liberties[root].none()) {
         error = "Suicide";
         return false;
     }
@@ -157,21 +157,19 @@ bool GoMatch::play(int row, int col, QString &error)
                     && newGroups->liberties[newRoot].count() == 1)
                     threat = true;
             }
-    koThreatLastMove = threat;
+    koThreat = threat;
     recordMove(currentPlayer, pos);
     previousBoard = board;
     hasPrevious = true;
     board = candidate;
     m_groups = std::move(newGroups);
-    capturedLastMove = count;
-    capturedStones[currentPlayer] += count;
-    koPoint = count == 1 && m_groups->size[ownRoot] == 1
-                      && m_groups->liberties[ownRoot].count() == 1
-                  ? last
-                  : -1;
+    capturedLastMove = cnt;
+    capturedStones[currentPlayer] += cnt;
+    koPoint = cnt == 1 && m_groups->size[root] == 1 && m_groups->liberties[root].count() == 1 ? last
+                                                                                              : -1;
     currentPlayer = 1 - currentPlayer;
-    consecutivePasses = 0;
-    ++moveCount;
+    m_passes = 0;
+    ++moves;
     return true;
 }
 void GoMatch::pass()
@@ -181,17 +179,17 @@ void GoMatch::pass()
     hasPrevious = true;
     capturedLastMove = 0;
     koPoint = -1;
-    koThreatLastMove = false;
-    ++moveCount;
-    ++consecutivePasses;
+    koThreat = false;
+    ++moves;
+    ++m_passes;
     currentPlayer = 1 - currentPlayer;
 }
 QJsonArray GoMatch::state() const
 {
-    QJsonArray data;
+    QJsonArray res;
     for (int color : board)
-        data.append(color);
-    return data;
+        res.append(color);
+    return res;
 }
 QJsonObject GoMatch::scoreDetails(ScoringPhase phase) const
 {
@@ -329,7 +327,7 @@ QJsonObject GoMatch::toJson() const
                         {"initialPlayer", r.initialPlayer},
                         {"initialKo", r.initialKo},
                         {"initialPasses", r.initialPasses},
-                        {"initialMoveCount", r.initialMoveCount},
+                        {"initialmoves", r.initialMoveCount},
                         {"initialCaptured", QJsonArray{r.initialCaptured[0], r.initialCaptured[1]}},
                         {"moves", moves}};
     return {{"history", history},
@@ -337,16 +335,16 @@ QJsonObject GoMatch::toJson() const
             {"previousBoard", previous},
             {"hasPrevious", hasPrevious},
             {"currentPlayertmp", currentPlayer},
-            {"moveCount", moveCount},
-            {"consecutivePasses", consecutivePasses},
+            {"moves", moves},
+            {"m_passes", m_passes},
             {"capturedLastMove", capturedLastMove},
             {"capturedStones", QJsonArray{capturedStones[0], capturedStones[1]}},
             {"koPoint", koPoint},
-            {"koThreatLastMove", koThreatLastMove}};
+            {"koThreat", koThreat}};
 }
 bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
 {
-    GoMatch parsed;
+    GoMatch res;
     auto array = [&](const QString &key, std::array<int, Count> &target) {
         auto data = json.value(key).toArray();
         if (data.size() != Count)
@@ -359,7 +357,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         }
         return true;
     };
-    auto integer = [&](const QString &key, int &target, int min, int max) {
+    auto isInt = [&](const QString &key, int &target, int min, int max) {
         const auto value = json.value(key);
         double v = value.toDouble(-1e12);
         if (!value.isDouble() || v != std::floor(v) || v < min || v > max)
@@ -367,13 +365,12 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         target = int(v);
         return true;
     };
-    if (!array("board", parsed.board) || !array("previousBoard", parsed.previousBoard)
+    if (!array("board", res.board) || !array("previousBoard", res.previousBoard)
         || !json.value("hasPrevious").isBool()
-        || !integer("currentPlayertmp", parsed.currentPlayer, 0, 1)
-        || !integer("moveCount", parsed.moveCount, 0, 1000000)
-        || !integer("consecutivePasses", parsed.consecutivePasses, 0, 2)
-        || !integer("capturedLastMove", parsed.capturedLastMove, 0, Count)
-        || !integer("koPoint", parsed.koPoint, -1, Count - 1)) {
+        || !isInt("currentPlayertmp", res.currentPlayer, 0, 1)
+        || !isInt("moves", res.moves, 0, 1000000) || !isInt("m_passes", res.m_passes, 0, 2)
+        || !isInt("capturedLastMove", res.capturedLastMove, 0, Count)
+        || !isInt("koPoint", res.koPoint, -1, Count - 1)) {
         error = "Invalid Go position";
         return false;
     }
@@ -388,11 +385,11 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
             error = "Invalid capture counts";
             return false;
         }
-        parsed.capturedStones[i] = int(v);
+        res.capturedStones[i] = int(v);
     }
-    parsed.koThreatLastMove = json.value("koThreatLastMove").toBool();
-    parsed.hasPrevious = json.value("hasPrevious").toBool();
-    parsed.m_groups = buildGroups(parsed.board);
+    res.koThreat = json.value("koThreat").toBool();
+    res.hasPrevious = json.value("hasPrevious").toBool();
+    res.m_groups = buildGroups(res.board);
     if (json.contains("history")) {
         const auto h = json.value("history").toObject();
         const auto initial = h.value("initialCells").toArray();
@@ -402,13 +399,13 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         setup["previousBoard"] = initial;
         setup["hasPrevious"] = false;
         setup["currentPlayertmp"] = h.value("initialPlayer");
-        setup["moveCount"] = h.value("initialMoveCount");
-        setup["consecutivePasses"] = h.value("initialPasses");
+        setup["moves"] = h.value("initialmoves");
+        setup["m_passes"] = h.value("initialPasses");
         setup["capturedStones"] = h.value("initialCaptured");
         setup["capturedLastMove"] = 0;
         setup["koPoint"] = h.value("initialKo");
-        GoMatch rebuilt;
-        if (!fromJson(setup, rebuilt, error) || !h.value("moves").isArray()) {
+        GoMatch match;
+        if (!fromJson(setup, match, error) || !h.value("moves").isArray()) {
             error = "Invalid Go history setup";
             return false;
         }
@@ -420,7 +417,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         for (const auto &item : moves) {
             const auto move = item.toArray();
             if (move.size() != 2 || !move[0].isDouble() || !move[1].isDouble()
-                || move[0].toDouble() != rebuilt.currentPlayer
+                || move[0].toDouble() != match.currentPlayer
                 || move[1].toDouble() != std::floor(move[1].toDouble()) || move[1].toInt(-1) < 0
                 || move[1].toInt() > Count) {
                 error = "Invalid Go history move";
@@ -428,23 +425,22 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
             }
             const int point = move[1].toInt();
             if (point == Count)
-                rebuilt.pass();
-            else if (!rebuilt.play(point / Size, point % Size, error))
+                match.pass();
+            else if (!match.play(point / Size, point % Size, error))
                 return false;
         }
-        if (rebuilt.board != parsed.board || rebuilt.currentPlayer != parsed.currentPlayer
-            || rebuilt.moveCount != parsed.moveCount || rebuilt.koPoint != parsed.koPoint
-            || rebuilt.capturedStones != parsed.capturedStones
-            || rebuilt.consecutivePasses != parsed.consecutivePasses
+        if (match.board != res.board || match.currentPlayer != res.currentPlayer
+            || match.moves != res.moves || match.koPoint != res.koPoint
+            || match.capturedStones != res.capturedStones || match.m_passes != res.m_passes
             || (!moves.empty()
-                && (rebuilt.previousBoard != parsed.previousBoard
-                    || rebuilt.hasPrevious != parsed.hasPrevious))) {
+                && (match.previousBoard != res.previousBoard
+                    || match.hasPrevious != res.hasPrevious))) {
             error = "Go history does not match position";
             return false;
         }
-        parsed.m_replay = rebuilt.m_replay;
+        res.m_replay = match.m_replay;
     }
-    game = std::move(parsed);
+    game = std::move(res);
     error.clear();
     return true;
 }
