@@ -109,7 +109,7 @@ void GameManager::notifyMove() {
   if (!parts.isEmpty())
     notify(parts.join(" · "));
 }
-}
+
 bool GameManager::is_valid_move(int row, int col) {
   if (!canAct()) {
     emit gameError(tr("Wait for your turn"));
