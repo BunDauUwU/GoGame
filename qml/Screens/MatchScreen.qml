@@ -133,13 +133,13 @@ Rectangle {
         }
 
         function onCaptureOccurred() {
-            captureSound.play();
-            effectText.popup(qsTr("Capture!"), "#ffd54f");
+            // captureSound.play();
+            // effectText.popup(qsTr("Capture!"), "#ffd54f");
         }
 
         function onKoOccurred() {
-            koSound.play();
-            effectText.popup(qsTr("Ko!"), "#ff5252");
+            // koSound.play();
+            // effectText.popup(qsTr("Ko!"), "#ff5252");
         }
 
         function onInvalidMovePlayed() {
@@ -398,12 +398,12 @@ Rectangle {
                 opacity: stateValue === -1 ? 0 : 1
                 visible: opacity > 0
 
-                Behavior on opacity {
-                    SpringAnimation {
-                        spring: 1.0
-                        damping: 0.3
-                    }
-                }
+                // Behavior on opacity {
+                //     SpringAnimation {
+                //         spring: 1.0
+                //         damping: 0.3
+                //     }
+                // }
 
                 Component.onCompleted: {
                     if (stateValue !== -1)
