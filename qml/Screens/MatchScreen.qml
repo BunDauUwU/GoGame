@@ -87,7 +87,8 @@ Rectangle {
     }
 
     Shortcut {
-        sequence: "Shirt+S"
+        sequence: "Shift+S"
+        enabled: (!gameManager.finished && !gameManager.pending) && (gameManager.online || gameManager.aiEnabled)
         onActivated: concedeDialog.open()
     }
 
