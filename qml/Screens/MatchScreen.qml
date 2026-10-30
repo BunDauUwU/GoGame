@@ -36,6 +36,33 @@ Rectangle {
         AppState.playingAgainstAI = false;
     }
 
+    Shortcut {
+        sequence: "Ctrl+Z"
+        enabled: gameManager.canUndo
+        onActivated: gameManager.undo()
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+Y", "Ctrl+Shift+Z"]
+        enabled: gameManager.canRedo
+        onActivated: gameManager.redo()
+    }
+
+    Shortcut {
+        sequence: "Space"
+        onActivated: gameManager.pass_turn()
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        onActivated: boardScreen.clearPreview()
+    }
+
+    Shortcut {
+        sequence: "F"
+        onActivated: boardScreen.previewEnabled = !boardScreen.previewEnabled
+    }
+
     function clearPreview() {
         cur_x = -1;
         cur_y = -1;
