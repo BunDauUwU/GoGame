@@ -774,7 +774,7 @@ Rectangle {
     Dialog {
         id: concedeDialog
         anchors.centerIn: parent
-        title: qsTr("Are you gay?")
+        title: qsTr("Are you sure you want to surrender?")
         modal: true
         standardButtons: Dialog.Yes | Dialog.No
         onAccepted: gameManager.concede()
