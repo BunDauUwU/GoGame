@@ -1063,7 +1063,7 @@ SearchResult HardAI::chooseMove(const GoMatch &current,
         out.stopReason = QStringLiteral("Game ended");
         return finish();
     }
-    auto state = m_impl; // Keep this backend/cache alive if the UI configures a new one.
+    auto state = m_impl;
     std::unique_lock<std::mutex> lock(state->mutex, std::defer_lock);
     while (!lock.try_lock()) {
         if (cancelled()) {

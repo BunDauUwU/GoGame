@@ -10,7 +10,6 @@ namespace {
 std::mutex dutyMutex;
 std::unordered_map<const void *, double> duties;
 } // namespace
-// Called by the private nneval.cpp build copy once per actual neural batch.
 double inferenceDuty(const void *evaluator) {
   std::lock_guard<std::mutex> lock(dutyMutex);
   const auto found = duties.find(evaluator);
@@ -78,8 +77,6 @@ Result Native::evaluate(const Request &request) {
                      ? Board::NULL_LOC
                      : Location::getLoc(request.initialKo % 19,
                                         request.initialKo / 19, 19);
-  // Upstream counts stones lost by the named color; GoMatch counts prisoners
-  // taken.
   board.numBlackCaptures = request.initialCaptured[1];
   board.numWhiteCaptures = request.initialCaptured[0];
   Rules rules(Rules::KO_SIMPLE, Rules::SCORING_TERRITORY, Rules::TAX_NONE,

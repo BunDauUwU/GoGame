@@ -6,7 +6,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(GOGAME_ENABLE_KATAGO "Build native KataGo model evaluation for HardAI" OFF)
+option(GOGAME_ENABLE_KATAGO OFF)
 if(GOGAME_ENABLE_KATAGO)
     include(cmake/KataGoBackend.cmake)
 endif()
@@ -59,10 +59,8 @@ qt_add_qml_module(appGoGame
     QML_FILES
         main.qml
 
-        # Singletons
         qml/Singletons/AppState.qml
 
-        # Core
         qml/Core/Motion.qml
         qml/Core/Radius.qml
         qml/Core/SceneManager.qml
@@ -70,18 +68,15 @@ qt_add_qml_module(appGoGame
         qml/Core/Theme.qml
         qml/Core/Typography.qml
 
-        # Components: Battle
         qml/Components/battle/GameClock.qml
         qml/Components/battle/PlayerPanel.qml
 
-        # Components: Controls
         qml/Components/controls/GameButton.qml
         qml/Components/controls/GamePanel.qml
         qml/Components/controls/GameText.qml
         qml/Components/controls/SaveSlotTable.qml
         qml/Components/controls/SaveGameDialog.qml
 
-        # Screens
         qml/Screens/SettingsScreen.qml
         qml/Screens/MatchScreen.qml
         qml/Screens/LoginScreen.qml
@@ -90,7 +85,6 @@ qt_add_qml_module(appGoGame
     SOURCES
         main.cpp
 
-        # Client AI
         src/AI/AIGame.cpp
         src/AI/SearchTypes.h
         src/AI/EasyAI.cpp
@@ -101,19 +95,18 @@ qt_add_qml_module(appGoGame
         src/AI/HardAI.h
         src/AI/KataGoEvaluator.cpp
         src/AI/KataGoEvaluator.h
+        # src/AI/KataGoNative.cpp
+        # src/AI/KataGoNative.h
 
-        # Shared Go rules
         src/Rules/GoMatch.cpp
         src/Rules/GoMatch.h
 
-        # Core
         src/Core/Game.cpp
         src/Core/Game.h
         src/Core/Enums.h
         src/Core/Enumutils.h
         src/Core/Enumutils.cpp
 
-        # Managers
         src/Managers/DataManager.cpp
         src/Managers/DataManager.h
         src/Managers/AssetManager.cpp
@@ -123,7 +116,6 @@ qt_add_qml_module(appGoGame
         src/Managers/MatchmakingManager.h
         src/Managers/MatchmakingManager.cpp
 
-        # Network
         src/Network/NetworkClient.cpp
         src/Network/NetworkClient.h
         src/Network/Protocol.cpp

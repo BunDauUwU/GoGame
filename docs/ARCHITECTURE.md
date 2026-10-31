@@ -43,7 +43,8 @@ sequenceDiagram
     S-->>B: MatchFound(playerIndex=1, opponentName)
     S-->>A: GameSnapshot(self.playerIndex=0)
     S-->>B: GameSnapshot(self.playerIndex=1)
-    A->>A: Local preview; no command sent
+    A->>A: Local preview()
+
     A->>S: GameCommand(Play, row, col) on confirmation
     S->>S: Validate membership, turn, clock, and rules
     alt Legal move

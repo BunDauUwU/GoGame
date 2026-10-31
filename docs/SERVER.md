@@ -150,9 +150,9 @@ Sandbox and AI save/undo/redo run on the client; online matches do not allow und
 
 ## Server/Client Build Boundary
 
-Shared rules live in `src/Rules/GoMatch.*`; the server compiles the rules source directly and links only Qt Core/Network/WebSockets. The standalone server does not build AI, DataManager, or Qt Concurrent. Root CMake compiles AI, DataManager, and rules directly into the client; only the server has a separate CMake file. Test files are absent, but root CMake still references `tests/` when `BUILD_TESTING` is enabled; use `-DBUILD_TESTING=OFF` for the current client build. `DataManager` belongs to the client and handles JSON Save/Load; see the [AI guide](ai/IMPLEMENTATION_GUIDE.md) for SGF training and algorithms.
+Shared rules live in `src/Rules/GoMatch.*`; the server compiles the rules source directly and links only Qt Core/Network/WebSockets. The standalone server does not build AI, DataManager, or Qt Concurrent. Root CMake compiles AI, DataManager, and rules directly into the client; only the server has a separate CMake file. Test files are absent, but root CMake still references `tests/` when `BUILD_TESTING` is enabled; use `-DBUILD_TESTING=OFF` for the current client build. `DataManager` belongs to the client and handles JSON Save/Load.
 
-PlayerPanel displays Current points from scoring for each player's color. Territory, captured-stone, and komi calculations follow the [Nihon Ki-in Japanese rules](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm). Current scores are provisional; there is no mutual dead-stone/seki confirmation step.
+PlayerPanel displays Current points from scoring for each player's color. Territory, captured-stone, and komi calculations follow the [Nihon Ki-in Japanese rules](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.html).
 
 Current points count only secured territory identified by Benson elimination, using chains with two vital eye regions, plus captured stones; White receives komi. Open regions, groups not proven alive, and false eyes do not count as territory. scoreBasis is SecuredTerritory; unsettledPoints records uncounted empty intersections. This is a conservative estimate, not a replacement for dead-stone/seki confirmation. See [pass-alive territory in KataGo](https://lightvector.github.io/KataGo/rules.html#additional-definitions).
 

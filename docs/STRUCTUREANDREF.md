@@ -4,18 +4,18 @@ Checked directly against the filesystem on **21 October 2026**, after documentat
 
 ## Documentation Locations
 
-| File | Contents |
-| --- | --- |
-| [README.md](../README.md) | Overview and usage: build, client, server, AI, Sandbox, and KataGo. |
-| [AI_Declaration.md](AI_Declaration.md) | Team AI usage declaration, attribution, and individual confirmations. |
-| [PROMPT.md](PROMPT.md) | Full prompts, recoverable responses, changes, and checks for each recorded request. |
-| [STRUCTUREANDREF.md](STRUCTUREANDREF.md) | Project tree and reference catalog. |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Client/server diagrams, WebSocket flow, and snapshot schema. |
-| [SERVER.md](SERVER.md) | Server protocol, commands, snapshots, clocks, and JSON API; moved from `server/README.md`. |
-| [ROADMAP.md](ROADMAP.md) | Plans and future-work notes (removed because no further implementation was planned). |
-| [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md) | Native KataGo backend build/run instructions, CPU/CUDA, and limitations. |
-| [references/HARD_AI_INPUT.md](references/HARD_AI_INPUT.md) | Complete user-supplied MCTS code for the HardAI request. |
-| [archive/README-2026-10-20.md](archive/README-2026-10-20.md) | Unmodified README before reorganization; its paths/status are historical. |
+| File                                                         | Contents                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| [README.md](../README.md)                                    | Overview and usage: build, client, server, AI, Sandbox, and KataGo.                        |
+| [AI_Declaration.md](AI_Declaration.md)                       | Team AI usage declaration, attribution, and individual confirmations.                      |
+| [PROMPT.md](PROMPT.md)                                       | Full prompts, recoverable responses, changes, and checks for each recorded request.        |
+| [STRUCTUREANDREF.md](STRUCTUREANDREF.md)                     | Project tree and reference catalog.                                                        |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                           | Client/server diagrams, WebSocket flow, and snapshot schema.                               |
+| [SERVER.md](SERVER.md)                                       | Server protocol, commands, snapshots, clocks, and JSON API; moved from `server/README.md`. |
+| [ROADMAP.md](ROADMAP.md)                                     | Plans and future-work notes (removed because no further implementation was planned).       |
+| [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)                 | Native KataGo backend build/run instructions, CPU/CUDA, and limitations.                   |
+| [references/HARD_AI_INPUT.md](references/HARD_AI_INPUT.md)   | Complete user-supplied MCTS code for the HardAI request.                                   |
+| [archive/README-2026-10-20.md](archive/README-2026-10-20.md) | Unmodified README before reorganization; its paths/status are historical.                  |
 
 ## Current File Tree
 
@@ -177,19 +177,19 @@ GoGame/
 
 ## Responsibilities of Major Components
 
-| Location | Responsibility |
-| --- | --- |
-| `main.cpp`, `main.qml`, `qml/` | Client startup, QML context, menus, match screen, and components. |
-| `src/Core/Game.*`, `src/AI/AIGame.cpp` | Game state, mode coordination, AI workers, and stale-result cancellation. |
-| `src/Rules/GoMatch.*` | Shared rules, board, groups/liberties, history, and scoring. |
-| `src/Managers/` | Local authentication, matchmaking, assets, and JSON save/load. |
-| `src/Network/` | WebSocket connections and client protocol packaging. |
-| `server/` | Console server, queue, matches, clocks, and JSON read/write API. CMake builds rules from `src/Rules/`; old `server/GoMatch.*` files remain on disk. |
-| `src/AI/` | EasyAI, MediumAI, HardAI, KataGo adapters, and SGF training. Hard has independent search board/groups. |
-| `cmake/KataGoBackend.cmake` | Native backend integration and a copy of KataGo source. |
-| `tools/run-katago-hard.sh` | Builds and launches the client with a KataGo model. |
-| `assets/` | Backgrounds, avatars, fonts, stones, music, and sound effects. |
-| `docs/` | All project-managed Markdown except the root README. |
+| Location                               | Responsibility                                                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.cpp`, `main.qml`, `qml/`         | Client startup, QML context, menus, match screen, and components.                                                                                   |
+| `src/Core/Game.*`, `src/AI/AIGame.cpp` | Game state, mode coordination, AI workers, and stale-result cancellation.                                                                           |
+| `src/Rules/GoMatch.*`                  | Shared rules, board, groups/liberties, history, and scoring.                                                                                        |
+| `src/Managers/`                        | Local authentication, matchmaking, assets, and JSON save/load.                                                                                      |
+| `src/Network/`                         | WebSocket connections and client protocol packaging.                                                                                                |
+| `server/`                              | Console server, queue, matches, clocks, and JSON read/write API. CMake builds rules from `src/Rules/`; old `server/GoMatch.*` files remain on disk. |
+| `src/AI/`                              | EasyAI, MediumAI, HardAI, KataGo adapters, and SGF training. Hard has independent search board/groups.                                              |
+| `cmake/KataGoBackend.cmake`            | Native backend integration and a copy of KataGo source.                                                                                             |
+| `tools/run-katago-hard.sh`             | Builds and launches the client with a KataGo model.                                                                                                 |
+| `assets/`                              | Backgrounds, avatars, fonts, stones, music, and sound effects.                                                                                      |
+| `docs/`                                | All project-managed Markdown except the root README.                                                                                                |
 
 The source tree no longer contains `tests/` or `scripts/server_stats.py`; mentions in logs/archives are historical. No source files were changed or redundant files removed during the documentation reorganization.
 
@@ -197,33 +197,33 @@ The source tree no longer contains `tests/` or `scripts/server_stats.py`; mentio
 
 This catalog was compiled from existing documents rather than a new content review or availability check. The source column identifies where each reference was mentioned; URLs are preserved. The Caro report, 5×5 Q-learning project, and 9×9 Go paper are references, not evidence of GoGame's 19×19 AI performance.
 
-| Reference | Recorded source / context |
-| --- | --- |
-| [Introduction to Artificial Intelligence Report — Studocu](https://www.studocu.vn/vn/document/dai-hoc-dien-luc/dien-luc-university/bao-cao-nhap-mon-tri-tue-nhan-tao/88382780?sid=a353be05-df77-4401-bae7-4597fba4fd601791775595) |                                                          |
-| [Caro Report — equation reference](https://www.scribd.com/document/434712509/BAO-CAO)                                                                                                                        |                                                          |
-| [Implementing Go — Modern Descartes](https://www.moderndescartes.com/essays/implementing_go/)                                                                                                                        |                                                          |
-| [Atari Go — CodinGame](https://www.codingame.com/ide/puzzle/atari-go)                                                                                                                                                |                                                          |
-| [Go Minimax — BaseGo/core](https://github.com/HosseinBakand/GO-Game-Min-Max-/tree/main/BaseGo/core)                                                                                                                  |                                                          |
-| [Go Monte Carlo — Java](https://github.com/GTnull/Go/blob/master/version_2.0/src/gogame/monteCarloMethod.java)                                                                                                       |                                                          |
-| [5×5 Go AI Bot — Q-learning](https://github.com/27rg5/AI-bot-for-GO-game)                                                                                                                                        |                                                          |
-| [GoByGo — Monte-Carlo Based Computer Player for the Game of Go](https://durhamgo.club/GoByGo.pdf)                                                                                                                    |                                                          |
-| [AlphaGo — Nature paper (historically recorded URL)](https://deepmind-media.storage.googleapis.com/alphago/AlphaGoNaturePaper.pdf)                                                                                            |                                                          |
-| [Nihon Ki-in — Japanese rules](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm)                                                                                                                                       | [SERVER.md](SERVER.md)                                   |
-| [KataGo — pass-alive territory definitions](https://lightvector.github.io/KataGo/rules.html#additional-definitions)                                                                                                   | [SERVER.md](SERVER.md)                                   |
-| [KataGo — Analysis Engine protocol](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md)                                                                                                      | [ai/HARD_AI.md](ai/HARD_AI.md)                           |
-| [AlphaGo — Nature paper](https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf)                                                                                                               | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [OpenSpiel — AlphaZero](https://github.com/google-deepmind/open_spiel/blob/master/docs/alpha_zero.md)                                                                                                                | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [PyTorch — installation](https://pytorch.org/get-started/locally/)                                                                                                                                                        | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [SGF FF4 — specification](https://www.red-bean.com/sgf/)                                                                                                                                                                    | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [SGF FF4 — property index](https://www.red-bean.com/sgf/proplist_t.html)                                                                                                                                        | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [PyTorch — scaled dot-product attention](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html)                                                                       | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [ONNX Runtime — external data for large models](https://onnxruntime.ai/docs/tutorials/web/large-models.html#external-data)                                                                                              | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [ONNX Runtime — C++](https://onnxruntime.ai/docs/get-started/with-cpp)                                                                                                                                               | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [PyTorch — ONNX export](https://docs.pytorch.org/docs/stable/onnx.html)                                                                                                                                                | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [ONNX Runtime — threading configuration](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)                                                                                                             | [ai/IMPLEMENTATION_GUIDE.md](ai/IMPLEMENTATION_GUIDE.md) |
-| [KataGo v1.18.1 — NNEvaluator](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nneval.h)                                                                                                            | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
-| [KataGo v1.18.1 — features and NNOutput](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nninputs.h)                                                                                                 | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
-| [KataGo v1.18.1 — BoardHistory and rules](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/game/boardhistory.h)                                                                                                  | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)             |
+| Reference                                                                                                                                                                                                                         | Recorded source / context                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [Introduction to Artificial Intelligence Report — Studocu](https://www.studocu.vn/vn/document/dai-hoc-dien-luc/dien-luc-university/bao-cao-nhap-mon-tri-tue-nhan-tao/88382780?sid=a353be05-df77-4401-bae7-4597fba4fd601791775595) |                                              |
+| [Caro Report — equation reference](https://www.scribd.com/document/434712509/BAO-CAO)                                                                                                                                             |                                              |
+| [Implementing Go — Modern Descartes](https://www.moderndescartes.com/essays/implementing_go/)                                                                                                                                     |                                              |
+| [Atari Go — CodinGame](https://www.codingame.com/ide/puzzle/atari-go)                                                                                                                                                             |                                              |
+| [Go Minimax — BaseGo/core](https://github.com/HosseinBakand/GO-Game-Min-Max-/tree/main/BaseGo/core)                                                                                                                               |                                              |
+| [Go Monte Carlo — Java](https://github.com/GTnull/Go/blob/master/version_2.0/src/gogame/monteCarloMethod.java)                                                                                                                    |                                              |
+| [5×5 Go AI Bot — Q-learning](https://github.com/27rg5/AI-bot-for-GO-game)                                                                                                                                                         |                                              |
+| [GoByGo — Monte-Carlo Based Computer Player for the Game of Go](https://durhamgo.club/GoByGo.pdf)                                                                                                                                 |                                              |
+| [AlphaGo — Nature paper (historically recorded URL)](https://deepmind-media.storage.googleapis.com/alphago/AlphaGoNaturePaper.pdf)                                                                                                |                                              |
+| [Nihon Ki-in — Japanese rules](https://www.nihonkiin.or.jp/match/kiyaku/zenbun.htm)                                                                                                                                               | [SERVER.md](SERVER.md)                       |
+| [KataGo — pass-alive territory definitions](https://lightvector.github.io/KataGo/rules.html#additional-definitions)                                                                                                               | [SERVER.md](SERVER.md)                       |
+| [KataGo — Analysis Engine protocol](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md)                                                                                                                    | [ai/HARD_AI.md](ai/HARD_AI.md)               |
+| [AlphaGo — Nature paper](https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf)                                                                                                                            |                                              |
+| [OpenSpiel — AlphaZero](https://github.com/google-deepmind/open_spiel/blob/master/docs/alpha_zero.md)                                                                                                                             |                                              |
+| [PyTorch — installation](https://pytorch.org/get-started/locally/)                                                                                                                                                                |                                              |
+| [SGF FF4 — specification](https://www.red-bean.com/sgf/)                                                                                                                                                                          |                                              |
+| [SGF FF4 — property index](https://www.red-bean.com/sgf/proplist_t.html)                                                                                                                                                          |                                              |
+| [PyTorch — scaled dot-product attention](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html)                                                                                    |                                              |
+| [ONNX Runtime — external data for large models](https://onnxruntime.ai/docs/tutorials/web/large-models.html#external-data)                                                                                                        |                                              |
+| [ONNX Runtime — C++](https://onnxruntime.ai/docs/get-started/with-cpp)                                                                                                                                                            |                                              |
+| [PyTorch — ONNX export](https://docs.pytorch.org/docs/stable/onnx.html)                                                                                                                                                           |                                              |
+| [ONNX Runtime — threading configuration](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)                                                                                                                 |                                              |
+| [KataGo v1.18.1 — NNEvaluator](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nneval.h)                                                                                                                         | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md) |
+| [KataGo v1.18.1 — features and NNOutput](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/neuralnet/nninputs.h)                                                                                                             | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md) |
+| [KataGo v1.18.1 — BoardHistory and rules](https://github.com/lightvector/KataGo/blob/v1.18.1/cpp/game/boardhistory.h)                                                                                                             | [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md) |
 
 ## Reference Files and Local Dependencies
 

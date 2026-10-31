@@ -67,9 +67,9 @@ The server is not required for AI matches or Sandbox mode.
 
 The current scorer still has limitations when adjudicating dead stones and seki.
 
-# Rule
+# Rules
 
-This game currently uses Japanese rules, however there may be some inaccuracies, so please report them for debugging.
+See [GoGame Rules — Simplified Japanese-style Scoring](docs/RULES.md) for the current scoring, Ko, game-ending, and online time-control rules.
 
 # Project Documentation
 

@@ -59,6 +59,12 @@ public:
     static const std::array<std::array<int, 4>, Count> &adj();
 
 private:
+    struct MoveInfo
+    {
+        std::bitset<Count> captured;
+        bool ck = false;
+    };
+    bool analyzeMove(int row, int col, MoveInfo &move, QString &error) const;
     std::shared_ptr<Replay> m_replay;
     void recordMove(int player, int point);
     std::array<int, Count> board;

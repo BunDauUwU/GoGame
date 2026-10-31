@@ -68,9 +68,9 @@ const GoMatch::Groups &GoMatch::groups() const
 }
 bool GoMatch::validMove(int row, int col) const
 {
-    auto tmp = *this;
+    MoveInfo move;
     QString error;
-    return tmp.play(row, col, error);
+    return analyzeMove(row, col, move, error);
 }
 GoMatch::Replay GoMatch::replay() const
 {
@@ -93,7 +93,7 @@ void GoMatch::recordMove(int player, int point)
         m_replay = std::make_shared<Replay>(*m_replay);
     m_replay->moves.push_back({player, point});
 }
-bool GoMatch::play(int row, int col, QString &error)
+bool GoMatch::analyzeMove(int row, int col, MoveInfo &move, QString &error) const
 {
     error.clear();
     if (row < 0 || row >= Size || col < 0 || col >= Size) {
@@ -110,28 +110,62 @@ bool GoMatch::play(int row, int col, QString &error)
         return false;
     }
     const auto &tmp = groups();
-    std::array<bool, Count> captured{};
-    for (int next : adj()[pos])
-        if (next >= 0 && board[next] == 1 - currentPlayer) {
-            int r = tmp.root(next);
-            if (tmp.liberties[r].count() == 1 && tmp.liberties[r].test(pos))
-                captured[r] = true;
+    bool alive = false;
+    for (int next : adj()[pos]) {
+        if (next < 0)
+            continue;
+        if (board[next] == -1) {
+            alive = true;
+        } else {
+            int par = tmp.root(next);
+            if (board[next] == currentPlayer) {
+                alive = alive || tmp.liberties[par].count() > 1;
+            } else if (tmp.liberties[par].count() == 1 && tmp.liberties[par].test(pos)) {
+                move.captured.set(par);
+                move.ck = true;
+                alive = true;
+            }
         }
+    }
+    if (!alive) {
+        error = "Suicide";
+        return false;
+    }
+    if (hasPrevious && previousBoard[pos] == currentPlayer) {
+        bool same = true;
+        for (int i = 0; i < Count; ++i) {
+            int color = board[i];
+            if (i == pos)
+                color = currentPlayer;
+            else if (move.ck && color >= 0 && move.captured.test(tmp.root(i)))
+                color = -1;
+            if (color != previousBoard[i]) {
+                same = false;
+                break;
+            }
+        }
+        if (same) {
+            error = "Ko";
+            return false;
+        }
+    }
+    return true;
+}
+bool GoMatch::play(int row, int col, QString &error)
+{
+    MoveInfo move;
+    if (!analyzeMove(row, col, move, error))
+        return false;
+    int pos = row * Size + col;
+    const auto &tmp = groups();
+    const auto &captured = move.captured;
     auto candidate = board;
     candidate[pos] = currentPlayer;
     int cnt = 0, last = -1;
-    bool ck = false; // check captured
-
-    for (int next : adj()[pos]) {
-        if (next >= 0 && captured[tmp.root(next)]){
-            ck = true;
-            break;
-        }
-    }
-
+    bool ck = move.ck;
     if (ck) {
         for (int i = 0; i < Count; ++i) {
-            if (board[i] >= 0 && captured[tmp.root(i)]) {
+            if (board[i] >= 0 && captured.test(tmp.root(i))) {
                 candidate[i] = -1;
                 ++cnt;
                 last = i;
@@ -140,14 +174,7 @@ bool GoMatch::play(int row, int col, QString &error)
     }
     auto newGroups = buildGroups(candidate);
     int root = newGroups->root(pos);
-    if (newGroups->liberties[root].none()) {
-        error = "Suicide";
-        return false;
-    }
-    if (hasPrevious && candidate == previousBoard) {
-        error = "Ko";
-        return false;
-    }
+
     bool threat = false;
     if (koPoint >= 0)
         for (int next : adj()[pos])
@@ -427,12 +454,12 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
         setup["koPoint"] = h.value("initialKo");
         GoMatch match;
         if (!fromJson(setup, match, error) || !h.value("moves").isArray()) {
-            error = "Invalid Go history setup";
+            error = "Invalid setup";
             return false;
         }
         const auto moves = h.value("moves").toArray();
         if (moves.size() > 100000) {
-            error = "Go history too long";
+            error = "History is too long";
             return false;
         }
         for (const auto &item : moves) {
@@ -441,7 +468,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
                 || move[0].toDouble() != match.currentPlayer
                 || move[1].toDouble() != std::floor(move[1].toDouble()) || move[1].toInt(-1) < 0
                 || move[1].toInt() > Count) {
-                error = "Invalid Go history move";
+                error = "Invalid played move";
                 return false;
             }
             const int point = move[1].toInt();
@@ -456,7 +483,7 @@ bool GoMatch::fromJson(const QJsonObject &json, GoMatch &game, QString &error)
             || (!moves.empty()
                 && (match.previousBoard != res.previousBoard
                     || match.hasPrevious != res.hasPrevious))) {
-            error = "Go history does not match position";
+            error = "History does not match";
             return false;
         }
         res.m_replay = match.m_replay;
