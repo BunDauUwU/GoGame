@@ -755,7 +755,7 @@ Rectangle {
         anchors.right: passButton.left
         anchors.verticalCenter: passButton.verticalCenter
         anchors.rightMargin: 12
-        text: boardScreen.previewEnabled ? qsTr("Fast mode (PRESS F): OFF") : qsTr("Fast mode: ON")
+        text: qsTr("Fast mode (PRESS F): " + (boardScreen.previewEnabled ? "OFF" : "ON"))
         highlighted: !boardScreen.previewEnabled
         onClicked: boardScreen.previewEnabled = !boardScreen.previewEnabled
         ToolTip.visible: hovered
