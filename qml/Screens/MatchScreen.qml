@@ -36,6 +36,90 @@ Rectangle {
         AppState.playingAgainstAI = false;
     }
 
+    Shortcut {
+        sequence: "Ctrl+Z"
+        enabled: gameManager.canUndo
+        onActivated: gameManager.undo()
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+Y", "Ctrl+Shift+Z"]
+        enabled: gameManager.canRedo
+        onActivated: gameManager.redo()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+R"
+        enabled: gameManager.sandbox
+        onActivated: resetDialog.open()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+L"
+        onActivated: {
+            gameManager.refreshSaves();
+            slotDialog.loading = true;
+            const games = gameManager.sandbox ? gameManager.sandboxSavedGames : gameManager.savedGames;
+            const first = games.findIndex(function (game) {
+                return game.saved;
+            });
+            slotSelector.currentIndex = gameManager.currentSaveSlot > 0 ? gameManager.currentSaveSlot - 1 : Math.max(0, first);
+            slotDialog.open();
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+S"
+        onActivated: {
+            gameManager.refreshSaves();
+            slotDialog.loading = false;
+            slotSelector.currentIndex = Math.max(0, gameManager.currentSaveSlot - 1);
+            slotDialog.open();
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Q"
+        onActivated: {
+            gameManager.exitLocalGame();
+            stack.pop();
+        }
+    }
+
+    Shortcut {
+        sequence: "Shift+S"
+        enabled: (!gameManager.finished && !gameManager.pending) && (gameManager.online || gameManager.aiEnabled)
+        onActivated: concedeDialog.open()
+    }
+
+    Shortcut {
+        sequence: "F"
+        onActivated: boardScreen.previewEnabled = !boardScreen.previewEnabled
+    }
+
+    Shortcut {
+        sequence: "Space"
+        enabled: gameManager.canAct
+        onActivated: gameManager.pass_turn()
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        onActivated: boardScreen.clearPreview()
+    }
+
+    function resultTitle() {
+        const winner = boardScreen.battleState.winnerIndex;
+
+        if (winner === undefined || winner < 0)
+            return qsTr("Game ended");
+
+        if (gameManager.sandbox)
+            return winner === 0 ? qsTr("Black wins") : qsTr("White wins");
+
+        return winner === boardScreen.localPlayerColor ? qsTr("You won") : qsTr("You lost");
+    }
+
     function clearPreview() {
         cur_x = -1;
         cur_y = -1;
@@ -566,25 +650,25 @@ Rectangle {
             }
             Button {
                 width: localActions.width
-                text: gameManager.aiEnabled ? "Undo (" + gameManager.undoRemaining + ")" : "Undo"
+                text: gameManager.aiEnabled ? "Undo (PRESS CTRL+Z) (" + gameManager.undoRemaining + ")" : "Undo (PRESS CTRL+Z)"
                 enabled: gameManager.canUndo
                 onClicked: gameManager.undo()
             }
             Button {
                 width: localActions.width
-                text: "Redo"
+                text: "Redo (PRESS CTRL+Y)"
                 enabled: gameManager.canRedo
                 onClicked: gameManager.redo()
             }
             Button {
                 width: localActions.width
-                text: qsTr("Reset")
+                text: qsTr("Reset (PRESS CTRL+R)")
                 visible: gameManager.sandbox
                 onClicked: resetDialog.open()
             }
             Button {
                 width: localActions.width
-                text: qsTr("Save")
+                text: qsTr("Save (PRESS CTRL+S)")
                 onClicked: {
                     gameManager.refreshSaves();
                     slotDialog.loading = false;
@@ -594,7 +678,7 @@ Rectangle {
             }
             Button {
                 width: localActions.width
-                text: qsTr("Load")
+                text: qsTr("Load (PRESS CTRL+L)")
                 onClicked: {
                     gameManager.refreshSaves();
                     slotDialog.loading = true;
@@ -608,7 +692,7 @@ Rectangle {
             }
             Button {
                 width: localActions.width
-                text: qsTr("Exit")
+                text: qsTr("Quit (PRESS CTRL+Q)")
                 onClicked: {
                     gameManager.exitLocalGame();
                     stack.pop();
@@ -660,7 +744,7 @@ Rectangle {
         anchors.bottom: userInfo.top
         anchors.bottomMargin: 112
         anchors.rightMargin: 20
-        text: qsTr("Pass")
+        text: qsTr("Pass (PRESS SPACE)")
         enabled: gameManager.canAct
         onClicked: gameManager.pass_turn()
     }
@@ -671,7 +755,7 @@ Rectangle {
         anchors.right: passButton.left
         anchors.verticalCenter: passButton.verticalCenter
         anchors.rightMargin: 12
-        text: boardScreen.previewEnabled ? qsTr("Fast mode: OFF") : qsTr("Fast mode: ON")
+        text: boardScreen.previewEnabled ? qsTr("Fast mode (PRESS F): OFF") : qsTr("Fast mode: ON")
         highlighted: !boardScreen.previewEnabled
         onClicked: boardScreen.previewEnabled = !boardScreen.previewEnabled
         ToolTip.visible: hovered
@@ -682,7 +766,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         anchors.margins: 20
-        text: qsTr("Surrender")
+        text: qsTr("Surrender (PRESS SHIFT+S)")
         visible: gameManager.online || gameManager.aiEnabled
         enabled: !gameManager.finished && !gameManager.pending
         onClicked: concedeDialog.open()
@@ -690,7 +774,7 @@ Rectangle {
     Dialog {
         id: concedeDialog
         anchors.centerIn: parent
-        title: qsTr("Are you gay?")
+        title: qsTr("Are you sure you want to surrender?")
         modal: true
         standardButtons: Dialog.Yes | Dialog.No
         onAccepted: gameManager.concede()
@@ -711,7 +795,7 @@ Rectangle {
             spacing: 14
             Text {
                 width: parent.width
-                text: gameManager.sandbox ? (boardScreen.battleState.winnerIndex === 0 ? qsTr("Black wins") : qsTr("White wins")) : boardScreen.battleState.winnerIndex === gameManager.playerIndex ? qsTr("You won") : boardScreen.battleState.winnerIndex >= 0 ? qsTr("You lost") : qsTr("Game ended")
+                text: boardScreen.resultTitle()
                 horizontalAlignment: Text.AlignHCenter
                 font.pixelSize: 24
             }
