@@ -1,0 +1,56 @@
+{
+  "version": 4,
+  "include": [
+    "../cmake/common.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-cpu",
+      "displayName": "Linux standard (Eigen CPU)",
+      "inherits": "gogame-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "GOGAME_KATAGO_BACKEND": "EIGEN"
+      }
+    },
+    {
+      "name": "linux-cuda",
+      "displayName": "Linux NVIDIA (CUDA + cuDNN)",
+      "inherits": "gogame-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "GOGAME_KATAGO_BACKEND": "CUDA"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-cpu",
+      "inherits": "gogame-release-build",
+      "configurePreset": "linux-cpu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-cuda",
+      "inherits": "gogame-release-build",
+      "configurePreset": "linux-cuda",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    }
+  ]
+}

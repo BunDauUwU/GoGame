@@ -90,6 +90,11 @@ CMakeLists.txt.user*
 /tools/*.bin.gz
 /tools/*.bin.gz.part
 
+/CMakeUserPresets.json
+/release/build/
+/release/staging/
+/release/packages/
+
 /weeklyreport
 /file.txt 
 *.zip

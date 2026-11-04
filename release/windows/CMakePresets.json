@@ -1,0 +1,56 @@
+{
+  "version": 4,
+  "include": [
+    "../cmake/common.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "windows-cpu",
+      "displayName": "Windows standard (Eigen CPU)",
+      "inherits": "gogame-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "GOGAME_KATAGO_BACKEND": "EIGEN"
+      }
+    },
+    {
+      "name": "windows-cuda",
+      "displayName": "Windows NVIDIA (CUDA + cuDNN)",
+      "inherits": "gogame-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "GOGAME_KATAGO_BACKEND": "CUDA"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-cpu",
+      "inherits": "gogame-release-build",
+      "configurePreset": "windows-cpu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-cuda",
+      "inherits": "gogame-release-build",
+      "configurePreset": "windows-cuda",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ]
+}

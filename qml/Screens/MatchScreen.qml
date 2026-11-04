@@ -650,25 +650,25 @@ Rectangle {
             }
             Button {
                 width: localActions.width
-                text: gameManager.aiEnabled ? "Undo (PRESS CTRL+Z) (" + gameManager.undoRemaining + ")" : "Undo (PRESS CTRL+Z)"
+                text: gameManager.aiEnabled ? "Undo (CTRL+Z) (" + gameManager.undoRemaining + ")" : "Undo (CTRL+Z)"
                 enabled: gameManager.canUndo
                 onClicked: gameManager.undo()
             }
             Button {
                 width: localActions.width
-                text: "Redo (PRESS CTRL+Y)"
+                text: "Redo (CTRL+Y)"
                 enabled: gameManager.canRedo
                 onClicked: gameManager.redo()
             }
             Button {
                 width: localActions.width
-                text: qsTr("Reset (PRESS CTRL+R)")
+                text: qsTr("Reset (CTRL+R)")
                 visible: gameManager.sandbox
                 onClicked: resetDialog.open()
             }
             Button {
                 width: localActions.width
-                text: qsTr("Save (PRESS CTRL+S)")
+                text: qsTr("Save (CTRL+S)")
                 onClicked: {
                     gameManager.refreshSaves();
                     slotDialog.loading = false;
@@ -678,7 +678,7 @@ Rectangle {
             }
             Button {
                 width: localActions.width
-                text: qsTr("Load (PRESS CTRL+L)")
+                text: qsTr("Load (CTRL+L)")
                 onClicked: {
                     gameManager.refreshSaves();
                     slotDialog.loading = true;
@@ -692,7 +692,7 @@ Rectangle {
             }
             Button {
                 width: localActions.width
-                text: qsTr("Quit (PRESS CTRL+Q)")
+                text: qsTr("Quit (CTRL+Q)")
                 onClicked: {
                     gameManager.exitLocalGame();
                     stack.pop();
@@ -744,7 +744,7 @@ Rectangle {
         anchors.bottom: userInfo.top
         anchors.bottomMargin: 112
         anchors.rightMargin: 20
-        text: qsTr("Pass (PRESS SPACE)")
+        text: qsTr("Pass (SPACE)")
         enabled: gameManager.canAct
         onClicked: gameManager.pass_turn()
     }
@@ -755,7 +755,7 @@ Rectangle {
         anchors.right: passButton.left
         anchors.verticalCenter: passButton.verticalCenter
         anchors.rightMargin: 12
-        text: boardScreen.previewEnabled ? qsTr("Fast mode (PRESS F): OFF") : qsTr("Fast mode: ON")
+        text: boardScreen.previewEnabled ? qsTr("Fast mode (F): OFF") : qsTr("Fast mode: ON")
         highlighted: !boardScreen.previewEnabled
         onClicked: boardScreen.previewEnabled = !boardScreen.previewEnabled
         ToolTip.visible: hovered
@@ -766,7 +766,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         anchors.margins: 20
-        text: qsTr("Surrender (PRESS SHIFT+S)")
+        text: qsTr("Surrender (SHIFT+S)")
         visible: gameManager.online || gameManager.aiEnabled
         enabled: !gameManager.finished && !gameManager.pending
         onClicked: concedeDialog.open()

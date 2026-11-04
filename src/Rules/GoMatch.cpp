@@ -196,6 +196,8 @@ bool GoMatch::play(int row, int col, QString &error)
                                                                                               : -1;
     currentPlayer = 1 - currentPlayer;
     m_passes = 0;
+    
+    
     ++moves;
     return true;
 }
