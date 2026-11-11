@@ -25,6 +25,7 @@ const QHash<QString, QString> AssetManager::paths = {
     {"BoardTexture6", "board/variant6.jpg"},
     {"CaptureSound", "sounds/capture1.mp3"},
     {"KoSound", "sounds/ko1.mp3"},
+    {"WinSound", "sounds/win.mp3"},
 };
 
 int AssetManager::currentBackground() const { return m_currentBackground; }

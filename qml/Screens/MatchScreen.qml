@@ -113,9 +113,17 @@ Rectangle {
 
         if (winner === undefined || winner < 0)
             return qsTr("Game ended");
+        
+        winSound.play();
 
         if (gameManager.sandbox)
             return winner === 0 ? qsTr("Black wins") : qsTr("White wins");
+
+        if (winner === boardScreen.localPlayerColor) {
+            return qsTr("You won!");
+        } else {
+            return qsTr("You lost...");
+        }
 
         return winner === boardScreen.localPlayerColor ? qsTr("You won") : qsTr("You lost");
     }
@@ -150,6 +158,12 @@ Rectangle {
         repeat: true
         running: gameManager.online && !gameManager.finished
         onTriggered: boardScreen.clockNow = Date.now()
+    }
+
+    SoundEffect {
+        id: winSound
+        source: AssetManager.url("WinSound")
+        volume: AssetManager.sfxVolume
     }
 
     SoundEffect {
