@@ -128,7 +128,7 @@ private:
     const MediumAI &m_engine;
 
 public:
-    bool stopped()
+    bool stopped() // tks for stackoverflow
     {
         if ((cancel && cancel->load(memory_order_relaxed))
             || timer.elapsed() >= options.timeBudgetMs)
@@ -166,7 +166,7 @@ public:
         for (int pos = 0; pos < GoMatch::Count; ++pos) {
             if (board[pos] != -1)
                 continue;
-            double priorty = nxt[pos] ? 0 : -4;
+            double priorty = nxt[pos] ? 0 : -4; // mention above
             bitset<GoMatch::Count> visited;
             for (int next : GoMatch::adj()[pos]) {
                 if (next < 0)
@@ -181,22 +181,30 @@ public:
                 visited.set(root);
                 const auto liberties = groups.liberties[root].count();
                 if (liberties == 1)
-                    priorty += (board[next] == color ? 3.0 : 4.0) * groups.size[root];
+                    priorty += (board[next] == color ? 3.0 : 4.0) * groups.size[root]; // 2.0 : 4.0
                 else if (liberties == 2)
-                    priorty += (board[next] == color ? 0.3 : 0.5) * groups.size[root];
+                    priorty += (board[next] == color ? 0.3 : 0.5) * groups.size[root]; // 0.2 : 0.3
             }
             if (ownEye(game, pos, color))
                 priorty -= 2;
+
+            //
             int edge = min({pos / 19, pos % 19, 18 - pos / 19, 18 - pos % 19});
             if (game.moves < 30)
                 priorty += edge == 3 ? 0.3 : edge == 2 ? 0.15 : edge == 0 ? -0.3 : 0;
+            //
+
             ranked.push_back({pos, priorty});
         }
+
         sort(ranked.begin(), ranked.end(), [](const Ranked &a, const Ranked &b) {
             return a.priorty == b.priorty ? a.pos < b.pos : a.priorty > b.priorty;
         });
+
         vector<Candidate> res;
         res.reserve(options.candidateLimit + 1);
+
+        // Pass case
         auto passed = game;
         passed.pass();
         double passValue = m_engine.evaluate(passed);
@@ -216,6 +224,8 @@ public:
         sort(res.begin(), res.end(), [](const Candidate &a, const Candidate &b) {
             return a.priorty == b.priorty ? a.pos < b.pos : a.priorty > b.priorty;
         });
+        //
+
         return res;
     }
     double minimax(const GoMatch &game, int depth, double alpha, double beta)
@@ -225,9 +235,11 @@ public:
             return 0;
         if (depth == 0 || game.m_passes >= 2)
             return m_engine.evaluate(game);
+
         const bool maximize = game.currentPlayer == 0;
         double best = maximize ? -numeric_limits<double>::infinity()
                                : numeric_limits<double>::infinity();
+
         auto moves = candidates(game);
         for (const auto &move : moves) {
             if (stopped())
@@ -248,7 +260,13 @@ public:
             if (beta <= alpha)
                 break;
         }
+
         return best;
+        // For explain:
+        /*
+         * minimax will search all important move (candidate) -> reduce depth -> if depth is 0 calc the last point
+         * result will callback and update depend on whose turn
+         */
     }
 };
 
@@ -265,11 +283,13 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
         res.stopReason = QStringLiteral("terminal");
         return res;
     }
+
     const int sign = cur.currentPlayer == 0 ? 1 : -1;
     auto u = search.candidates(cur);
     const auto pass = find_if(u.begin(), u.end(), [](const auto &v) { return v.pos < 0; });
     res.passScore = sign * pass->value;
     res.estimatedScore = res.passScore;
+
     double fallback = -numeric_limits<double>::infinity();
     int fallbackMove = -1;
     for (const auto &v : u)
@@ -277,6 +297,7 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
             fallback = sign * v.value;
             fallbackMove = v.pos;
         }
+
     const auto publish = [&](int chosen, double score, double passValue, double playValue) {
         res.pass = chosen < 0;
         res.row = chosen < 0 ? -1 : chosen / 19;
@@ -286,10 +307,12 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
         res.moveScore = isfinite(playValue) ? playValue : passValue;
         res.gainOverPass = res.moveScore - passValue;
     };
+
     if (fallbackMove >= 0 && fallback > res.passScore + m_options.passMargin + 1e-9)
         publish(fallbackMove, fallback, res.passScore, fallback);
     else
         publish(-1, res.passScore, res.passScore, fallback);
+
     struct Progress
     {
         int move = -2;
@@ -297,9 +320,11 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
         bool valid = false;
         int stalls = 0;
     };
+
     array<Progress, 2> progress;
     int lastMove = -2, stable = 0;
     const double infinity = numeric_limits<double>::infinity();
+
     for (int depth = 1; depth <= m_options.maxDepth; ++depth) {
         if (search.stopped())
             break;
@@ -316,6 +341,7 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
             beta = passBlack - m_options.passMargin;
         double bestPlay = -infinity;
         int chosenMove = -1;
+
         for (const auto &v : u) {
             if (v.pos < 0)
                 continue;
@@ -329,20 +355,24 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
                 bestPlay = ownValue;
                 chosenMove = v.pos;
             }
+
             if (sign > 0)
                 alpha = max(alpha, score);
             else
                 beta = min(beta, score);
         }
+
         if (search.incomplete)
             break;
         const bool choosePass = chosenMove < 0
                                 || bestPlay <= passValue + m_options.passMargin + 1e-9;
         const int chosen = choosePass ? -1 : chosenMove;
         publish(chosen, choosePass ? passValue : bestPlay, passValue, bestPlay);
+
         res.completedDepth = depth;
         stable = chosen == lastMove ? stable + 1 : 1;
         lastMove = chosen;
+
         auto &previous = progress[depth % 2];
         const double gain = res.estimatedScore - passValue;
         const bool stalled = previous.valid && previous.move == chosen
@@ -351,11 +381,12 @@ SearchResult MediumAI::chooseMove(const GoMatch &cur, const shared_ptr<atomic_bo
         previous.move = chosen;
         previous.gain = gain;
         previous.valid = true;
+
         if (m_options.stableIterations > 0 && depth >= m_options.minimumStopDepth
             && stable >= m_options.stableIterations && progress[0].stalls > 0
             && progress[1].stalls > 0) {
             res.stoppedEarly = true;
-            res.stopReason = QStringLiteral("stable-or-declining"); // don't need to play
+            res.stopReason = QStringLiteral("stable-or-declining");
             break;
         }
     }
