@@ -3,7 +3,7 @@
 **Project:** GoGame — C++17 / Qt 6  
 **Updated:** 21 October 2026
 
-This document responsibilities describe development and integration work; it does not imply sole authorship of every line in a listed file. AI assistance and upstream code are identified separately in [AI_Declaration.md](AI_Declaration.md).
+This document shows development and integration work; it does not imply sole authorship of every line in a listed file. AI assistance and upstream code are identified separately in [AI_Declaration.md](AI_Declaration.md).
 
 ## Team Members
 
@@ -16,7 +16,7 @@ This document responsibilities describe development and integration work; it doe
 
 Recorded responsibilities include the login screen, server logic, reusable QML components, initial game UI, Medium/Hard AI, KataGo integration, game rules, game management, matchmaking, authentication, save/load, and parts of the documentation. **"-----"** Means all wrote by this member.
 
-### Server and Shared Rules
+### Server and Rules
 
 | Files                                                     | Recorded contribution |
 | --------------------------------------------------------- | --------------------- |
@@ -37,7 +37,7 @@ Recorded responsibilities include the login screen, server logic, reusable QML c
 | `qml/Components/controls/SaveGameDialog.qml`, `SaveSlotTable.qml`                                     | **-----**                                                                                                                                 |
 | `qml/Core/Motion.qml`, `Radius.qml`, `SceneManager.qml`, `Spacing.qml`, `Theme.qml`, `Typography.qml` | **-----**                                                                                                                                 |
 
-### Game Management, Networking, and Persistence
+### Game Management, Networking, and File Save
 
 | Files                                                                      | Recorded contribution                                                                                                                                                       |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -45,11 +45,11 @@ Recorded responsibilities include the login screen, server logic, reusable QML c
 | `src/Core/Game.h`, `src/Core/Game.cpp`                                     | Do not contain `startMediumGame()`, `startHardGame()`, `stopAI()`, `loadAIGame()`, `aiEnabled()`, `aiDifficulty()`, `pass_turn()`, `aiStateChanged()`, and `startAIGame()`. |
 | `src/Managers/AuthManager.h`, `src/Managers/AuthManager.cpp`               | **-----**                                                                                                                                                                   |
 | `src/Managers/MatchmakingManager.h`, `src/Managers/MatchmakingManager.cpp` | **-----**                                                                                                                                                                   |
-| `src/Managers/DataManager.h`, `src/Managers/DataManager.cpp`               | Including AI-assisted Sandbox save support.                                                                                                                                 |
+| `src/Managers/DataManager.h`, `src/Managers/DataManager.cpp`               | **-----**                                                                                                                                                                   |
 | `src/Network/NetworkClient.h`, `src/Network/NetworkClient.cpp`             | **-----**                                                                                                                                                                   |
 | `src/Network/Protocol.h`, `src/Network/Protocol.cpp`                       | **-----**                                                                                                                                                                   |
 
-### AI and KataGo Integration
+### AI and KataGo
 
 | Files                                                    | Recorded contribution and attribution                                                                                                                                |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -67,10 +67,10 @@ Recorded responsibilities cover asset collection and integration, the settings i
 
 ### Asset collection and integration
 
-| Files | Recorded contribution and attribution |
-| --- | --- |
+| Files                                                                         | Recorded contribution and attribution                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `assets/background/*`, `assets/board/*`, `assets/sounds/*`, `assets/stones/*` | Collected royalty-free game assets from Internet sources, including in-match background ambient images, playing-board textures, stone appearances, background songs, and in-game sound effects like stone placing, wrong move warning, announcement voices. |
-| `src/Managers/AssetManager.cpp`, `src/Managers/AssetManager.h` | Integrated the collected assets into the game and implemented state management for user preferences, so selected background, board, stone, song, and volume settings are applied consistently. |
+| `src/Managers/AssetManager.cpp`, `src/Managers/AssetManager.h`                | Integrated the collected assets into the game and implemented state management for user preferences, so selected background, board, stone, song, and volume settings are applied consistently.                                                              |
 
 ### Settings interface
 
@@ -93,18 +93,16 @@ Recorded responsibilities cover asset collection and integration, the settings i
 
 ### In-match visual feedback
 
-| Files | Recorded contribution and attribution |
-| --- | --- |
+| Files                                  | Recorded contribution and attribution                                                                                                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `src/AI/EasyAI.h`, `src/AI/EasyAI.cpp` | Adapted the Medium AI implementation into an Easy AI variant, adjusted its decision behavior for easier play, and integrated it into the AI game flow. The logic is derived from `src/AI/MediumAI.h` and `src/AI/MediumAI.cpp` |
 
 ### In-match visual feedback
 
-| Files | Recorded contribution and attribution |
-| --- | --- |
-| `src/Core/Game.cpp`, `src/Core/Game.h` | Implemented interop with QML for events that need visual announcement like Ko, captures. |
-| `qml/Screens/MathScreen.qml` | Implemented the animations, layout management, and signal handling needed for the visual announcements mentioned above |
-
-
+| Files                                  | Recorded contribution and attribution                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/Core/Game.cpp`, `src/Core/Game.h` | Implemented interop with QML for events that need visual announcement like Ko, captures.                               |
+| `qml/Screens/MathScreen.qml`           | Implemented the animations, layout management, and signal handling needed for the visual announcements mentioned above |
 
 ## Collaboration Tools Used:
 

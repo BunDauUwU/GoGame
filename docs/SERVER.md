@@ -45,17 +45,7 @@ Error codes: `InvalidJson`, `InvalidPayload`, `UnknownType`, `ReadFailed`, `Writ
 
 The server processes requests sequentially and uses `QSaveFile` for atomic file replacement. Clients share one file; the last successful write determines its contents. Run only one server per data file. The server serves local clients and supports guest nickname authentication, matchmaking, and basic Go rules. TLS and password-based account authentication are not implemented.
 
-## Existing Client Connection
-
-The client supports the `GOGAME_SERVER_URL` environment variable. For example:
-
-```bash
-GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/Desktop_Debug/appGoGame
-```
-
-The client connects automatically at startup, defaulting to `ws://127.0.0.1:14509`. The login screen displays connection status/errors and provides a reconnect button. `ReadData`/`WriteData` is a separate JSON-file API; online matches use commands/snapshots. The server supports guest AuthRequest and MatchmakingStart/MatchmakingCancel. Password login in the UI is not integrated with this guest protocol.
-
-## Server Class
+## Server
 
 `Server.h` declares the API, `Server.cpp` implements it, and `main.cpp` parses CLI arguments and calls `start`. The class receives the file path at construction and owns the WebSocket listener and client connections.
 
@@ -124,11 +114,7 @@ The server enforces clocks using monotonic time; epoch timestamps are only for U
 
 Each clock appears next to its player's name panel, above the background. The active player has a gold border. The UI shows `mm:ss` during main time and seconds plus remaining periods during Byo-yomi. Unconfirmed preview time still counts against the clock.
 
-Default: **10 minutes of main time + 3 × 20 seconds**. To use 15 minutes of main time:
-
-```bash
-./build/server/appserver --main-minutes 15 --data-file server/data/state.json
-```
+Default: **10 minutes of main time + 3 × 20 seconds**.
 
 Exhausting main time starts Byo-yomi rather than an immediate loss. Every exhausted 20-second period consumes one period, then the next starts immediately within the same turn. A legal move or pass stops the clock and restores the current period to 20 seconds for the next turn; consumed periods are not restored. Invalid commands do not reset time. Exhausting the final period immediately loses on the server. If a timer runs late, the server still deducts all actual elapsed time using a monotonic clock.
 
@@ -139,14 +125,6 @@ Snapshots add `clocks[0/1]`: `mainRemainingMs`, `periodRemainingMs`, `periodDura
 These are historical measurements. `scripts/server_stats.py` and the tests mentioned here are no longer in the source tree; do not treat the recount command below as current instructions.
 
 Removed the unused `Server::stop`/`address` APIs and old selection timeout; the destructor still closes sockets/timers. Removed server QML and an old test version; retained GoMatch, ByoYomiClock, snapshots, and all four tests running at that time. The client matchmaking protocol sends only mode, without deckId. The Play helper takes matchId/row/col.
-
-Measurements on 13 October 2026: server runtime **841 lines / 28,126 characters**; including four tests and CMake, **1,277 lines / 51,924 characters**. These are source totals at that time, including comments/whitespace, not separate human/AI authorship counts. The recount command was `python3 scripts/server_stats.py`; that script is now absent. Cleanup details, measurement methodology, and per-file counts were recorded in the [technical log](CHANGELOG.md).
-
-## DSU and Match Notifications
-
-GoMatch uses DSU stone groups, liberty bitsets, an immutable position cache, and empty-region DSU for territory scoring. Snapshots add `position` (board, previousBoard, simple ko, captures, turn/move count) and `scoring` (rules, blackTerritory, whiteTerritory, blackPrisoners, whitePrisoners, blackPoints, whitePoints, komi, provisional, difference). StonePlayed GameEvent adds `captured`, `koPoint`, and `koThreat`; GameEnded after two passes adds `scoring`. The client displays capture, ko, and provisional Japanese score notifications. `koThreat` identifies a response after ko that puts an opposing group into atari; it is not a complete analysis of every ko threat.
-
-Sandbox and AI save/undo/redo run on the client; online matches do not allow undo/redo. See the [AI documentation](ai/IMPLEMENTATION_GUIDE.md).
 
 ## Server/Client Build Boundary
 

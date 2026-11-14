@@ -6,7 +6,6 @@ GoGame is an application that allows users to play the classic board game Go. It
 
 - [Requirement](#requirements)
 - [Installation](#installation)
-- [Setup and Run](#setup-and-run)
 - [Usage](#usage)
 - [Rule](#rules)
 - [Contributing](#contributing)
@@ -30,50 +29,19 @@ CMake ≥ 3.16, a C++17 compiler, and Qt 6 (CMake requires ≥ 6.2) with Core, G
 
 You can also open `CMakeLists.txt` in Qt Creator. The default build does not require a KataGo model; Hard uses a heuristic evaluator instead.
 
-## Run the Server and Play Local
-
-Open a separate terminal and run the following commands to build and start the server. Keep the server running while playing:
-
-```bash
-cmake -S server -B build/server
-cmake --build build/server --parallel 3
-./build/server/appserver --data-file server/data/state.json
-```
-
-The server listens at `ws://127.0.0.1:14509`.
-
-If the file is corrupted, the server will stop without modifying the existing data. `state.json` is used by the JSON read/write API; it is not a file that automatically saves ongoing matches.
-
-By default, each player has 10 minutes of main time plus 3 periods of 20-second Byo-yomi.
-
-The server currently listens on localhost only. Client-side SQLite authentication and server-side guest nickname identities are separate systems.
-
-The client uses the default server URL. If you change the port, set the corresponding URL before launching the client but you should not change it due to potential bugs:
-
-```bash
-GOGAME_SERVER_URL=ws://127.0.0.1:14509 ./build/local/appGoGame
-```
-
-In another terminal, launch two client instances, register or log in with two local accounts, and select **Find Match** in both clients to get matched.
-
-## Play Against AI, use Sandbox Mode and Fast Mode
+## Game Feature
 
 - **Play against AI → Easy / Medium / Hard**: Play offline, with the human player controlling Black. You can save up to 20 games angainst AI. Use the game-loading button in the menu to resume a saved game, select a slot, and confirm overwriting if all slots are occupied.
 - **Sandbox**: Control both sides, with support for Reset, Undo, Redo, Save, and Load. The `sandbox.json` slot is separate. Reset and Exit do not automatically overwrite manually saved games.
-- By default, game data is stored in `QStandardPaths::AppDataLocation/games`. Set the `GOGAME_SAVE_DIR` environment variable to use a different directory.
 - The first click on a valid intersection displays a move preview; the second click confirms the move. **Fast mode** allows a move to be placed with a single click.
 
 The server is not required for AI matches or Sandbox mode.
 
-The current scorer still has limitations when adjudicating dead stones and seki.
-
 # Rules
 
-See [GoGame Rules — Simplified Japanese-style Scoring](docs/RULES.md) for the current scoring, Ko, game-ending, and online time-control rules.
+See [GoGame Rules — Simplified Japanese-style Scoring](docs/RULES.md) for the current rule.
 
 # Project Documentation
-
-Project documentation is maintained in English to support developers and AI-assisted debugging. Original Vietnamese prompts are preserved in Vietnamese.
 
 - [AI Usage Declaration](docs/AI_Declaration.md)
 - [Project Structure and References](docs/STRUCTUREANDREF.md)

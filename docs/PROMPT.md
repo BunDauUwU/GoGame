@@ -5,10 +5,10 @@ Updated **21 October 2026**. Maintained at the project owner's request, this doc
 ## Scope and Reading Guide
 
 - Sources: prompts available in the conversation and the README log before reorganization. Original requests, code, and typos are preserved; line breaks/formatting from the chat interface may have been normalized in the earlier log.
-- The response column retains complete recoverable final responses. Where only a prompt/result remains, it explicitly states **the verbatim response is missing** rather than reconstructing it from a summary. Not all previous AI sessions are accessible; this table is not necessarily the complete project history.
+- The response column retains complete recoverable final responses. Where only a prompt/result remains, it explicitly states **the verbatim response is missing** rather than reconstructing it from a summary.
 - Change entries retain results/checks from the old log. Figures, feature status, and test results describe the time of recording, not the current state. Paths quoted in responses remain as originally given; use the [current index](STRUCTUREANDREF.md) to locate moved documents.
 - The first three entries were recovered from earlier session logs; their order within the day is unknown. Dates follow the old log rather than being inferred from Git commit dates.
-- The HardAI request includes the [complete attached MCTS code](references/HARD_AI_INPUT.md). The first prompt has an older copy with added references; the changes column retains that copy for comparison. The [README archived before reorganization](archive/README-2026-10-20.md) remains unchanged.
+- The HardAI request includes the [complete attached MCTS code](references/HARD_AI_INPUT.md). The first prompt has an older copy with added references; the changes column retains that copy for comparison.
 - Documentation, responses, and change notes have been translated into English. Response translations retain the recorded meaning rather than claiming to be verbatim English originals. Original Vietnamese prompts, including the historical prompt copy and attached code, remain in their original language.
 
 ## Conventions for Future Updates

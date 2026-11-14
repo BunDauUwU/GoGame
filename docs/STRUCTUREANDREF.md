@@ -1,93 +1,45 @@
 # Project Structure and References
 
-Checked directly against the filesystem on **21 October 2026**, after documentation reorganization. Source paths and commands are relative to the project root; Markdown links are relative to the document being read.
+## Documents
 
-## Documentation Locations
+| File                                                       | Contents                                                                            |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [README.md](../README.md)                                  | Overview.                                                                           |
+| [AI_Declaration.md](AI_Declaration.md)                     | Team AI usage declaration.                                                          |
+| [PROMPT.md](PROMPT.md)                                     | Full prompts, recoverable responses, changes, and checks for each recorded request. |
+| [STRUCTUREANDREF.md](STRUCTUREANDREF.md)                   | Project tree and reference catalog.                                                 |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                         | Client/server diagrams, WebSocket flow, and snapshot schema.                        |
+| [SERVER.md](SERVER.md)                                     | Server protocol, commands, snapshots, clocks, and JSON API.                         |
+| [references/HARD_AI_INPUT.md](references/HARD_AI_INPUT.md) | Complete user-supplied MCTS code for the HardAI request.                            |
 
-| File                                                         | Contents                                                                                   |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| [README.md](../README.md)                                    | Overview and usage: build, client, server, AI, Sandbox, and KataGo.                        |
-| [AI_Declaration.md](AI_Declaration.md)                       | Team AI usage declaration, attribution, and individual confirmations.                      |
-| [PROMPT.md](PROMPT.md)                                       | Full prompts, recoverable responses, changes, and checks for each recorded request.        |
-| [STRUCTUREANDREF.md](STRUCTUREANDREF.md)                     | Project tree and reference catalog.                                                        |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                           | Client/server diagrams, WebSocket flow, and snapshot schema.                               |
-| [SERVER.md](SERVER.md)                                       | Server protocol, commands, snapshots, clocks, and JSON API; moved from `server/README.md`. |
-| [ROADMAP.md](ROADMAP.md)                                     | Plans and future-work notes (removed because no further implementation was planned).       |
-| [ai/KATAGO_BACKEND.md](ai/KATAGO_BACKEND.md)                 | Native KataGo backend build/run instructions, CPU/CUDA, and limitations.                   |
-| [references/HARD_AI_INPUT.md](references/HARD_AI_INPUT.md)   | Complete user-supplied MCTS code for the HardAI request.                                   |
-| [archive/README-2026-10-20.md](archive/README-2026-10-20.md) | Unmodified README before reorganization; its paths/status are historical.                  |
-
-## Current File Tree
-
-Lists source, assets, documentation, and existing empty directories. Build directories, Python environments, caches, Git, and local configuration are collapsed; generated dependency documentation/libraries are outside the project's Markdown set. Runtime data in `server/data/` may be Git-ignored and vary by machine. The KataGo `.zip` package was not extracted to list its contents.
+## File Tree
 
 ```text
 GoGame/
-├── .agents/  [collapsed: generated content or local configuration]
-├── .aws/  [collapsed: generated content or local configuration]
-├── .cache/  [collapsed: generated content or local configuration]
-├── .codex/  [collapsed: generated content or local configuration]
-├── .git/  [collapsed: generated content or local configuration]
 ├── .qtcreator/  [collapsed: generated content or local configuration]
-├── .venv-ai/  [collapsed: generated content or local configuration]
 ├── assets/
 │   ├── background/
-│   │   ├── background1.png
-│   │   ├── background2.png
-│   │   └── background3.png
+│   │   ├── ...
 │   ├── fonts/
-│   │   └── genshin.ttf
+│   │   └── ...
 │   ├── playerAvatar/
-│   │   ├── ayame1.png
-│   │   ├── ayame2.png
-│   │   ├── ayame3.png
-│   │   ├── ayame4.png
-│   │   ├── ayame5.png
-│   │   ├── ayame6.png
-│   │   ├── ayame8.webp
-│   │   ├── eula (5).png
-│   │   ├── hutao (1).jpeg
-│   │   ├── hutao (1).png
-│   │   ├── hutao (11).png
-│   │   ├── hutao (12).png
-│   │   ├── hutao (3).png
-│   │   ├── kazuha (3).png
-│   │   ├── kazuha (4).png
-│   │   ├── kazuha (5).png
-│   │   ├── nahida.jpg
-│   │   ├── paimon (1).jpg
-│   │   ├── yoimiya (1).png
-│   │   ├── yoimiya (4).png
-│   │   └── yoimiya (8).png
+│   │   ├── ...
 │   ├── sounds/
-│   │   ├── background1.mp3
-│   │   ├── background2.opus
-│   │   ├── background3.mp3
-│   │   └── place.wav
+│   │   ├── ...
 │   └── stones/
-│       ├── black1.png
-│       ├── black2.png
-│       ├── white1.png
-│       └── white2.png
+│       ├── ...
 ├── build/  [collapsed: generated content or local configuration]
 ├── cmake/
 │   └── KataGoBackend.cmake
 ├── docs/
-│   ├── ai/
-│   │   ├── HARD_AI.md
-│   │   ├── IMPLEMENTATION_GUIDE.md
-│   │   └── KATAGO_BACKEND.md
-│   ├── archive/
-│   │   └── README-2026-10-20.md
 │   ├── references/
 │   │   └── HARD_AI_INPUT.md
 │   ├── AI_Declaration.md
 │   ├── ARCHITECTURE.md
-│   ├── CHANGELOG.md
 │   ├── PROMPT.md
-│   ├── ROADMAP.md
 │   ├── SERVER.md
-│   └── STRUCTUREANDREF.md
+│   ├── STRUCTUREANDREF.md
+│   └── WORK_DIVISION.md
 ├── qml/
 │   ├── Components/
 │   │   ├── battle/
@@ -96,7 +48,9 @@ GoGame/
 │   │   └── controls/
 │   │       ├── GameButton.qml
 │   │       ├── GamePanel.qml
-│   │       └── GameText.qml
+│   │       ├── GameText.qml
+│   │       ├── SaveGameDialog.qml
+│   │       └── SaveSlotTable.qml
 │   ├── Core/
 │   │   ├── Motion.qml
 │   │   ├── Radius.qml
@@ -132,8 +86,6 @@ GoGame/
 │   │   ├── EasyAI.h
 │   │   ├── HardAI.cpp
 │   │   ├── HardAI.h
-│   │   ├── katago-v1.18.1-cuda12.1-cudnn8.9.7-linux-x64+bs50.zip
-│   │   ├── KATAGO_LICENSE.txt
 │   │   ├── KataGoEvaluator.cpp
 │   │   ├── KataGoEvaluator.h
 │   │   ├── KataGoNative.cpp
@@ -141,7 +93,6 @@ GoGame/
 │   │   ├── MediumAI.cpp
 │   │   ├── MediumAI.h
 │   │   ├── SearchTypes.h
-│   │   └── trainAI.py
 │   ├── Core/
 │   │   ├── Enums.h
 │   │   ├── Enumutils.cpp
@@ -166,36 +117,16 @@ GoGame/
 │       ├── GoMatch.cpp
 │       └── GoMatch.h
 ├── tools/
+    ├── b10c384h6nbttflrs.bin
 │   └── run-katago-hard.sh
 ├── .gitignore
 ├── CMakeLists.txt
 ├── main.cpp
 ├── main.qml
-├── README.md
-└── users.sqlite
+└── README.md
 ```
 
-## Responsibilities of Major Components
-
-| Location                               | Responsibility                                                                                                                                      |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main.cpp`, `main.qml`, `qml/`         | Client startup, QML context, menus, match screen, and components.                                                                                   |
-| `src/Core/Game.*`, `src/AI/AIGame.cpp` | Game state, mode coordination, AI workers, and stale-result cancellation.                                                                           |
-| `src/Rules/GoMatch.*`                  | Shared rules, board, groups/liberties, history, and scoring.                                                                                        |
-| `src/Managers/`                        | Local authentication, matchmaking, assets, and JSON save/load.                                                                                      |
-| `src/Network/`                         | WebSocket connections and client protocol packaging.                                                                                                |
-| `server/`                              | Console server, queue, matches, clocks, and JSON read/write API. CMake builds rules from `src/Rules/`; old `server/GoMatch.*` files remain on disk. |
-| `src/AI/`                              | EasyAI, MediumAI, HardAI, KataGo adapters, and SGF training. Hard has independent search board/groups.                                              |
-| `cmake/KataGoBackend.cmake`            | Native backend integration and a copy of KataGo source.                                                                                             |
-| `tools/run-katago-hard.sh`             | Builds and launches the client with a KataGo model.                                                                                                 |
-| `assets/`                              | Backgrounds, avatars, fonts, stones, music, and sound effects.                                                                                      |
-| `docs/`                                | All project-managed Markdown except the root README.                                                                                                |
-
-The source tree no longer contains `tests/` or `scripts/server_stats.py`; mentions in logs/archives are historical. No source files were changed or redundant files removed during the documentation reorganization.
-
 ## References
-
-This catalog was compiled from existing documents rather than a new content review or availability check. The source column identifies where each reference was mentioned; URLs are preserved. The Caro report, 5×5 Q-learning project, and 9×9 Go paper are references, not evidence of GoGame's 19×19 AI performance.
 
 | Reference                                                                                                                                                                                                                         | Recorded source / context                    |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -228,7 +159,4 @@ This catalog was compiled from existing documents rather than a new content revi
 ## Reference Files and Local Dependencies
 
 - [Original user-supplied MCTS code](references/HARD_AI_INPUT.md): reference for naming and PUCT/FPU (`cpuct = 1.5`, `fpuReduction = 0.2`, `19652`).
-- [KataGo license](../src/AI/KATAGO_LICENSE.txt): retained at its current source location; the license is not Markdown.
 - [CMake backend](../cmake/KataGoBackend.cmake): integration source and KataGo v1.18.1 version/SHA-256. Builds can download upstream or use explicitly supplied local source.
-- `../DatasetGogame/AI/`: directory outside the repository used by the launcher to locate models/source/libraries; not part of the project tree and not copied into `docs/`.
-- SplitMix64 notes inserted into the old log are preserved in the [archived README](archive/README-2026-10-20.md) and [PROMPT.md](PROMPT.md). That record did not include a source for verification; see [HardAI](ai/HARD_AI.md) for actual `mix64` use.
