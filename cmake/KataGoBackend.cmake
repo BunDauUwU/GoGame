@@ -34,7 +34,9 @@ target_include_directories(gogameKataGoNative PRIVATE "${kg}" "${PROJECT_SOURCE_
 target_include_directories(gogameKataGoNative SYSTEM PRIVATE "${kg}/external"
     "${kg}/external/filesystem-1.5.8/include" "${kg}/external/half-2.2.0/include")
 target_compile_definitions(gogameKataGoNative PRIVATE NO_LIBZIP NO_GIT_REVISION)
-target_link_libraries(gogameKataGoNative PRIVATE ZLIB::ZLIB Threads::Threads)
+target_include_directories(gogameKataGoNative SYSTEM PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:${ZLIB_INCLUDE_DIRS}>")
+target_link_libraries(gogameKataGoNative PRIVATE ${ZLIB_LIBRARIES} Threads::Threads)
 # Pace actual batches centrally, so multiple MCTS workers cannot multiply the duty.
 set(kg_paced_dir "${CMAKE_CURRENT_BINARY_DIR}/katago-paced/neuralnet")
 file(MAKE_DIRECTORY "${kg_paced_dir}")
@@ -46,11 +48,16 @@ set(kg_eval_hook "
 namespace GoKata { double inferenceDuty(const void*); }
 template<typename... Args>
 static void gogamePacedGetOutput(const void* evaluator, Args&&... args) {
+#ifdef USE_EIGEN_BACKEND
+    (void)evaluator;
+    NeuralNet::getOutput(std::forward<Args>(args)...);
+#else
     const auto started = std::chrono::steady_clock::now();
     NeuralNet::getOutput(std::forward<Args>(args)...);
     const auto active = std::chrono::steady_clock::now() - started;
     const double duty = GoKata::inferenceDuty(evaluator);
     if(duty < 1. && duty > 0.) std::this_thread::sleep_for(active * (1. / duty - 1.));
+#endif
 }
 ")
 string(REPLACE "using namespace std;" "${kg_eval_hook}\nusing namespace std;" kg_eval_source "${kg_eval_source}")
@@ -98,6 +105,7 @@ if(GOGAME_KATAGO_BACKEND STREQUAL "CUDA")
     target_compile_definitions(gogameKataGoNative PRIVATE USE_CUDA_BACKEND CUDA_TARGET_VERSION=${CMAKE_CUDA_COMPILER_VERSION})
     target_include_directories(gogameKataGoNative SYSTEM PRIVATE "${GOGAME_CUDNN_INCLUDE}" "${kg}/external/cudnn-frontend/include")
     target_link_libraries(gogameKataGoNative PRIVATE CUDA::cudart CUDA::cublas CUDA::nvrtc "${GOGAME_CUDNN_LIBRARY}")
+    target_link_directories(gogameKataGoNative INTERFACE "$<TARGET_FILE_DIR:CUDA::cudart>")
     set_target_properties(gogameKataGoNative PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
 elseif(GOGAME_KATAGO_BACKEND STREQUAL "EIGEN")
     set(GOGAME_EIGEN_INCLUDE_DIR "" CACHE PATH "Optional extracted Eigen headers (contains Eigen/)")

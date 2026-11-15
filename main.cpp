@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
         {"katago-fp32", "Disable FP16 for older convolution models"},
         {"ai-threads", "MCTS workers (1-16)", "number", "4"},
         {"ai-time-ms", "Move search budget in milliseconds", "ms", "1800"},
-        {"katago-duty", "Approximate inference duty (0,1]", "fraction", "0.30"}
+        {"katago-duty", "Approximate GPU inference duty (0,1]", "fraction", "0.30"}
     });
     parser.process(app);
     std::shared_ptr<KataGoEvaluator> kataGo;
