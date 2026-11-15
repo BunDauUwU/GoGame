@@ -35,5 +35,8 @@ struct SearchResult
     std::uint32_t rootVisits = 0, reusedVisits = 0;
     std::size_t allocatedBytes = 0;
     bool memoryLimited = false;
+
+    bool policy = false;
+    bool heuristic = false;
 };
 
