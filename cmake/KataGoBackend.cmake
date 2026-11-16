@@ -73,8 +73,22 @@ target_sources(gogameKataGoNative PRIVATE "${kg_paced_dir}/nneval.cpp")
 if(GOGAME_KATAGO_BACKEND STREQUAL "CUDA")
     enable_language(CUDA)
     find_package(CUDAToolkit REQUIRED)
-    find_path(GOGAME_CUDNN_INCLUDE cudnn.h HINTS ${CUDAToolkit_INCLUDE_DIRS} ENV CUDNN_ROOT PATH_SUFFIXES include REQUIRED)
-    find_library(GOGAME_CUDNN_LIBRARY NAMES cudnn libcudnn.so.9 HINTS ENV CUDNN_ROOT PATH_SUFFIXES lib lib64 REQUIRED)
+    set(GOGAME_CUDNN_ROOT "${PROJECT_SOURCE_DIR}/release/runtime/cuda" CACHE PATH "cuDNN directory containing include and lib or lib64")
+    find_path(GOGAME_CUDNN_INCLUDE cudnn.h
+        HINTS "${GOGAME_CUDNN_ROOT}" ENV CUDNN_ROOT ${CUDAToolkit_INCLUDE_DIRS}
+        PATH_SUFFIXES include)
+    find_library(GOGAME_CUDNN_LIBRARY NAMES cudnn libcudnn.so.9
+        HINTS "${GOGAME_CUDNN_ROOT}" ENV CUDNN_ROOT
+        PATH_SUFFIXES lib lib64 lib/x64)
+    if(NOT EXISTS "${GOGAME_CUDNN_INCLUDE}/cudnn.h"
+        OR NOT EXISTS "${GOGAME_CUDNN_LIBRARY}")
+        message(FATAL_ERROR
+            "The CUDA backend requires cuDNN headers and libraries. "
+            "Place them in release/runtime/cuda/include and release/runtime/cuda/lib, "
+            "or set -DGOGAME_CUDNN_ROOT=/path/to/cudnn. "
+            "For separate locations, set GOGAME_CUDNN_INCLUDE and GOGAME_CUDNN_LIBRARY. "
+            "Use the linux-cpu preset for an Eigen build without cuDNN.")
+    endif()
     # This cuDNN rejects the forced FP16 PRECOMP_GEMM algorithm for the
     # model's input convolution. Ask cuDNN for a supported algorithm instead.
     # Patch a private build copy; the downloaded source stays unchanged.
@@ -107,6 +121,9 @@ if(GOGAME_KATAGO_BACKEND STREQUAL "CUDA")
     target_link_libraries(gogameKataGoNative PRIVATE CUDA::cudart CUDA::cublas CUDA::nvrtc "${GOGAME_CUDNN_LIBRARY}")
     target_link_directories(gogameKataGoNative INTERFACE "$<TARGET_FILE_DIR:CUDA::cudart>")
     set_target_properties(gogameKataGoNative PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+
+#  optional because it so bug
+
 elseif(GOGAME_KATAGO_BACKEND STREQUAL "EIGEN")
     set(GOGAME_EIGEN_INCLUDE_DIR "" CACHE PATH "Optional extracted Eigen headers (contains Eigen/)")
     if(GOGAME_EIGEN_INCLUDE_DIR)
