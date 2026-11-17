@@ -10,6 +10,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+// AI-assisted: see AI22 in docs/AI_Declaration.md and docs/PROMPT.md
 class GameManager : public QObject {
   Q_OBJECT
   Q_PROPERTY(QVariantList boardState READ boardState NOTIFY boardStateChanged)
