@@ -33,6 +33,8 @@ GameManager::~GameManager()
     cancelSearch();
     m_aiPool.waitForDone();
 }
+
+// AI-assisted: see AI22 in docs/AI_Declaration.md and docs/PROMPT.md
 void GameManager::setLastMove(int row, int col)
 {
     QVariantList next{row, col};

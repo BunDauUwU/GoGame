@@ -10,6 +10,7 @@ Rectangle {
     color: "black"
 
     // BACKGROUND
+    // AI-assisted: see AI21 in docs/AI_Declaration.md and docs/PROMPT.md
     Item {
         id: background
         anchors.fill: parent

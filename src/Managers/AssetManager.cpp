@@ -82,6 +82,8 @@ void AssetManager::setSfxVolume(double volume) {
     emit sfxVolumeChanged();
 }
 
+// AI-assisted: see AI28 in docs/AI_Declaration.md and docs/PROMPT.md
+
 QUrl AssetManager::url(const QString& name) const {
     if (!paths.contains(name)) return {};
 
