@@ -20,6 +20,10 @@ find_package(Qt6 REQUIRED COMPONENTS
     Multimedia
 )
 
+if(Qt6_VERSION VERSION_GREATER_EQUAL "6.8")
+    qt_policy(SET QTP0004 NEW)
+endif()
+
 qt_add_executable(appGoGame
     main.cpp
 )
@@ -55,6 +59,7 @@ endforeach()
 qt_add_qml_module(appGoGame
     URI GoGame
     VERSION 1.0
+    RESOURCE_PREFIX "/"
 
     QML_FILES
         main.qml

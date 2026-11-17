@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>GoGame</Name>
+    <Version>@VERSION@</Version>
+    <Title>GoGame Setup</Title>
+    <Publisher>GoGame</Publisher>
+    <TargetDir>@HomeDir@/GoGame</TargetDir>
+    <StartMenuDir>GoGame</StartMenuDir>
+    <MaintenanceToolName>GoGameMaintenanceTool</MaintenanceToolName>
+    <AllowNonAsciiCharacters>true</AllowNonAsciiCharacters>
+    <InstallerWindowIcon>gogame.png</InstallerWindowIcon>
+    <RunProgram>@RUN_PROGRAM@</RunProgram>
+    @RUN_ARGUMENTS@
+    <RunProgramDescription>Play GoGame</RunProgramDescription>
+</Installer>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+    <DisplayName>GoGame</DisplayName>
+    <Description>GoGame with the KataGo neural model and Eigen CPU backend.</Description>
+    <Name>com.gogame.client</Name>
+    <Version>@VERSION@</Version>
+    <ReleaseDate>@DATE@</ReleaseDate>
+    <Default>true</Default>
+    <ForcedInstallation>true</ForcedInstallation>
+    <Script>installscript.qs</Script>
+</Package>

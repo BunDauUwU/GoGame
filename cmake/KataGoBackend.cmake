@@ -2,6 +2,9 @@
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
+if(POLICY CMP0104)
+    cmake_policy(SET CMP0104 NEW)
+endif()
 set(GOGAME_KATAGO_SOURCE_DIR "" CACHE PATH "Extracted KataGo v1.18.1 source (offline override)")
 set(GOGAME_KATAGO_BACKEND "CUDA" CACHE STRING "CUDA or EIGEN")
 set_property(CACHE GOGAME_KATAGO_BACKEND PROPERTY STRINGS CUDA EIGEN)
@@ -19,6 +22,10 @@ if(NOT EXISTS "${kg}/neuralnet/nneval.cpp")
 endif()
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
+if(GOGAME_KATAGO_BACKEND STREQUAL "CUDA")
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+endif()
 set(kg_files
     core/global.cpp core/base64.cpp core/bsearch.cpp core/config_parser.cpp
     core/datetime.cpp core/fancymath.cpp core/fileutils.cpp core/hash.cpp core/logger.cpp
@@ -71,8 +78,6 @@ endif()
 target_include_directories(gogameKataGoNative PRIVATE "${kg}/neuralnet")
 target_sources(gogameKataGoNative PRIVATE "${kg_paced_dir}/nneval.cpp")
 if(GOGAME_KATAGO_BACKEND STREQUAL "CUDA")
-    enable_language(CUDA)
-    find_package(CUDAToolkit REQUIRED)
     set(GOGAME_CUDNN_ROOT "${PROJECT_SOURCE_DIR}/release/runtime/cuda" CACHE PATH "cuDNN directory containing include and lib or lib64")
     find_path(GOGAME_CUDNN_INCLUDE cudnn.h
         HINTS "${GOGAME_CUDNN_ROOT}" ENV CUDNN_ROOT ${CUDAToolkit_INCLUDE_DIRS}
