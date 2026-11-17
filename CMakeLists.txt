@@ -34,7 +34,7 @@ set_source_files_properties(
     PROPERTIES
         QT_QML_SINGLETON_TYPE TRUE
 )
-
+# AI-assisted: see AI29, AI30 in docs/AI_Declaration.md and docs/PROMPT.md
 file(GLOB_RECURSE GAME_ASSETS
     CONFIGURE_DEPENDS
     LIST_DIRECTORIES false
