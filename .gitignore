@@ -89,6 +89,4 @@ diff-details.*
 results.*
 diff.*
 
-/release/build/
-/release/runtime/
-/release/packages/
+/dist/

@@ -1,8 +1,0 @@
-{
-  "version": 4,
-  "include": [
-    "windows/CMakePresets.json",
-    "linux/CMakePresets.json",
-    "macos/CMakePresets.json"
-  ]
-}

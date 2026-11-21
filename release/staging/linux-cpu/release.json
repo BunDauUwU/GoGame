@@ -1,9 +1,0 @@
-{
-  "profile": "linux-cpu",
-  "platform": "linux",
-  "backend": "EIGEN",
-  "configuration": "Release",
-  "preparedAtUtc": "2026-11-15T05:46:29Z",
-  "model": "models/model.bin.gz",
-  "packaged": false
-}
