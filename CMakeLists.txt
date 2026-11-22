@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.17)
 
 project(GoGame VERSION 0.1 LANGUAGES CXX)
 
@@ -28,6 +28,12 @@ qt_add_executable(appGoGame
     main.cpp
 )
 
+if(WIN32)
+    target_sources(appGoGame PRIVATE tools/windows/gogame.rc)
+    set_property(SOURCE tools/windows/gogame.rc APPEND PROPERTY
+        OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/gogame.ico")
+endif()
+
 set_source_files_properties(
     qml/Singletons/AppState.qml
     qml/Core/Motion.qml
@@ -55,6 +61,13 @@ foreach(asset IN LISTS GAME_ASSETS)
         QT_RESOURCE_ALIAS "${asset_alias}"
     )
 endforeach()
+
+# Embed assets without making the C++ compiler parse their byte arrays.
+qt_add_resources(appGoGame game_assets
+    BIG_RESOURCES
+    PREFIX "/GoGame"
+    FILES ${GAME_ASSETS}
+)
 
 qt_add_qml_module(appGoGame
     URI GoGame
@@ -126,8 +139,6 @@ qt_add_qml_module(appGoGame
         src/Network/Protocol.cpp
         src/Network/Protocol.h
 
-    RESOURCES
-        ${GAME_ASSETS}
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

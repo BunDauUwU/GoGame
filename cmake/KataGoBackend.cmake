@@ -41,6 +41,14 @@ target_include_directories(gogameKataGoNative PRIVATE "${kg}" "${PROJECT_SOURCE_
 target_include_directories(gogameKataGoNative SYSTEM PRIVATE "${kg}/external"
     "${kg}/external/filesystem-1.5.8/include" "${kg}/external/half-2.2.0/include")
 target_compile_definitions(gogameKataGoNative PRIVATE NO_LIBZIP NO_GIT_REVISION)
+if(WIN32)
+    target_compile_definitions(gogameKataGoNative PRIVATE
+        NOMINMAX BYTE_ORDER=1234 LITTLE_ENDIAN=1234 BIG_ENDIAN=4321)
+    target_link_libraries(gogameKataGoNative PRIVATE ws2_32)
+    if(MINGW)
+        target_link_libraries(gogameKataGoNative PRIVATE shlwapi)
+    endif()
+endif()
 target_include_directories(gogameKataGoNative SYSTEM PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${ZLIB_INCLUDE_DIRS}>")
 target_link_libraries(gogameKataGoNative PRIVATE ${ZLIB_LIBRARIES} Threads::Threads)

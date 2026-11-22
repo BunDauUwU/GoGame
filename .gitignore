@@ -90,3 +90,7 @@ results.*
 diff.*
 
 /dist/
+/out
+CMakePresets.json 
+CMakeUserPresets.json
+.vs

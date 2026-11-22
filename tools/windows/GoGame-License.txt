@@ -1,0 +1,5 @@
+GoGame
+
+This project is for educational purposes only and is not intended for commercial use.
+
+Developed by Hoang Minh Vu and Nguyen Cao Long Khanh as part of a university project.
