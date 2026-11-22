@@ -13,29 +13,32 @@ GoGame is an application that allows users to play the classic board game Go. It
 
 # Requirements
 
-CMake ≥ 3.16, a C++17 compiler, and Qt 6 (CMake requires ≥ 6.2) with Core, Gui, Quick/QML, Network, WebSockets, Sql, Concurrent, and Multimedia. Qt must support `QWebSocket::errorOccurred`, as required by the current source code. The SQLite plugin is also required for local account authentication.
+- **Linux:** Use a distribution compatible with the release archive. Choose the CPU edition for KataGo inference on the CPU, or the GPU (CUDA) edition if you have a compatible NVIDIA GPU and driver.
+- **Windows:** Use 64-bit Windows. The installer bundles Qt and the KataGo model, and installs the Microsoft Visual C++ Redistributable x64 if needed. The Windows release uses the CPU backend (I do not like Windows as how annoying they are so there is no GPU version).
+- **Building from source:** Install CMake 3.17 or later, a C++17 compiler, and Qt 6 (CMake requires ≥ 6.2) with Core, Gui, Quick/QML, Network, WebSockets, Sql, Concurrent, and Multimedia. Use a Qt version that supports `QWebSocket::errorOccurred` and includes the SQLite driver for local accounts.
 
 # Installation
 
-- I don't know but just don't load **Cmake** and continue reading.
+## Linux
+
+1. Download the CPU or CUDA archive from the [Releases page](https://github.com/BunDauUwU/GoGame/releases).
+2. Extract the archive and open a terminal in the extracted folder.
+3. Run the included `.sh` launcher to start GoGame.
+
+## Windows
+
+1. Download `gogame_installer.exe` from the [Releases page](https://github.com/BunDauUwU/GoGame/releases).
+2. Open the installer, review the license, and follow the prompts. You can choose to create a desktop shortcut.
+3. Launch **GoGame** from the Start menu or the desktop shortcut.
 
 # Usage
 
-## Build and Launch the Client
-
-```bash
-./tools/run-katago-hard.sh --ai-time-ms 1800 --ai-threads 4 --katago-duty 0.30
-```
-
-You can also open `CMakeLists.txt` in Qt Creator. The default build does not require a KataGo model; Hard uses a heuristic evaluator instead.
-
-## Game Feature
-
-- **Play against AI → Easy / Medium / Hard**: Play offline, with the human player controlling Black. You can save up to 20 games angainst AI. Use the game-loading button in the menu to resume a saved game, select a slot, and confirm overwriting if all slots are occupied.
-- **Sandbox**: Control both sides, with support for Reset, Undo, Redo, Save, and Load. The `sandbox.json` slot is separate. Reset and Exit do not automatically overwrite manually saved games.
-- The first click on a valid intersection displays a move preview; the second click confirms the move. **Fast mode** allows a move to be placed with a single click.
-
-The server is not required for AI matches or Sandbox mode.
+- **Find Match** searches for an online opponent. If the hosted server has gone idle, wait for it to start and use **Reconnect**. If the connection still fails, restart the game.
+- **Practice Mode** lets you play offline against Easy, Medium, or Hard AI. In the packaged releases, Hard uses the KataGo model.
+- **Sandbox** lets you control both sides. Use it to explore positions or play locally with a friend.
+- **Load** lets you resume a local game. Each mode ("Practice", "Sandbox") has 20 separate save slots.
+- **Settings** lets you change the background, stone style, board texture, music, and volume.
+- **Fast mode** places a stone with one click. With Fast mode off, click once to preview the move and again to confirm it.
 
 # Rules
 
