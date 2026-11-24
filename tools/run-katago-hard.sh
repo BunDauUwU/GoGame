@@ -6,7 +6,7 @@ build_path="${GOGAME_KATAGO_BUILD:-$game_root}"
 if [[ -z "${GOGAME_KATAGO_BUILD:-}" && ! -x "$build_path/appGoGame" ]]; then
     build_path="$game_root/build/Desktop_Release"
 fi
-model_path="${GOGAME_KATAGO_MODEL:-$game_root/tools/b10c384h6nbttflrs.bin.gz}"
+model_path="${GOGAME_KATAGO_MODEL:-$game_root/tools/model.bin.gz}"
 
 if [[ $# -gt 0 && "$1" != --* ]]; then
     model_path="$1"

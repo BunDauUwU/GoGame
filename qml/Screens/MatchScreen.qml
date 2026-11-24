@@ -50,7 +50,7 @@ Rectangle {
 
     Shortcut {
         sequence: "Ctrl+R"
-        enabled: gameManager.sandbox
+        enabled: !gameManager.online && (gameManager.sandbox || gameManager.aiEnabled)
         onActivated: resetDialog.open()
     }
 
@@ -677,7 +677,7 @@ Rectangle {
             Button {
                 width: localActions.width
                 text: qsTr("Reset (CTRL+R)")
-                visible: gameManager.sandbox
+                visible: gameManager.sandbox || gameManager.aiEnabled
                 onClicked: resetDialog.open()
             }
             Button {
@@ -722,9 +722,14 @@ Rectangle {
     Dialog {
         id: resetDialog
         anchors.centerIn: parent
+        width: Math.min(420, boardScreen.width - 40)
         modal: true
         title: qsTr("Reset game?")
         standardButtons: Dialog.Yes | Dialog.No
+        contentItem: Label {
+            text: gameManager.aiEnabled ? qsTr("Start a new game and clear undo/redo history? The current save slot will be overwritten.") : qsTr("Start a new game and clear undo/redo history?")
+            wrapMode: Text.WordWrap
+        }
         onAccepted: gameManager.resetGame()
     }
     SaveGameDialog {

@@ -92,7 +92,7 @@ void GameManager::setNetworkClient(NetworkClient *client)
                 return;
             m_pending = false;
             m_finished = true;
-            m_resultMessage = QStringLiteral("Disconnected from server; match cannot continue");
+            m_resultMessage = QStringLiteral("Disconnected, finish the match");
             emit interactionChanged();
             emit gameError(m_resultMessage);
         });
@@ -110,7 +110,7 @@ void GameManager::notifyMove()
         emit captureOccurred();
     }
     if (m_position.koPoint >= 0) {
-        parts << QStringLiteral("Ko at (%1, %2): Immediate recapture is forbidden")
+        parts << QStringLiteral("Ko at (%1, %2): Can not play this move")
                      .arg(m_position.koPoint / 19 + 1)
                      .arg(m_position.koPoint % 19 + 1);
     }
@@ -167,7 +167,7 @@ void GameManager::pass_turn()
     m_position.pass();
     recordMove({{"pass", true}});
     if (m_position.m_passes >= 2)
-        finishLocalGame(m_position.score() > 0 ? 0 : 1, QStringLiteral("Two consecutive passes"));
+        finishLocalGame(m_position.score() > 0 ? 0 : 1, QStringLiteral("Two passes"));
     requestMove();
 }
 void GameManager::setMatchInfo(const QString &id, int player, const QString &opponent)
@@ -354,6 +354,13 @@ bool GameManager::exitLocalGame()
 }
 void GameManager::resetGame()
 {
+    if (online())
+        return;
+    if (m_aiEnabled) {
+        if (startAIGame(m_aiDifficulty, m_playerIndex, m_currentSlot))
+            notify(tr("AI game reset"));
+        return;
+    }
     if (!m_sandbox)
         return;
     cancelSearch();
